@@ -1,0 +1,40 @@
+name: PassportMac
+options:
+  bundleIdPrefix: ai.mirasim
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  SWIFT_VERSION: "5.0"
+  CODE_SIGN_STYLE: Automatic
+  DEVELOPMENT_TEAM: ""
+targets:
+  PassportMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: PassportMac
+      - path: ../shared
+    dependencies:
+      - sdk: CoreWLAN.framework
+    info:
+      path: PassportMac/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.mirasim.passport.configuration
+            CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - ai-passport-openclaw
+    settings:
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport.mac
+      GENERATE_INFOPLIST_FILE: YES
+      PRODUCT_NAME: AI Passport OpenClaw
+      INFOPLIST_KEY_CFBundleDisplayName: AI Passport OpenClaw
+      INFOPLIST_KEY_NSLocationUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
+      INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
+      MARKETING_VERSION: "0.1"
+      CURRENT_PROJECT_VERSION: "1"
+      ENABLE_APP_SANDBOX: NO

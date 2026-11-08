@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Passport OpenClaw · USB 配置</title>
+  <style>
+    body { margin: 0; background: #141816; color: #ece4d2; font: 18px/1.4 "Songti SC", serif; }
+    main { max-width: 32rem; margin: 0 auto; padding: 1.5rem 1.2rem 3rem; }
+    h1 { font-size: 1.6rem; font-weight: 500; margin: 0 0 0.4rem; }
+    p, .hint { color: #968e80; }
+    button, select, input { font: inherit; }
+    button { border: 0; background: #ece4d2; color: #18201c; padding: 0.7rem 0.9rem; }
+    select, input { width: 100%; box-sizing: border-box; border: 0; background: #ece4d2; color: #18201c; padding: 0.7rem 0.8rem; }
+    label { display: block; margin: 0.9rem 0 0.3rem; }
+    #log { white-space: pre-wrap; color: #968e80; min-height: 1.4rem; }
+    .row { display: flex; gap: 0.6rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>USB 配置</h1>
+    <p>用数据线把 AI Passport 插上这台电脑。页面只通过串口和它通信，不会去连接你的 OpenClaw。</p>
+    <div class="row">
+      <button id="connect" type="button">连接 AI Passport</button>
+    </div>
+    <p id="hello" class="hint"></p>
+    <form id="form">
+      <label for="ssid">周围的 2.4 GHz 网络</label>
+      <select id="ssid" name="ssid"></select>
+      <label for="pass">Wi-Fi 密码</label>
+      <input id="pass" name="pass" type="password" autocomplete="off">
+      <div class="row">
+        <button id="copy" type="button">复制提示词给 OpenClaw</button>
+      </div>
+      <p class="hint">贴给 OpenClaw。它会给你地址和配对码，填回下面两格。有手机就扫它给出的二维码，扫完把内容贴进配对码。</p>
+      <label for="url">地址</label>
+      <input id="url" name="gateway_url" placeholder="wss://你的网关地址" autocomplete="off">
+      <label for="code">配对码</label>
+      <input id="code" name="setup_code" autocomplete="off">
+      <div class="row">
+        <button id="save" type="submit">写入 AI Passport</button>
+        <button id="scan" type="button">重新扫描</button>
+      </div>
+    </form>
+    <p id="log"></p>
+  </main>
+  <script>
+    const log = document.querySelector("#log");
+    const hello = document.querySelector("#hello");
+    const ssid = document.querySelector("#ssid");
+    let port;
+    let reader;
+    let writer;
+    let buffer = "";
+    let generation = 0;
+
+    function enc(value) {
+      return encodeURIComponent(value).replace(/%20/g, "%20");
+    }
+
+    function addNetwork(name, rssi) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = rssi === "" ? name : `${name}  ${rssi} dBm`;
+      ssid.append(option);
+    }
+
+    async function onLine(line) {
+      if (line.startsWith("HELLO ")) {
+        const parts = line.split(" ");
+        generation = Number(parts[2]) || 0;
+        hello.textContent = `已记住 ${parts[3]} 个 Wi-Fi、${parts[4]} 套 OpenClaw`;
+        return;
+      }
+      if (line.startsWith("NET ")) {
+        const parts = line.split(" ");
+        addNetwork(parts.slice(2).join(" "), parts[1]);
+        return;
+      }
+      if (line.startsWith("OK ")) {
+        await send("HELLO");
+        log.textContent = "已写入 AI Passport。第一次连过去时，到 OpenClaw 那台电脑上执行 openclaw devices list，再 approve。";
+        return;
+      }
+      if (line === "ERR stale") {
+        log.textContent = "AI Passport 刚被别的设备改过，已重新读取，再点一次写入。";
+        await send("HELLO");
+        return;
+      }
+      if (line.startsWith("ERR ")) {
+        log.textContent = line;
+      }
+    }
+
+    async function readLoop() {
+      const decoder = new TextDecoder();
+      while (port && port.readable) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value);
+          let nl;
+          while ((nl = buffer.indexOf("\n")) >= 0) {
+            await onLine(buffer.slice(0, nl).replace(/\r$/, ""));
+            buffer = buffer.slice(nl + 1);
+          }
+        } catch (error) {
+          log.textContent = String(error);
+          break;
+        }
+      }
+    }
+
+    async function send(line) {
+      const data = new TextEncoder().encode(line + "\n");
+      await writer.write(data);
+    }
+
+    document.querySelector("#connect").addEventListener("click", async () => {
+      if (!("serial" in navigator)) {
+        log.textContent = "这个浏览器没有 Web Serial。请用桌面版 Chrome 或 Edge。";
+        return;
+      }
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+      reader = port.readable.getReader();
+      writer = port.writable.getWriter();
+      readLoop();
+      await send("HELLO");
+      ssid.replaceChildren();
+      await send("SCAN");
+    });
+
+    document.querySelector("#scan").addEventListener("click", async () => {
+      if (!writer) return;
+      ssid.replaceChildren();
+      await send("SCAN");
+    });
+
+    const promptText = `请给一块 AI Passport 做一次配对。你在运行 OpenClaw 网关的这台电脑上。不要改网关配置，不要重启网关，不要把 gateway.auth.token 写进回复，也不要在命令里加 --token。
+
+AI Passport 是挂在身上的小设备。它自己连 Wi-Fi，再从外面连这台网关。整站转到网关的外网通道已经有了。不要新建入口，不要改网关配置，不要把网关改成局域网监听。
+
+找出这条通道的公网主机名，地址用 wss://那个主机名。只转发某一个路径的主机名不算。不要用 ws://，不要用 127.0.0.1，也不要交局域网地址。
+
+运行：
+
+openclaw qr --json --no-ascii --limited --url wss://找到的主机名
+
+失败就只说明原因。不要换地址，不要改用网关总口令，不要编造配对码。配对码是一长串；只有几位，说明命令没有跑成功。
+
+成功后只回复下面三样，各一次。不要加解释，不要加尖括号，两个值必须来自 JSON 里的 gatewayUrl 和 setupCode：
+
+1. 一张二维码。内容是一行 JSON，url 填 gatewayUrl 的值，code 填 setupCode 的值。
+2. 地址：后面跟 gatewayUrl 的值
+3. 配对码：后面跟 setupCode 的值`;
+
+    document.querySelector("#copy").addEventListener("click", async () => {
+      await navigator.clipboard.writeText(promptText);
+      log.textContent = "已复制。贴给 OpenClaw，再把地址和配对码填回来。";
+    });
+
+    document.querySelector("#form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!writer) {
+        log.textContent = "先连接 AI Passport。";
+        return;
+      }
+      const body = Object.fromEntries(new FormData(event.target));
+      await send(["SAVE", generation, enc(body.ssid), enc(body.pass), enc(body.setup_code)].join(" "));
+    });
+  </script>
+</body>
+</html>

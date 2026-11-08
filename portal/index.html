@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Passport OpenClaw</title>
+  <style>
+    body { margin: 0; background: #141816; color: #ece4d2; font: 18px/1.4 "Songti SC", serif; }
+    main { max-width: 28rem; margin: 0 auto; padding: 1.5rem 1.2rem 3rem; }
+    h1 { font-size: 1.6rem; font-weight: 500; margin: 0 0 0.4rem; }
+    p { color: #968e80; margin: 0 0 1.2rem; }
+    label { display: block; margin: 0.9rem 0 0.3rem; }
+    input { width: 100%; box-sizing: border-box; border: 0; background: #ece4d2; color: #18201c; font: inherit; padding: 0.7rem 0.8rem; }
+    button { margin-top: 1.4rem; width: 100%; border: 0; background: #ece4d2; color: #18201c; font: inherit; padding: 0.8rem; }
+    #result { min-height: 1.4rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>给 AI Passport 加一个 Wi-Fi</h1>
+    <p>只填写 2.4 GHz 网络。OpenClaw 留空则沿用 AI Passport 里已保存的地址。</p>
+    <form id="form">
+      <label for="ssid">Wi-Fi 名称</label>
+      <input id="ssid" name="ssid" autocomplete="off" required>
+      <label for="pass">Wi-Fi 密码</label>
+      <input id="pass" name="pass" type="password" autocomplete="off">
+      <label for="code">配对码</label>
+      <input id="code" name="bootstrap" placeholder="在 OpenClaw 那台电脑上运行 openclaw qr 得到" autocomplete="off">
+      <button type="submit">保存并连接</button>
+    </form>
+    <div id="result"></div>
+  </main>
+  <script>
+    const result = document.querySelector("#result");
+    document.querySelector("#form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const body = Object.fromEntries(new FormData(event.target));
+      const response = await fetch("/save", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      result.textContent = data.message || data.error || "";
+    });
+  </script>
+</body>
+</html>

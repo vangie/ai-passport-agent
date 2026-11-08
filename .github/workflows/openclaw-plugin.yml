@@ -1,0 +1,53 @@
+name: OpenClaw plugin
+
+on:
+  pull_request:
+    paths:
+      - "tools/openclaw/**"
+      - "tests/test_passport_plugin*"
+      - "tests/test_passport_relay*"
+      - "Makefile"
+      - ".github/workflows/openclaw-plugin.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "tools/openclaw/**"
+      - "tests/test_passport_plugin*"
+      - "tests/test_passport_relay*"
+      - "Makefile"
+      - ".github/workflows/openclaw-plugin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openclaw-plugin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin:
+    name: Package and test on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: tools/openclaw/package-lock.json
+      - name: Install locked transport dependency without a second gateway
+        run: npm ci --prefix tools/openclaw --omit=peer --ignore-scripts --no-audit --no-fund
+      - name: Test and package plugin without gateway credentials
+        run: make plugin-package
+      - name: Upload installable plugin
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: openclaw-plugin-node-${{ matrix.node }}
+          path: build/openclaw/*.tgz
+          if-no-files-found: error
+          retention-days: 7

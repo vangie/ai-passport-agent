@@ -1,0 +1,53 @@
+name: Static checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Repository and host checks
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+
+      - name: Install host dependencies
+        run: |
+          brew install mbedtls@3 pkg-config xcodegen
+          echo "PKG_CONFIG_PATH=$(brew --prefix mbedtls@3)/lib/pkgconfig" >> "$GITHUB_ENV"
+          git clone https://github.com/DaveGamble/cJSON.git "$RUNNER_TEMP/cJSON"
+          git -C "$RUNNER_TEMP/cJSON" checkout c859b25da02955fef659d658b8f324b5cde87be3
+          echo "CJSON_SOURCE_DIR=$RUNNER_TEMP/cJSON" >> "$GITHUB_ENV"
+
+      - name: Install verified actionlint
+        run: |
+          actionlint_bin="$(./tools/install-actionlint.sh "$RUNNER_TEMP/actionlint")"
+          echo "ACTIONLINT_BIN=${actionlint_bin}" >> "$GITHUB_ENV"
+
+      - name: Validate repository and run host tests
+        run: |
+          python3 tools/check_public.py
+          bash tools/check-secrets.sh
+          ./tools/validate.sh --static
+
+      - name: Build Mac configuration app
+        run: |
+          cd mac
+          xcodegen generate
+          xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build

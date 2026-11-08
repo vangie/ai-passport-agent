@@ -1,0 +1,28 @@
+#ifndef LV_CONF_H
+#define LV_CONF_H
+
+#define LV_COLOR_DEPTH 16
+#define LV_USE_OS 0
+#define LV_MEM_SIZE (64 * 1024U) /* 64-bit host object overhead; firmware stays 28 KB. */
+#define LV_USE_DRAW_SW 1
+#define LV_DRAW_SW_SUPPORT_RGB565 1
+#define LV_FONT_MONTSERRAT_14 1
+#define LV_FONT_MONTSERRAT_20 1
+#define LV_FONT_FMT_TXT_LARGE 1
+#define LV_USE_FONT_COMPRESSED 1
+#define LV_USE_FONT_PLACEHOLDER 1
+#define LV_USE_LOG 1
+#define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
+#define LV_LOG_PRINTF 1
+#define LV_USE_ASSERT_MALLOC 1
+#define LV_USE_ASSERT_MEM_INTEGRITY 1
+#define LV_USE_ASSERT_OBJ 1
+#define LV_USE_ARC 1
+#define LV_USE_LINE 1
+#define LV_USE_LABEL 1
+#define LV_USE_IMAGE 1
+#define LV_USE_THEME_DEFAULT 0
+#define LV_BUILD_EXAMPLES 0
+#define LV_USE_DEMO_WIDGETS 0
+
+#endif

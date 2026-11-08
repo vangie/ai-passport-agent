@@ -1,0 +1,15 @@
+{
+  "id": "ai-passport-openclaw",
+  "name": "AI Passport OpenClaw",
+  "description": "Bounded audio transport using native device authentication and Talk sessions",
+  "categories": ["infrastructure"],
+  "activation": {"onStartup": true},
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "upstreamProvider": {"type": "string", "default": "openai"},
+      "maxConnections": {"type": "integer", "minimum": 1, "maximum": 32, "default": 4}
+    }
+  }
+}

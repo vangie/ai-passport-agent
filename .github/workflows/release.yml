@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  host-tests:
+    uses: ./.github/workflows/static-checks.yml
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Check public sources
+        run: |
+          python3 tools/check_repo.py
+          python3 tools/check_public.py
+          bash tools/check-secrets.sh
+          actionlint_bin="$(./tools/install-actionlint.sh)"
+          "$actionlint_bin" .github/workflows/*.yml
+
+  firmware:
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        with:
+          path: .ccache
+          key: release-ccache-${{ github.sha }}
+          restore-keys: release-ccache-
+      - name: Build and verify firmware
+        uses: espressif/esp-idf-ci-action@9d38657f3d789ca759b2b37aaf5ceffbc42c4f0d
+        with:
+          esp_idf_version: v5.5.3
+          target: esp32c3
+          extra_docker_args: >-
+            -e CCACHE_DIR=/app/${{ github.repository }}/.ccache
+            -e IDF_CCACHE_ENABLE=1
+          command: ./tools/validate.sh --firmware
+      - name: Package only distributable firmware
+        run: |
+          python3 tools/release.py firmware build/release/firmware
+          tar -czf build/release/ai-passport-openclaw-firmware.tar.gz -C build/release/firmware .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-firmware
+          path: build/release/
+          if-no-files-found: error
+
+  plugin:
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+      - run: npm ci --prefix tools/openclaw --omit=peer --ignore-scripts --no-audit --no-fund
+      - run: make plugin-package
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-plugin
+          path: build/openclaw/*.tgz
+          if-no-files-found: error
+
+  mac:
+    needs: firmware
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-firmware
+          path: build/release-input
+      - run: brew install xcodegen
+      - name: Build universal configuration app
+        run: |
+          cd mac
+          xcodegen generate
+          xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath build \
+            ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
+      - name: Bundle firmware, seal and package app
+        run: |
+          app='mac/build/Build/Products/Release/AI Passport OpenClaw.app'
+          python3 tools/release.py mac-resources "$app" build/release-input/firmware
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          mkdir -p build/release-mac
+          ditto -c -k --sequesterRsrc --keepParent "$app" build/release-mac/ai-passport-openclaw-macos-universal-adhoc.zip
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-mac
+          path: build/release-mac/*.zip
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [audit, host-tests, firmware, plugin, mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: release-*
+          path: build/downloads
+      - name: Prepare versioned assets and checksums
+        run: |
+          mkdir -p dist
+          find build/downloads -type f \( -name '*.tgz' -o -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
+          cp build/downloads/release-firmware/firmware/FoloToy-AI-Passport-full.bin dist/
+          cp build/downloads/release-firmware/firmware/FoloToy-AI-Passport.bin dist/
+          cd dist
+          sha256sum ./* > SHA256SUMS.txt
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" dist/* --verify-tag --generate-notes \
+            --title "AI Passport OpenClaw $RELEASE_TAG" --notes-file docs/release/notes.md
