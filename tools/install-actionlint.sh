@@ -50,7 +50,7 @@ if ! curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
         --pattern "${archive_name}" --dir "${destination}"
 fi
 if command -v sha256sum >/dev/null 2>&1; then
-    printf '%s  %s\n' "${checksum}" "${archive_path}" | sha256sum --check --status
+    printf '%s  %s\n' "${checksum}" "${archive_path}" | sha256sum -c >/dev/null
 elif command -v shasum >/dev/null 2>&1; then
     [[ "$(shasum -a 256 "${archive_path}" | awk '{print $1}')" == "${checksum}" ]]
 else

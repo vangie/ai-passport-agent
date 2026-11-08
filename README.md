@@ -21,7 +21,10 @@ FoloToy firmware or an OpenClaw distribution.
 | Development tools | `tools/`, `tests/`, `sim/` | Host tests, firmware verification, packaging and simulator launchers |
 
 Call uses a realtime voice provider through OpenClaw; Ask submits recorded
-speech to the configured agent. Model credentials stay on the gateway.
+speech to the gateway's `badge` agent. Create that dedicated agent in OpenClaw
+and configure its model/tool permissions before using Ask. Multiple assistant
+profiles select gateway connections; they do not change Ask's agent ID yet.
+Model credentials stay on the gateway.
 Configuration is stored on the Passport; the Mac also remembers useful local
 form values and saved Wi-Fi passwords using platform storage. Do not publish
 configuration exports, pairing codes, logs or device credentials.

@@ -133,17 +133,9 @@ Host tests cover tool-progress/final retention, session reuse, sequence continui
 migration, tamper rejection and rollback refusal after a simulated core upgrade.
 No actual future OpenClaw release upgrade was performed.
 
-The matching application-only firmware was flashed at `0x10000`, preserving
-configuration generation 79, two networks, two assistants, Chinese and volume 80.
-Full-image SHA-256:
-`128e6ce5662d2c54de8bf7b1809e361afedf203012d5d5e9543a1f358b23452b`.
-Application SHA-256:
-`97ab07201ce9e16b344fb9766204ca8311b90aaf48ee39fa3aa55e87cdd22fe5`.
-Matching ELF SHA-256:
-`1753dbe357775fa72607423de0e3f349972de3940804fd525e04d2794b72f2f4`.
-Bounded USB diagnostics confirmed this ELF, intact heap and zero allocation
-failures. Physical Call audio, news-result playback and real network reconnects
-remain user acceptance checks; diagnostics did not start recording.
+Physical Call audio, news-result playback and real network reconnects remain
+user acceptance checks. Published firmware identities come from each Release's
+manifest and checksums, not a developer's earlier local build.
 
 ## Legacy patch reference
 
