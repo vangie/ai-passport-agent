@@ -4,22 +4,24 @@
 
 # Firmware Layout
 
-This repository is a minimal base for user-defined firmware targeting an
-ESP32-C3 with 8 MB Flash. Its default does not reserve product-specific
-identity, OTA, or unused data partitions.
+This application targets an ESP32-C3 with 8 MB Flash. Its layout reserves
+device-identity and audio storage in addition to the firmware and settings.
 
 ## Default layout
 
-The default partition table contains exactly:
+The checked-in `partitions.csv` contains:
 
 | Partition | Type/subtype | Offset | Size | Purpose |
 | --- | --- | ---: | ---: | --- |
 | `nvs` | data/NVS | `0x9000` | `0x6000` | ESP-IDF and application key-value storage |
 | `phy_init` | data/PHY | `0xF000` | `0x1000` | PHY initialization data |
-| `factory` | app/factory | `0x10000` | `0x7F0000` | The single application image; all remaining Flash |
+| `factory` | app/factory | `0x10000` | `0x340000` | The single application image |
+| `cardid` | data/0x40 | `0x350000` | `0x10000` | Reserved device identity data |
+| `audio` | data/0x41 | `0x360000` | `0x4A0000` | Recorded audio storage |
 
-The default has no OTA slots. This is a starting point, not a restriction on
-user firmware.
+There are no OTA slots. The Mac updater writes only the application at
+`0x10000`, with `0x350000` as its exclusive upper bound. Changing these
+boundaries requires updating the updater and its tests, not just this table.
 
 ## Custom layouts
 
@@ -51,9 +53,9 @@ images must fit entirely inside a configured partition; an offset inside that
 partition is allowed. Merely declaring a resource partition does not require a
 preloaded image, but listing an image in `flash_args` makes it mandatory.
 
-Upload only `build/FoloToy-AI-Passport-full.bin`; the similarly named app-only
-`build/FoloToy-AI-Passport.bin` does not contain the bootloader or partition
-table.
+For initial installation, use `build/FoloToy-AI-Passport-full.bin` at `0x0`.
+The similarly named app-only image does not contain a bootloader or partition
+table; release packages include it explicitly for compatible updates at `0x10000`.
 
 ## Flashing and stored data
 
