@@ -59,7 +59,7 @@ struct PassportMacView: View {
     @State private var prober = OpenClawProbe()
     private let accent = Color.accentColor
 
-    var body: some View {
+    private var layout: some View {
         VStack(spacing: 0) {
             header
             Divider()
@@ -74,6 +74,10 @@ struct PassportMacView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .frame(minWidth: 820, minHeight: 640)
+    }
+
+    private var importLifecycle: some View {
+        layout
         .onAppear {
             remembered = WifiMemory.ssids()
             if gatewayURL.isEmpty { gatewayURL = UserDefaults.standard.string(forKey: "gatewayURL") ?? "" }
@@ -89,6 +93,10 @@ struct PassportMacView: View {
             get: { incoming.error != nil }, set: { if !$0 { incoming.error = nil } }
         )) { Button("好", role: .cancel) {} }
         message: { Text(incoming.error ?? "") }
+    }
+
+    private var deviceLifecycle: some View {
+        importLifecycle
         .onChange(of: wifi.current) { _, _ in prefill() }
         .onChange(of: ssid) { old, _ in
             if let old { passwordDrafts[old] = password }
@@ -111,6 +119,10 @@ struct PassportMacView: View {
             } else if let target { agentPick = target.id }
             if let picked = agents.first(where: { $0.id == agentPick }) { routeForm = RouteForm(picked.route) }
         }
+    }
+
+    private var formLifecycle: some View {
+        deviceLifecycle
         .onChange(of: [ssid ?? "", password, name, setupCode]) { _, _ in
             if link.result != .writing { link.result = nil }
         }
@@ -121,6 +133,10 @@ struct PassportMacView: View {
             prober.cancel()
             probe = nil
         }
+    }
+
+    var body: some View {
+        formLifecycle
         .confirmationDialog("让 AI Passport 忘掉「\(forgetting ?? "")」？", isPresented: Binding(
             get: { forgetting != nil }, set: { if !$0 { forgetting = nil } }
         )) {

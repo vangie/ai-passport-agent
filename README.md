@@ -4,7 +4,7 @@
 
 A wearable OpenClaw voice terminal for the **FoloToy AI Passport**: configure it
 from a Mac, then use Wi-Fi without keeping a phone connected. Built for the
-ESP32-C3, 8 MB Flash, 240 × 240 display, microphone, speaker and three buttons.
+ESP32-C3, 8 MB Flash, 240 × 320 display, microphone, speaker and three buttons.
 
 This is an independent community project derived from
 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport), not official

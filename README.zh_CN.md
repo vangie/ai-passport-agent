@@ -2,7 +2,7 @@
 
 # AI Passport OpenClaw
 
-把 **FoloToy AI Passport** 变成随身 OpenClaw 语音终端：用 Mac 配置，之后直接通过 Wi-Fi 工作，不需要一直连接手机。面向 ESP32-C3、8 MB Flash、240 × 240 屏幕、麦克风、扬声器和三个按键。
+把 **FoloToy AI Passport** 变成随身 OpenClaw 语音终端：用 Mac 配置，之后直接通过 Wi-Fi 工作，不需要一直连接手机。面向 ESP32-C3、8 MB Flash、240 × 320 屏幕、麦克风、扬声器和三个按键。
 
 这是基于 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport) 的独立社区项目，不是 FoloToy 官方固件，也不是 OpenClaw 发行版。
 
