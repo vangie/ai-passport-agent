@@ -509,11 +509,11 @@ static void test_agent_rename(void) {
     char log[1024]={0},command[256];
     badge_usb_t usb={.store=&store,.reply=capture_reply,.reply_ctx=log};
     badge_store_t expected=store;
-    badge_usb_line(&usb,"RENAME 1 0 %E6%98%A5%E5%BA%AD%C2%B7Cloudflare");
+    badge_usb_line(&usb,"RENAME 1 0 %E5%8A%A9%E6%89%8B%C2%B7Cloudflare");
     strcpy(expected.agents[0].name,"助手·Cloudflare");badge_store_bump(&expected);
     expect(strstr(log,"OK rename")!=NULL && !memcmp(&store,&expected,sizeof(store)),
            "rename changes only one name and generation, preserving every credential, network and selection");
-    const char *invalid[]={"RENAME 1 1 stale", "RENAME 2 1 %E6%98%A5%E5%BA%AD%C2%B7Cloudflare",
+    const char *invalid[]={"RENAME 1 1 stale", "RENAME 2 1 %E5%8A%A9%E6%89%8B%C2%B7Cloudflare",
         "RENAME 2 1 ", "RENAME 2 8 invalid", "RENAME 2 -1 invalid", "RENAME 2 invalid name",
         "RENAME 2 0x name", "RENAME 2  name", "RENAME 2 0 123456789012345678901234"};
     for(size_t i=0;i<sizeof(invalid)/sizeof(invalid[0]);i++) {
@@ -521,7 +521,7 @@ static void test_agent_rename(void) {
         expect(strstr(log,"ERR ")!=NULL && !memcmp(&store,&expected,sizeof(store)),
                "invalid or stale rename preserves all existing configuration");
     }
-    snprintf(command,sizeof(command),"RENAME %u 1 %%E6%%98%%A5%%E5%%BA%%AD%%C2%%B7SakuraFrp",store.generation);
+    snprintf(command,sizeof(command),"RENAME %u 1 %%E5%%8A%%A9%%E6%%89%%8B%%C2%%B7SakuraFrp",store.generation);
     log[0]=0;badge_usb_line(&usb,command);
     strcpy(expected.agents[1].name,"助手·SakuraFrp");badge_store_bump(&expected);
     expect(strstr(log,"OK rename")!=NULL && !memcmp(&store,&expected,sizeof(store)),
