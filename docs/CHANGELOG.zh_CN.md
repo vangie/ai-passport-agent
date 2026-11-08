@@ -10,7 +10,7 @@
 
 ## Unreleased
 
-## v0.3.0 - 2026-11-08
+## v0.3.1 - 2026-11-08
 
 - 首次独立发布 AI Passport OpenClaw 源码：通话／提问固件、Mac USB 配置及刷机 App、独立原生 OpenClaw 插件。
 - 添加通用局域网、Cloudflare Tunnel 和 SakuraFrp／TLS 配置指南，不分发私人部署地址或凭据。

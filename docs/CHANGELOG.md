@@ -12,7 +12,7 @@
 
 ## Unreleased
 
-## v0.3.0 - 2026-11-08
+## v0.3.1 - 2026-11-08
 
 - First standalone AI Passport OpenClaw source release: wearable Call/Ask firmware,
   Mac USB configuration/flashing app and independent native OpenClaw plugin.
