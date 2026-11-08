@@ -125,6 +125,7 @@ jobs:
           find build/downloads -type f \( -name '*.tgz' -o -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
           cp build/downloads/release-firmware/firmware/FoloToy-AI-Passport-full.bin dist/
           cp build/downloads/release-firmware/firmware/FoloToy-AI-Passport.bin dist/
+          cp LICENSE dist/LICENSE.txt
           cd dist
           sha256sum ./* > SHA256SUMS.txt
       - name: Publish GitHub Release

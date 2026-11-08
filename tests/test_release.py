@@ -44,6 +44,8 @@ class ReleaseTests(unittest.TestCase):
         resources = app / 'Contents/Resources/Passport'
         self.assertTrue((resources / 'tools/flash-app.sh').stat().st_mode & 0o111)
         self.assertTrue((resources / 'build/firmware' / self.manifest['full_bin_sha256'] / 'manifest.json').is_file())
+        self.assertTrue((resources / 'licenses/Noto-SIL-OFL.txt').is_file())
+        self.assertTrue((resources / 'licenses/Monocypher.txt').is_file())
 
     def test_reject_tampering(self):
         (self.source / 'FoloToy-AI-Passport.bin').write_bytes(b'corrupt')

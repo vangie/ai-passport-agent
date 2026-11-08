@@ -11,6 +11,15 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def licenses(destination):
+    sources = {'MIT.txt': 'LICENSE', 'Noto-SIL-OFL.txt': 'assets/fonts/OFL.txt',
+               'Monocypher.txt': 'components/passport_crypto/LICENSE',
+               'ESP-WebSocket-Client.txt': 'components/passport_transport/LICENSE'}
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, source in sources.items():
+        shutil.copy2(ROOT / source, destination / name)
+
+
 def firmware(destination):
     full = ROOT / 'build/FoloToy-AI-Passport-full.bin'
     full_hash = hashlib.sha256(full.read_bytes()).hexdigest()
@@ -22,6 +31,7 @@ def firmware(destination):
         target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(archive / name, target)
+    licenses(destination / 'licenses')
 
 
 def mac_resources(application, source):
@@ -61,6 +71,7 @@ def mac_resources(application, source):
     shutil.copy2(source / 'FoloToy-AI-Passport-full.bin', destination / 'build/FoloToy-AI-Passport-full.bin')
     (destination / 'tools').mkdir()
     shutil.copy2(ROOT / 'tools/flash-app.sh', destination / 'tools/flash-app.sh')
+    licenses(destination / 'licenses')
 
 
 def main():
