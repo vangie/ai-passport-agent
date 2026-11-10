@@ -35,6 +35,6 @@ targets:
       INFOPLIST_KEY_CFBundleDisplayName: AI Passport OpenClaw
       INFOPLIST_KEY_NSLocationUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
       INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
-      MARKETING_VERSION: "0.1"
+      MARKETING_VERSION: "0.4.0"
       CURRENT_PROJECT_VERSION: "1"
       ENABLE_APP_SANDBOX: NO

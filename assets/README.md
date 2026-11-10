@@ -29,11 +29,32 @@ Store reusable source images and generated display assets in `images/`.
 
 | File | Dimensions and format | Use and source |
 | --- | --- | --- |
-| [`images/home.jpg`](images/home.jpg) | 3840 × 2160, JPEG | Product hero image embedded in both project README files to foreground AI Passport and its open, maker-oriented identity. |
+| [`images/home.jpg`](images/home.jpg) | 3840 × 2160, JPEG | Upstream hardware hero retained in the bilingual `docs/README` pages, not the OpenClaw product homepage. |
 | [`images/readme-hardware-specs.png`](images/readme-hardware-specs.png) | 2172 × 724, PNG RGBA | Optional technical infographic retained as a reference asset; it is no longer used as the homepage hero. Generated for this repository with the built-in image generation tool on 2026-09-17; the six labels and values were checked against the documented hardware contract. |
-| [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336, PNG RGBA | Transparent black wordmark extracted from the repository's original `images/logo.png`; embedded in both project README files for light backgrounds. |
-| [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336, PNG RGBA | White version of the extracted wordmark, used by the README `<picture>` element when GitHub is in dark mode. |
+| [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336, PNG RGBA | Transparent black wordmark extracted from the repository's original `images/logo.png`; used by the hardware overview for light backgrounds. |
+| [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336, PNG RGBA | White version of the wordmark, used by the hardware overview's dark-mode `<picture>` element. |
 | [`images/passport-lobster.svg`](images/passport-lobster.svg), [`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22, SVG source and LVGL ARGB8888 | Original project artwork, provided under the repository license. A compact lobster beside the firmware's OpenClaw title; no emoji font is required. Rebuild the C asset with `python3 tools/make_lobster.py` (ImageMagick 7). The 1,936-byte pixel data stays in Flash and uses one image widget. |
+| [`logo/logo.png`](logo/logo.png) | 1024 × 1024, PNG | Existing project/app icon adopted for the OpenClaw README heading. Retained project artwork, not a new hardware photograph. |
+| [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804, PNG RGBA, 8-bit | Home / Ask / Call overview, composed from the three actual firmware renders below, enlarged 2× with nearest-neighbor sampling. Project UI/artwork under the repository license; Noto font notice above applies. |
+| [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png), [`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png), [`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | Each 240 × 320, PNG indexed RGB, 8-bit | Actual `main/passport_screen.c` rendered with the host LVGL setup from `sim/ui_preview/`, using synthetic device state. Original-resolution screenshots, not generated UI mockups. |
+| [`images/screenshots/macos.png`](images/screenshots/macos.png) | 1408 × 1024, PNG RGB, 8-bit | Native SwiftUI Mac app, captured from an isolated demo build. Cropped the 64-pixel system capture/title strip from the 1760 × 1344 capture, then resized to 80%. Project UI under the repository license; system controls retain their platform appearance. |
+| [`images/screenshots/ios.png`](images/screenshots/ios.png) | 804 × 1748, PNG RGBA, 8-bit | Native iPhone app in the iPhone 17 simulator, captured at 1206 × 2622 and resized to two-thirds. Project UI under the repository license; system controls retain their platform appearance. |
+
+### Product screenshot provenance and privacy
+
+The screenshots were refreshed on 2026-11-11. Native app previews used temporary
+isolated builds with synthetic transport/network state and separate example
+bundle identifiers, not a connection to the maintainer's device or Wi-Fi cache.
+Firmware previews used the real screen implementation, fonts, icons and RGB565
+rendering with demo state. `make preview-ui` runs the maintained screen checks;
+these curated product captures use the same renderer with coordinated demo data.
+
+Fixtures use `Passport Home`, `Passport Office`, `Demo iPhone`, a fictional
+assistant and `wss://gateway.example`. Passwords are demo-only, masked or absent;
+no real pairing codes, proxy nodes, endpoint hostnames or device identities were
+used. The image files have metadata stripped and were visually reviewed. These
+are UI previews, not hardware acceptance evidence. Do not replace them with
+unreviewed screenshots of a configured personal device.
 
 - Use descriptive names and document dimensions, pixel format, conversion steps, and destination.
 - Prefer formats suitable for the 240 × 320 RGB565 display and account for Flash and internal RAM.

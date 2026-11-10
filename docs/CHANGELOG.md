@@ -12,6 +12,27 @@
 
 ## Unreleased
 
+## v0.4.0 - 2026-11-11
+
+- Added the iPhone Bluetooth configuration companion: progressive device-side
+  Wi-Fi discovery, saved networks, hotspot hints, pairing and shared draft/save
+  behavior. Standby Bluetooth is enabled by default and configurable on-device.
+- Improved Call audio buffering, mute/interrupt/hangup controls, Ask transcript
+  echo and recent conversation rendering, network switching and connected standby.
+  USB-host presence prevents standby during desktop configuration/maintenance;
+  it is not treated as proof of charging.
+- Refined the Mac configuration workflow, device diagnostics and unified Save /
+  Discard controls, with separate application-only firmware maintenance.
+- Added iPhone physical-device and Simulator build gates plus Simulator UI tests.
+  Releases now include an allowlisted iPhone source kit and Simulator preview;
+  no signed IPA, TestFlight upload or Apple signing credentials are distributed.
+  Mac/iPhone marketing versions and the gateway plugin are now 0.4.0.
+- Reworked the bilingual product README with sanitized firmware/Mac/iPhone
+  screenshots, everyday setup guidance and a tested NFC hotspot automation tip.
+  Network and endpoint examples contain only demonstration data.
+- Retained OpenClaw 2026.10.5 as the tested plugin baseline. Builds and Simulator
+  tests do not replace physical BLE/hotspot, audio or battery acceptance.
+
 ## v0.3.1 - 2026-11-08
 
 - First standalone AI Passport OpenClaw source release: wearable Call/Ask firmware,

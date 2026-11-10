@@ -1,0 +1,92 @@
+name: iPhone app
+
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      - "shared/**"
+      - "tools/release.py"
+      - "tests/test_release.py"
+      - "docs/release/ios-install*"
+      - ".github/workflows/ios.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "ios/**"
+      - "shared/**"
+      - "tools/release.py"
+      - "tests/test_release.py"
+      - "docs/release/ios-install*"
+      - ".github/workflows/ios.yml"
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: Build, test and package iPhone app
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - run: brew install xcodegen
+      - name: Generate Xcode project
+        run: cd ios && xcodegen generate
+      - name: Build unsigned physical-device app
+        run: |
+          xcodebuild -project ios/Passport.xcodeproj -scheme Passport -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath ios/build/device CODE_SIGNING_ALLOWED=NO build
+      - name: Build Simulator app
+        run: |
+          xcodebuild -project ios/Passport.xcodeproj -scheme Passport -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build/simulator CODE_SIGNING_ALLOWED=NO build
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '--json']))
+          phones = [device for runtime, group in devices['devices'].items() if '.iOS-' in runtime
+                    for device in group if device['name'].startswith('iPhone') and device['isAvailable']]
+          if not phones:
+              raise SystemExit('No available iPhone simulator runtime on this runner')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f"udid={phones[0]['udid']}\n")
+          PY
+      - name: Run layout and provisioning UI tests with synthetic data
+        env:
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          xcodebuild -project ios/Passport.xcodeproj -scheme Passport -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath ios/build/tests -resultBundlePath ios/build/tests.xcresult \
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO test
+      - name: Package source and Simulator app, not an unsigned IPA
+        run: |
+          mkdir -p build/release-ios
+          python3 tools/release.py ios-source build/release-ios/ai-passport-openclaw-ios-source.zip
+          ditto -c -k --keepParent ios/build/simulator/Build/Products/Release-iphonesimulator/Passport.app \
+            build/release-ios/ai-passport-openclaw-ios-simulator.zip
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-ios
+          path: build/release-ios/*.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          name: ios-test-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ios/build/tests.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

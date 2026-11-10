@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +68,61 @@ class ReleaseTests(unittest.TestCase):
         self.write_manifest()
         with self.assertRaises(ValueError):
             release.mac_resources(self.root / 'Passport.app', self.source)
+
+    def ios_inputs(self):
+        names = ['ios/project.yml', 'ios/Passport/PassportApp.swift',
+                 'ios/Passport/Info.plist', 'shared/PairPrompt.swift',
+                 'docs/release/ios-install.md', 'docs/release/ios-install.zh_CN.md', 'LICENSE']
+        for name in names:
+            source = self.root / name
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text('fixture')
+        return names
+
+    def test_ios_source_allowlist(self):
+        names = self.ios_inputs() + ['ios/Passport/.env', 'ios/Passport/private.mobileprovision',
+                                   'ios/Passport/xcuserdata/private.json', 'shared/private.json']
+        (self.root / 'docs/release/ios-install.md').write_text('[Chinese](ios-install.zh_CN.md)')
+        (self.root / 'docs/release/ios-install.zh_CN.md').write_text('[English](ios-install.md)')
+        destination = self.root / 'source.zip'
+        with patch.object(release, 'ROOT', self.root), patch.object(
+                release.subprocess, 'check_output', return_value='\0'.join(names).encode()):
+            release.ios_source(destination)
+        with zipfile.ZipFile(destination) as archive:
+            prefix = 'ai-passport-openclaw-ios-source/'
+            self.assertEqual(set(archive.namelist()), {prefix + name for name in [
+                'ios/project.yml', 'ios/Passport/PassportApp.swift', 'ios/Passport/Info.plist',
+                'shared/PairPrompt.swift', 'README.md', 'README.zh_CN.md', 'LICENSE']})
+            self.assertEqual(archive.read(prefix + 'README.md'), b'[Chinese](README.zh_CN.md)')
+            self.assertEqual(archive.read(prefix + 'README.zh_CN.md'), b'[English](README.md)')
+        with patch.object(release, 'ROOT', self.root), patch.object(
+                release.subprocess, 'check_output', return_value='\0'.join(names).encode()):
+            with self.assertRaises(FileExistsError):
+                release.ios_source(destination)
+
+    def test_ios_source_rejects_missing_and_symlink(self):
+        names = self.ios_inputs()
+        with patch.object(release, 'ROOT', self.root), patch.object(
+                release.subprocess, 'check_output', return_value='ios/project.yml\0'.encode()):
+            with self.assertRaises(ValueError):
+                release.ios_source(self.root / 'incomplete.zip')
+        source = self.root / 'ios/Passport/PassportApp.swift'
+        source.unlink()
+        source.symlink_to(self.root / 'LICENSE')
+        with patch.object(release, 'ROOT', self.root), patch.object(
+                release.subprocess, 'check_output', return_value='\0'.join(names).encode()):
+            with self.assertRaises(ValueError):
+                release.ios_source(self.root / 'symlink.zip')
+
+    def test_release_versions_match(self):
+        version = json.loads((ROOT / 'tools/openclaw/package.json').read_text())['version']
+        lock = json.loads((ROOT / 'tools/openclaw/package-lock.json').read_text())
+        self.assertEqual(lock['version'], version)
+        self.assertEqual(lock['packages']['']['version'], version)
+        for name in ['index.mjs', 'doctor.mjs']:
+            self.assertIn(f"pluginVersion: '{version}'", (ROOT / 'tools/openclaw' / name).read_text())
+        for name in ['mac/project.yml', 'ios/project.yml']:
+            self.assertIn(f'MARKETING_VERSION: "{version}"', (ROOT / name).read_text())
 
 
 if __name__ == '__main__':

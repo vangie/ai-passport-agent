@@ -19,8 +19,8 @@ targets:
       path: Passport/Info.plist
       properties:
         CFBundleDisplayName: AI Passport
-        CFBundleShortVersionString: "0.1"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleURLTypes:
           - CFBundleURLName: ai.mirasim.passport.configuration
             CFBundleTypeRole: Editor
@@ -38,6 +38,8 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport
       TARGETED_DEVICE_FAMILY: "1"
       GENERATE_INFOPLIST_FILE: NO
+      MARKETING_VERSION: "0.4.0"
+      CURRENT_PROJECT_VERSION: "1"
   PassportUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -48,3 +50,11 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport.uitests
       GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Passport:
+    build:
+      targets:
+        Passport: all
+    test:
+      targets:
+        - PassportUITests

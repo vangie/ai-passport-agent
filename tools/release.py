@@ -6,9 +6,50 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def ios_source(destination):
+    names = subprocess.check_output(
+        ['git', 'ls-files', '-z', '--', 'ios/Passport', 'ios/PassportUITests',
+         'ios/project.yml', 'shared', 'LICENSE', 'docs/release/ios-install.md',
+         'docs/release/ios-install.zh_CN.md'], cwd=ROOT).decode().split('\0')
+    files = {}
+    for name in filter(None, names):
+        relative = Path(name)
+        allowed = (name in {'ios/project.yml', 'LICENSE', 'docs/release/ios-install.md',
+                            'docs/release/ios-install.zh_CN.md'}
+                   or (relative.is_relative_to('ios/Passport')
+                       and relative.suffix in {'.swift', '.plist', '.json', '.png'})
+                   or (relative.is_relative_to('ios/PassportUITests') and relative.suffix == '.swift')
+                   or (relative.is_relative_to('shared') and relative.suffix == '.swift'))
+        if (not allowed or relative.is_absolute() or '..' in relative.parts
+                or any(part.startswith('.') or part == 'xcuserdata' for part in relative.parts)):
+            continue
+        source = ROOT / relative
+        if (not source.is_file() or source.is_symlink()
+                or not source.resolve().is_relative_to(ROOT.resolve())
+                or any((ROOT / parent).is_symlink() for parent in relative.parents)):
+            raise ValueError('Unsafe iPhone source input')
+        target = {'docs/release/ios-install.md': 'README.md',
+                  'docs/release/ios-install.zh_CN.md': 'README.zh_CN.md'}.get(name, name)
+        files[target] = source
+    required = {'ios/project.yml', 'ios/Passport/PassportApp.swift',
+                'ios/Passport/Info.plist', 'shared/PairPrompt.swift',
+                'README.md', 'README.zh_CN.md', 'LICENSE'}
+    if not required.issubset(files):
+        raise ValueError('Incomplete iPhone source input; commit release inputs first')
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(destination, 'x', compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, source in sorted(files.items()):
+            content = source.read_bytes()
+            if name in {'README.md', 'README.zh_CN.md'}:
+                content = content.replace(b'(ios-install.md)', b'(README.md)').replace(
+                    b'(ios-install.zh_CN.md)', b'(README.zh_CN.md)')
+            archive.writestr(f'ai-passport-openclaw-ios-source/{name}', content)
 
 
 def licenses(destination):
@@ -82,11 +123,15 @@ def main():
     mac = commands.add_parser('mac-resources')
     mac.add_argument('application', type=Path)
     mac.add_argument('firmware', type=Path)
+    ios = commands.add_parser('ios-source')
+    ios.add_argument('destination', type=Path)
     args = parser.parse_args()
     if args.command == 'firmware':
         firmware(args.destination.resolve())
-    else:
+    elif args.command == 'mac-resources':
         mac_resources(args.application.resolve(), args.firmware.resolve())
+    else:
+        ios_source(args.destination.resolve())
 
 
 if __name__ == '__main__':

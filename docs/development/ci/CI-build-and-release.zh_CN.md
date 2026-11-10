@@ -2,11 +2,14 @@
 
 # CI 与 Release
 
-本仓库只发布 AI Passport OpenClaw 一个产品，标签采用 `v<semver>`，如 `v0.3.0`；Release 标题包含产品名。插件和 App 的内部版本可以不同，插件版本以包清单为准。
+本仓库只发布 AI Passport OpenClaw 一个产品，标签采用 `v<semver>`，如 `v0.4.0`；Release 标题包含产品名。
+当前 Mac、iPhone 与插件的营销版本对齐；请检查包清单及 App 版本，不要把它等同于固件协议版本变化。
 
 ## PR 与 main
 
 - `static-checks.yml`：仓库规范、私人地址检查、固定版本 Gitleaks、actionlint、C／Python／Swift 主机测试，以及 macOS 未签名构建。
+- `ios.yml`：未签名真机／模拟器构建、使用虚构数据的布局／配网 UI 测试、白名单源码包与模拟器 ZIP。
+  自动选择已安装的 iPhone 运行时，不写死机型。相关 PR／main 变更触发，Release 复用。
 - `firmware-checks.yml`：ESP-IDF 5.5.3 构建并校验合并固件。
 - `openclaw-plugin.yml`：Node 22／24／26，锁定依赖安装、插件测试和实际 npm 压缩包检查。
 
@@ -23,13 +26,30 @@
 3. 全新 ESP-IDF 构建、布局和哈希校验；从内容寻址的已验证归档打包固件，公开产物不包含 ELF／MAP。
 4. 按锁定依赖构建插件包。
 5. 构建 Intel／Apple Silicon 通用 Mac App，内置同一次发布校验过的固件和刷写工具，再对完整 App 做 ad-hoc 签名并验证。
-6. 所有前置任务成功后，创建 GitHub Release，上传固件、插件、Mac ZIP 和 `SHA256SUMS.txt`。
+6. 复用 iPhone 工作流：无需签名凭据构建真机／模拟器，使用虚构状态运行 Debug UI 测试，
+   打包 Release 模拟器 App 与 iPhone 源码包，不发布未签名 IPA。
+7. 包括 iPhone 检查在内的所有前置任务成功后，才创建 GitHub Release，
+   上传固件、插件、Mac ZIP、iPhone ZIP 和 `SHA256SUMS.txt`。
+
+`tools/release.py ios-source` 只打包已跟踪的 iPhone 源码／素材、UI 测试、
+`shared/*.swift`、XcodeGen 配置、MIT 许可证和双语安装说明。
+不含生成的 Xcode 工程、签名文件、本地设置、构建目录或仓库其他文件。
+提交前仍需检查暂存源码，白名单不能替代密钥扫描。
 
 所有 Action 固定到完整提交 SHA。默认只读，仅最后发布任务获得 `contents: write`。手动触发执行相同构建，但不会发布 Release。不包含远程部署，也不会自动修改任何人的 OpenClaw 安装。
 
 ## 签名与安装限制
 
 默认 Mac 产物是 **ad-hoc 签名，未经 Apple 公证**。流水线不包含也不要求开发者证书。未来如增加公证渠道，应使用 GitHub 加密 Secrets 和临时钥匙串，不能把证书与签名密码放进源码。仅购买开发者账户不会自动公证已有产物。
+
+iPhone 源码包需接收者在本地 Xcode 使用自己的团队签名，支持时可使用免费 Personal Team。
+此流程不发布 App Store、TestFlight 或可下载的已签名真机 App。
+未签名 `iphoneos` 构建只验证能编译，不上传产物。
+模拟器 ZIP 针对构建机架构／SDK，无法连接真实蓝牙，其他环境可能需要从源码构建。
+见 [iPhone 安装说明](../../release/ios-install.zh_CN.md)。
+
+如果以后要签名分发 iOS，需要另行确定分发方式、Apple 团队、Bundle 注册、
+证书／描述文件和受保护的 CI secrets，不会自动把开发者本机签名身份导入 GitHub。
 
 刷机需要本机 Python 3 和 esptool，例如 `pipx install esptool==4.11.0`。内置工具先检查 SHA、ESP32-C3 身份及边界，再将应用写到 `0x10000`；只有分区布局兼容时保留数据。合并镜像应写到 `0x0`，可能重置配置，不是日常仅应用区更新的路径。
 

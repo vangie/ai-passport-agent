@@ -27,11 +27,29 @@
 
 | 文件 | 尺寸与格式 | 用途与来源 |
 | --- | --- | --- |
-| [`images/home.jpg`](images/home.jpg) | 3840 × 2160，JPEG | 嵌入中英文项目 README 的产品主图，突出 AI Passport 产品形象与开放、人人可创作的理念。 |
+| [`images/home.jpg`](images/home.jpg) | 3840 × 2160，JPEG | 保留在中英文 `docs/README` 中的上游硬件主图，不用于 OpenClaw 产品首页。 |
 | [`images/readme-hardware-specs.png`](images/readme-hardware-specs.png) | 2172 × 724，PNG RGBA | 保留为可选技术参考图，不再用于首页主视觉。于 2026-09-17 使用内置图像生成工具为本仓库生成；已根据文档中的硬件能力契约核对图中的六项标签与参数。 |
-| [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336，PNG RGBA | 从仓库原始 `images/logo.png` 中精确裁切并去除背景的黑色字标；用于中英文项目 README 的浅色主题。 |
-| [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336，PNG RGBA | 提取字标的白色版本；README 使用 `<picture>` 在 GitHub 深色主题下显示。 |
+| [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336，PNG RGBA | 从仓库原始 `images/logo.png` 中精确裁切并去除背景的黑色字标，用于硬件概览浅色主题。 |
+| [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336，PNG RGBA | 字标的白色版本，由硬件概览的 `<picture>` 元素在深色主题使用。 |
 | [`images/passport-lobster.svg`](images/passport-lobster.svg)、[`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22，SVG 源图和 LVGL ARGB8888 | 项目原创图案，按仓库许可证提供。用于固件 OpenClaw 标题旁的小龙虾，不依赖 emoji 字体。运行 `python3 tools/make_lobster.py`（ImageMagick 7）可重新生成 C 资源。1,936 字节像素数据保存在 Flash 中，只使用一个图片控件。 |
+| [`logo/logo.png`](logo/logo.png) | 1024 × 1024，PNG | 既有项目／App 图标，用于 OpenClaw README 标题。沿用项目素材，并非新增硬件实拍。 |
+| [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804，PNG RGBA，8 位 | 首页／提问／通话总览，由下述真实渲染图以最近邻放大 2 倍后排版。项目 UI／图案按仓库许可证提供，Noto 字体声明见上文。 |
+| [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png)、[`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png)、[`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | 各 240 × 320，PNG 索引 RGB，8 位 | 使用 `sim/ui_preview/` 的主机 LVGL 环境，以虚构设备状态渲染实际 `main/passport_screen.c`。原始分辨率截图，不是生成的 UI 概念图。 |
+| [`images/screenshots/macos.png`](images/screenshots/macos.png) | 1408 × 1024，PNG RGB，8 位 | 隔离演示构建中的原生 SwiftUI Mac App。1760 × 1344 原图去掉顶部 64 像素系统捕获／标题条，再缩至 80%。项目 UI 按仓库许可证提供，系统控件保留平台外观。 |
+| [`images/screenshots/ios.png`](images/screenshots/ios.png) | 804 × 1748，PNG RGBA，8 位 | iPhone 17 模拟器中的原生 App，1206 × 2622 截图缩至三分之二。项目 UI 按仓库许可证提供，系统控件保留平台外观。 |
+
+### 产品截图来源与隐私
+
+截图更新于 2026-11-11。原生 App 使用临时隔离构建、虚构的传输／网络状态和独立示例
+Bundle ID，不连接维护者的设备，也不读取其 Wi-Fi 缓存。
+固件使用实际界面实现、字体、图标及 RGB565 渲染，填入演示状态。
+`make preview-ui` 运行维护中的界面检查；这些产品展示图使用同一渲染器和统一演示数据。
+
+演示网络为 `Passport Home`、`Passport Office`、`Demo iPhone`，
+助手为虚构名称，网关为 `wss://gateway.example`。
+密码仅为演示值、掩码或留空，不包含真实配对码、代理节点、入口域名或设备身份。
+图片已剥离元数据并逐张检查，只用于展示界面，不代表硬件验收。
+请勿替换为未经检查的个人设备配置截图。
 
 - 使用描述性命名，并记录尺寸、像素格式、转换步骤与目标路径。
 - 优先采用适合 240 × 320 RGB565 显示的格式，并纳入 Flash 与内部 RAM 考量。
