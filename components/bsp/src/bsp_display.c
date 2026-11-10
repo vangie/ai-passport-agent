@@ -19,6 +19,7 @@ static esp_lcd_panel_io_handle_t s_io;
 static bool                      s_bus_ready;
 static bool                      s_bl_ready;
 static bool                      s_ready;
+static uint8_t s_brightness;
 
 static const gpio_num_t s_deep_sleep_pins[] = {
     BSP_LCD_CS, BSP_LCD_SCLK, BSP_LCD_MOSI, BSP_LCD_DC, BSP_LCD_BL,
@@ -234,10 +235,34 @@ esp_lcd_panel_io_handle_t bsp_display_io(void) { return s_io; }
 void bsp_display_backlight(uint8_t percent) {
     if (!s_bl_ready) return;
     if (percent > 100) percent = 100;
+    s_brightness = percent;
     uint32_t max_duty = (1u << BSP_BL_LEDC_RES) - 1u;
     uint32_t duty = (max_duty * percent) / 100u;
     ledc_set_duty(BSP_BL_LEDC_MODE, BSP_BL_LEDC_CHANNEL, duty);
     ledc_update_duty(BSP_BL_LEDC_MODE, BSP_BL_LEDC_CHANNEL);
+}
+
+esp_err_t bsp_display_set_sleep(bool sleep) {
+    if (!s_ready || !s_panel) return ESP_ERR_INVALID_STATE;
+    uint8_t brightness = s_brightness;
+    if (sleep) {
+        bsp_display_backlight(0);
+        s_brightness = brightness;
+        esp_err_t error = esp_lcd_panel_disp_on_off(s_panel, false);
+        if (error == ESP_OK) error = esp_lcd_panel_disp_sleep(s_panel, true);
+        if (error == ESP_OK) return ESP_OK;
+        (void)esp_lcd_panel_disp_sleep(s_panel, false);
+        (void)esp_lcd_panel_disp_on_off(s_panel, true);
+        bsp_display_backlight(brightness);
+        return error;
+    }
+    esp_err_t error = esp_lcd_panel_disp_sleep(s_panel, false);
+    if (error == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(20));
+        error = esp_lcd_panel_disp_on_off(s_panel, true);
+    }
+    if (error == ESP_OK) bsp_display_backlight(brightness);
+    return error;
 }
 
 esp_err_t bsp_display_prepare_deep_sleep(void) {

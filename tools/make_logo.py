@@ -11,7 +11,7 @@ Mac 窗口顶部那张图另用 assets/logo/header.jpg，裁成圆角存进 Mac 
   assets/logo/logo.png                      1024，透明圆角，README 用
   mac/PassportMac/Assets.xcassets/Passport...  Mac 窗口顶部的图
   mac/PassportMac/Assets.xcassets/AppIcon...   Mac 各尺寸
-  ios/Badge/Assets.xcassets/AppIcon...      iPhone 1024，满版无透明
+  ios/Passport/Assets.xcassets/AppIcon...      iPhone 1024，满版无透明
 """
 
 import json
@@ -130,7 +130,7 @@ def write_mac(icon):
 
 
 def write_ios(full):
-    folder = ROOT / "ios/Badge/Assets.xcassets/AppIcon.appiconset"
+    folder = ROOT / "ios/Passport/Assets.xcassets/AppIcon.appiconset"
     folder.mkdir(parents=True, exist_ok=True)
     full.resize((S, S), Image.LANCZOS).convert("RGB").save(folder / "icon-1024.png")
     write_contents(folder, [{"idiom": "universal", "platform": "ios", "size": "1024x1024",

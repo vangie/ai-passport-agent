@@ -19,6 +19,10 @@ for (const language of ['zh', 'en', undefined, 'fr']) {
     assert(instructions.includes('openclaw_agent_consult') && instructions.includes('weather'));
     assert(instructions.includes('private memory') && instructions.includes('relevant context from this call'));
     assert(instructions.includes('openclaw_agent_control') && instructions.includes('confirmation requirements'));
+    assert(!instructions.includes('passport_end_call'));
+    const callInstructions = withPassportVoiceInstructions(baseInstructions, language, true, true);
+    assert(callInstructions.includes('passport_end_call') && callInstructions.includes('我不想聊了'));
+    assert(callInstructions.includes('requests not to hang up do not end the call'));
     assert(instructions.includes('Never invent live facts') && instructions.includes('clarification'));
 }
 assert(withPassportVoiceInstructions(undefined, 'zh', true).includes('普通话'));
@@ -124,12 +128,13 @@ assert.equal(test.output.diagnostics().queuedBytes, 0);
 assert.equal(test.timers.size, 0);
 assert.equal(test.failures.length, 0);
 
-for (const ending of ['clear', 'close']) {
+for (const ending of ['clear', 'close', 'discard']) {
     const current = fixture();
     for (let frame = 0; frame < 50; frame++) current.output.send(audio);
     current.output.send({type: 'mark'});
     current.output.send({type: 'audioDone'});
     if (ending === 'clear') current.output.send({type: 'clear'});
+    else if (ending === 'discard') current.output.discardOutput();
     else current.output.close();
     const count = current.events.length;
     current.advance(10000);
@@ -138,7 +143,7 @@ for (const ending of ['clear', 'close']) {
     assert.equal(current.output.diagnostics().queuedBytes, 0);
     current.output.send(audio);
     current.advance(10020);
-    assert.equal(current.events.length, count + (ending === 'clear' ? 1 : 0));
+    assert.equal(current.events.length, count + (ending !== 'close' ? 1 : 0));
 }
 
 const bounded = fixture({maxBytes: 1920});

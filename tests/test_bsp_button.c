@@ -11,6 +11,8 @@ static int create_calls, callback_calls, fail_create, fail_callback;
 static int fail_adc, fail_channel, fail_cal, fail_read, fail_convert, fail_delete;
 static int raw_mv, reads, events;
 static int64_t clock_us;
+esp_err_t iot_button_stop(void) { return ESP_OK; }
+esp_err_t iot_button_resume(void) { return ESP_OK; }
 
 esp_err_t adc_oneshot_new_unit(const adc_oneshot_unit_init_cfg_t *cfg, adc_oneshot_unit_handle_t *h) {
     assert(cfg->unit_id == BSP_BTN_ADC_UNIT && !adc_live);
@@ -157,7 +159,12 @@ static void check_deep_sleep_prepare(void) {
 }
 static void retry_success(void) {
     assert_clean(); reset_faults();
+    assert(bsp_button_set_polling(false) == ESP_ERR_INVALID_STATE);
     assert(bsp_button_init(event_cb, &events) == ESP_OK);
+    raw_mv = 300;
+    assert(bsp_button_set_polling(false) == ESP_OK);
+    assert(bsp_button_read_mv() == 300 && adc_live && cal_live);
+    assert(bsp_button_set_polling(true) == ESP_OK);
     assert(create_calls == BSP_BTN_COUNT && live_buttons == BSP_BTN_COUNT);
     assert(bsp_button_init(event_cb, &events) == ESP_OK);
     assert(create_calls == BSP_BTN_COUNT);

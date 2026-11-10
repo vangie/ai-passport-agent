@@ -1,4 +1,4 @@
-#include "badge.h"
+#include "passport.h"
 
 #include <SDL.h>
 #include <stdio.h>
@@ -9,9 +9,9 @@
 
 #define SCALE 2
 
-static badge_store_t g_store;
-static badge_view_t g_view;
-static char g_form_ssid[BADGE_SSID_MAX] = "Cafe";
+static passport_store_t g_store;
+static passport_view_t g_view;
+static char g_form_ssid[PASSPORT_SSID_MAX] = "Cafe";
 typedef struct {
     SDL_Texture *tex;
     int w;
@@ -26,8 +26,8 @@ static int g_label_count;
 static SDL_Renderer *g_renderer;
 
 static SDL_Texture *bake_label(const char *text, SDL_Color color, int *w, int *h) {
-    char path[] = "/tmp/badge-label.ppm";
-    char script[] = "/tmp/badge-label.py";
+    char path[] = "/tmp/passport-label.ppm";
+    char script[] = "/tmp/passport-label.py";
     FILE *fp = fopen(script, "w");
     if (fp == NULL) {
         return NULL;
@@ -35,22 +35,22 @@ static SDL_Texture *bake_label(const char *text, SDL_Color color, int *w, int *h
     fprintf(fp,
             "import sys\n"
             "from PIL import Image, ImageDraw, ImageFont\n"
-            "text=open('/tmp/badge-label.txt',encoding='utf-8').read()\n"
+            "text=open('/tmp/passport-label.txt',encoding='utf-8').read()\n"
             "font=ImageFont.truetype('%s', 18)\n"
             "box=font.getbbox(text)\n"
             "w=max(1, box[2]-box[0]+2); h=max(1, box[3]-box[1]+2)\n"
             "im=Image.new('RGB',(w,h),(%d,%d,%d))\n"
             "ImageDraw.Draw(im).text((-box[0], -box[1]), text, font=font, fill=(0,0,0))\n"
-            "im.save('/tmp/badge-label.ppm')\n",
+            "im.save('/tmp/passport-label.ppm')\n",
             FONT_PATH, color.r, color.g, color.b);
     fclose(fp);
-    fp = fopen("/tmp/badge-label.txt", "w");
+    fp = fopen("/tmp/passport-label.txt", "w");
     if (fp == NULL) {
         return NULL;
     }
     fputs(text, fp);
     fclose(fp);
-    int rc = system("python3 /tmp/badge-label.py");
+    int rc = system("python3 /tmp/passport-label.py");
     if (rc != 0) {
         return NULL;
     }
@@ -182,13 +182,13 @@ static void draw_lobster(SDL_Renderer *r, int x, int y) {
     fill(r, x + 16, y + 30, 28, 4, coral);
 }
 
-static const char *link_name(badge_link_t link) {
+static const char *link_name(passport_link_t link) {
     switch (link) {
-        case BADGE_LINK_JOINING: return "连接中";
-        case BADGE_LINK_ONLINE: return "已联网";
-        case BADGE_LINK_GATEWAY: return "Agent 在线";
-        case BADGE_LINK_FAILED: return "失败";
-        case BADGE_LINK_OFF:
+        case PASSPORT_LINK_JOINING: return "连接中";
+        case PASSPORT_LINK_ONLINE: return "已联网";
+        case PASSPORT_LINK_GATEWAY: return "Agent 在线";
+        case PASSPORT_LINK_FAILED: return "失败";
+        case PASSPORT_LINK_OFF:
         default: return "未联网";
     }
 }
@@ -204,7 +204,7 @@ static void render(SDL_Renderer *r) {
     draw_bluetooth(r, 190, 12, g_view.bluetooth_ready);
     draw_battery(r, 211, 10, g_view.battery_soc);
 
-    if (g_view.screen == BADGE_SCREEN_HOME || g_view.screen == BADGE_SCREEN_CAPTURE || g_view.screen == BADGE_SCREEN_PROGRESS || g_view.screen == BADGE_SCREEN_FAILURE) {
+    if (g_view.screen == PASSPORT_SCREEN_HOME || g_view.screen == PASSPORT_SCREEN_CAPTURE || g_view.screen == PASSPORT_SCREEN_PROGRESS || g_view.screen == PASSPORT_SCREEN_FAILURE) {
         char line[96];
         const char *ssid = "无网络";
         if (g_store.connected >= 0) {
@@ -216,13 +216,13 @@ static void render(SDL_Renderer *r) {
         draw_lobster(r, 26, 80);
         draw_text(r, 26, 126, g_view.recording ? "正在听" : g_view.reply, cream);
         if (g_view.recording) {
-            for (int i = 0; i < BADGE_WAVEFORM_BARS; i++) {
+            for (int i = 0; i < PASSPORT_WAVEFORM_BARS; i++) {
                 int h = 4 + g_view.waveform[i] / 5;
                 fill(r, 28 + i * 7, 220 - h / 2, 4, h,
                      (SDL_Color){112, 230, 245, 255});
             }
         }
-    } else if (g_view.screen == BADGE_SCREEN_NETS) {
+    } else if (g_view.screen == PASSPORT_SCREEN_NETS) {
         draw_text(r, 16, 44, "已保存的网络", dim);
         for (size_t i = 0; i < g_store.count; i++) {
             char line[80];
@@ -232,12 +232,12 @@ static void render(SDL_Renderer *r) {
         }
         row(r, 72 + (int)g_store.count * 42, "添加网络",
             g_view.cursor == (int)g_store.count);
-    } else if (g_view.screen == BADGE_SCREEN_NET_MENU) {
-        const badge_net_t *net = &g_store.nets[g_view.cursor];
+    } else if (g_view.screen == PASSPORT_SCREEN_NET_MENU) {
+        const passport_net_t *net = &g_store.nets[g_view.cursor];
         draw_text(r, 16, 48, net->name, cream);
         draw_text(r, 16, 74, net->ssid, dim);
         draw_text(r, 16, 120, "可设为优先网络", dim);
-    } else if (g_view.screen == BADGE_SCREEN_ADD) {
+    } else if (g_view.screen == PASSPORT_SCREEN_ADD) {
         char line[96];
         draw_text(r, 16, 48, "扫码打开配置页", cream);
         fill(r, 70, 96, 100, 100, cream);
@@ -246,9 +246,9 @@ static void render(SDL_Renderer *r) {
         snprintf(line, sizeof(line), "SSID %s", g_form_ssid);
         draw_text(r, 16, 214, line, dim);
         draw_text(r, 16, 246, "打开配置应用进行编辑", dim);
-    } else if (g_view.screen == BADGE_SCREEN_SETTINGS) {
+    } else if (g_view.screen == PASSPORT_SCREEN_SETTINGS) {
         char line[120];
-        const badge_agent_t *agent = badge_agent_active(&g_store);
+        const passport_agent_t *agent = passport_agent_active(&g_store);
         draw_text(r, 16, 48, agent != NULL ? agent->name : "尚未配置", cream);
         snprintf(line, sizeof(line), "%s", agent != NULL ? agent->url : "用手机添加 agent");
         draw_text(r, 16, 84, line, dim);
@@ -261,8 +261,8 @@ static void render(SDL_Renderer *r) {
     fill(r,208,29,32,291,bg);
     const int centres[] = {47,163,280};
     for(int i=0;i<3;i++) {
-        badge_key_binding_t binding=badge_key_binding(&g_view,&g_store,(badge_btn_t)i);
-        const char *text=badge_action_label(binding.action,true);
+        passport_key_binding_t binding=passport_key_binding(&g_view,&g_store,(passport_btn_t)i);
+        const char *text=passport_action_label(binding.action,true);
         SDL_Color color=binding.enabled ? (i==2 ? (SDL_Color){255,179,62,255} : (SDL_Color){112,230,245,255}) : dim;
         if(strlen(text)==6) {
             char glyph[4]={0};memcpy(glyph,text,3);draw_text(r,215,centres[i]-20,glyph,color);
@@ -272,35 +272,36 @@ static void render(SDL_Renderer *r) {
     SDL_RenderPresent(r);
 }
 
-static void handle_key(badge_btn_t btn, badge_press_t press) {
+static void handle_key(passport_btn_t btn, passport_press_t press) {
     int selected=g_view.cursor;
-    badge_action_t action=badge_on_key(&g_view,&g_store,btn,press);
+    passport_action_t action=passport_on_key(&g_view,&g_store,btn,press);
     if (g_view.cancel_pending) {
-        bool restart=badge_finish_cancel(&g_view,"本次操作已取消");
-        if (restart) badge_on_key(&g_view,&g_store,BADGE_BTN_OK,BADGE_CLICK);
+        bool restart=passport_finish_cancel(&g_view,"本次操作已取消");
+        if (restart) passport_on_key(&g_view,&g_store,PASSPORT_BTN_OK,PASSPORT_CLICK);
         return;
     }
-    if(action==BADGE_ACT_PRIORITIZE) {
-        badge_store_promote(&g_store,(size_t)selected);g_view.cursor=0;g_view.screen=BADGE_SCREEN_NETS;
-    } else if(action==BADGE_ACT_SELECT_AGENT) badge_agent_select(&g_store,(size_t)selected);
-    else if(action==BADGE_ACT_ADD_NETWORK || action==BADGE_ACT_CONFIGURE || action==BADGE_ACT_ENABLE_CONFIG) g_view.bluetooth_ready=true;
-    else if(action==BADGE_ACT_CLOSE_CONFIG) g_view.bluetooth_ready=false;
-    else if(action==BADGE_ACT_SEND || action==BADGE_ACT_RETRY) badge_finish_send(&g_view,true,false,"模拟回复：语音已发送");
+    if(action==PASSPORT_ACT_CONNECT_NETWORK) {
+        g_store.connected=selected;g_view.wifi_online=true;
+        g_view.network_target=selected;g_view.network_state=PASSPORT_NETWORK_CONNECTED;
+    } else if(action==PASSPORT_ACT_SELECT_AGENT) passport_agent_select(&g_store,(size_t)selected);
+    else if(action==PASSPORT_ACT_ADD_NETWORK || action==PASSPORT_ACT_CONFIGURE || action==PASSPORT_ACT_ENABLE_CONFIG) g_view.bluetooth_ready=true;
+    else if(action==PASSPORT_ACT_CLOSE_CONFIG) g_view.bluetooth_ready=false;
+    else if(action==PASSPORT_ACT_SEND || action==PASSPORT_ACT_RETRY) passport_finish_send(&g_view,true,false,"模拟回复：语音已发送");
 }
 
 int main(void) {
-    badge_store_init(&g_store);
-    badge_view_init(&g_view);
-    badge_store_add(&g_store, "家里", "home-wifi", "secret");
-    badge_store_add(&g_store, "手机热点", "iPhone", "hotspot");
+    passport_store_init(&g_store);
+    passport_view_init(&g_view);
+    passport_store_add(&g_store, "家里", "home-wifi", "secret");
+    passport_store_add(&g_store, "手机热点", "iPhone", "hotspot");
     g_store.connected = 0;
-    badge_agent_upsert(&g_store, "家里", "openclaw", "wss://gateway.example", NULL, "device", NULL,
+    passport_agent_upsert(&g_store, "家里", "openclaw", "wss://gateway.example", NULL, "device", NULL,
                        NULL);
-    badge_agent_upsert(&g_store, "公司", "openclaw", "wss://work.example", "boot", NULL, NULL, NULL);
+    passport_agent_upsert(&g_store, "公司", "openclaw", "wss://work.example", "boot", NULL, NULL, NULL);
     g_view.wifi_online = true;
     g_view.bluetooth_ready = true;
     g_view.battery_soc = 82;
-    badge_set_status(&g_view, BADGE_LINK_GATEWAY, "Agent 在线");
+    passport_set_status(&g_view, PASSPORT_LINK_GATEWAY, "Agent 在线");
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
@@ -308,9 +309,9 @@ int main(void) {
     }
     SDL_Window *window = SDL_CreateWindow(
         "ai-passport-openclaw", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        BADGE_LCD_W * SCALE, BADGE_LCD_H * SCALE, SDL_WINDOW_SHOWN);
+        PASSPORT_LCD_W * SCALE, PASSPORT_LCD_H * SCALE, SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_RenderSetLogicalSize(renderer, BADGE_LCD_W, BADGE_LCD_H);
+    SDL_RenderSetLogicalSize(renderer, PASSPORT_LCD_W, PASSPORT_LCD_H);
 
     int running = 1;
     while (running) {
@@ -327,13 +328,13 @@ int main(void) {
                 if (key == SDLK_ESCAPE || key == SDLK_q) {
                     running = 0;
                 } else if (key == SDLK_UP) {
-                    handle_key(BADGE_BTN_UP, BADGE_CLICK);
+                    handle_key(PASSPORT_BTN_UP, PASSPORT_CLICK);
                 } else if (key == SDLK_DOWN) {
-                    handle_key(BADGE_BTN_DOWN, BADGE_CLICK);
+                    handle_key(PASSPORT_BTN_DOWN, PASSPORT_CLICK);
                 } else if (key == SDLK_RETURN) {
-                    handle_key(BADGE_BTN_OK, BADGE_CLICK);
+                    handle_key(PASSPORT_BTN_OK, PASSPORT_CLICK);
                 } else if (key == SDLK_SPACE) {
-                    handle_key(BADGE_BTN_OK, BADGE_CLICK);
+                    handle_key(PASSPORT_BTN_OK, PASSPORT_CLICK);
                 }
             }
         }

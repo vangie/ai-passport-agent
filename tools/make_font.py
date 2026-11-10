@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate the badge fonts, including reply punctuation and temperature signs."""
+"""Regenerate the passport fonts, including reply punctuation and temperature signs."""
 
 import argparse
 from pathlib import Path
@@ -29,15 +29,15 @@ def main():
         "npx", "--yes", "lv_font_conv@1.5.3", "--font", str(font),
         "--range", RANGES, "--symbols", PUNCTUATION,
         "--size", "16", "--bpp", "2", "--format", "lvgl",
-        "--no-kerning", "--lv-include", "lvgl.h", "--lv-font-name", "badge_font_16",
-        "-o", "assets/fonts/badge_font_16.c",
+        "--no-kerning", "--lv-include", "lvgl.h", "--lv-font-name", "passport_font_16",
+        "-o", "assets/fonts/passport_font_16.c",
     ], cwd=ROOT, check=True)
     subprocess.run([
         "npx", "--yes", "lv_font_conv@1.5.3", "--font", str(font),
         "--range", "0x20-0x7e", "--symbols", HEADLINES,
         "--size", "20", "--bpp", "2", "--format", "lvgl", "--no-kerning",
-        "--lv-include", "lvgl.h", "--lv-font-name", "badge_font_20",
-        "-o", "assets/fonts/badge_font_20.c",
+        "--lv-include", "lvgl.h", "--lv-font-name", "passport_font_20",
+        "-o", "assets/fonts/passport_font_20.c",
     ], cwd=ROOT, check=True)
 
 

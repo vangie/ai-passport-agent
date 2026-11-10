@@ -55,7 +55,7 @@ struct BuiltFirmware {
     }
 
     /// ESP image header (24), segment header (8), then esp_app_desc_t.
-    /// The descriptor's ELF SHA begins at byte 144; compare exactly what the badge reports.
+    /// The descriptor's ELF SHA begins at byte 144; compare exactly what the passport reports.
     static func identity(in image: Data) -> String? {
         guard image.count >= 288, appOffset + image.count <= cardid,
               image[0] == 0xe9, image[12] == 5,

@@ -21,6 +21,7 @@ export function forwardedAddress(req) {
 export function createPassportConnection({sendUpstream, sendClient, close, now, schedule, cancel}) {
     let phase = 'challenge', connectId, createId, sessionId, ima = false, closed = false;
     let downstreamSequence = 0, upstreamSequence;
+    let cancellingOutput = false;
     const requests = new Map();
     function emit(frame) {
         if (frame.type === 'event' && frame.event !== 'connect.challenge') frame = {...frame, seq: ++downstreamSequence};
@@ -31,7 +32,7 @@ export function createPassportConnection({sendUpstream, sendClient, close, now, 
         fail: () => stop('Passport playback queue exceeded its bound'), now, schedule, cancel});
     let output = makeOutput();
     function resetSession() {
-        output.close(); output = makeOutput(); sessionId = undefined;
+        output.close(); output = makeOutput(); sessionId = undefined; cancellingOutput = false;
     }
     function stop(reason) {
         if (closed) return;
@@ -80,6 +81,11 @@ export function createPassportConnection({sendUpstream, sendClient, close, now, 
                     if (!decoded) return reject(frame.id, 'Passport audio format was not negotiated');
                     frame = {...frame, params: {...frame.params, audioBase64: decoded.toString('base64')}};
                 }
+                if (frame.method === 'talk.session.cancelOutput') {
+                    if (cancellingOutput) return reject(frame.id, 'Passport interruption is already pending');
+                    cancellingOutput = true;
+                    output.discardOutput();
+                }
             }
             track(frame); sendUpstream(frame);
         } catch { stop('Invalid Passport protocol or unsupported audio'); }
@@ -114,9 +120,15 @@ export function createPassportConnection({sendUpstream, sendClient, close, now, 
                 }
             }
             if (method === 'talk.session.close' && frame.ok) resetSession();
+            if (method === 'talk.session.cancelOutput') {
+                output.discardOutput(); cancellingOutput = false;
+                if (frame.ok) output.send({relaySessionId: sessionId, type: 'clear'});
+            }
             if (frame.event === 'talk.event') {
                 const payload = frame.payload;
                 if (!payload || !sessionId || payload.relaySessionId !== sessionId) return;
+                if (cancellingOutput && (['responseStarted', 'audio', 'mark', 'audioDone'].includes(payload.type) ||
+                    ['transcript', 'partial'].includes(payload.type) && payload.role === 'assistant')) return;
                 if (payload.type === 'close') {
                     resetSession(); emit(frame); return;
                 }

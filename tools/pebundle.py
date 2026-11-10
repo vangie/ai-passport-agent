@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FULL = ROOT / "build" / "FoloToy-AI-Passport-full.bin"
-OUT = ROOT / "build" / "badge.pebundle"
+OUT = ROOT / "build" / "passport.pebundle"
 
 
 def main() -> int:
@@ -26,7 +26,7 @@ def main() -> int:
     except (OSError, ValueError) as error:
         print(f"没有匹配的固件和 ELF：{error}", file=sys.stderr)
         return 1
-    (ROOT / "build" / "badge-flash.bin").write_bytes(flash)
+    (ROOT / "build" / "passport-flash.bin").write_bytes(flash)
     manifest = "\n".join([
         "[bundle]",
         'id = "ai-passport-openclaw"',

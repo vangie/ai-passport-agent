@@ -1,4 +1,5 @@
-#include "badge.h"
+#include "passport.h"
+#include "passport_control.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -8,15 +9,35 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#define SOCK_PATH "/tmp/badge-config.sock"
+#define SOCK_PATH "/tmp/passport-config.sock"
 
-static badge_store_t g_store;
-static badge_scan_t g_scan[2];
+static passport_store_t g_store;
+static passport_scan_t g_scan[2];
 static int g_client = -1;
+static unsigned g_volume = PASSPORT_VOLUME_DEFAULT;
+static int reply(void *ctx, const char *line);
+
+static bool device_control(const char *line) {
+    char output[160];
+    if (!strcmp(line, "DEVICE")) {
+        passport_control_status(output, sizeof(output), g_volume, -1, false, false, false, false);
+        reply(NULL, output);
+    } else if (!strncmp(line, "VOLUME ", 7)) {
+        unsigned expected, desired;
+        if (!passport_control_volume(line, &expected, &desired)) reply(NULL, "ERR control");
+        else if (expected != g_volume) reply(NULL, "ERR stale");
+        else { g_volume = desired; reply(NULL, "OK volume"); }
+        passport_control_status(output, sizeof(output), g_volume, -1, false, false, false, false);
+        reply(NULL, output);
+    } else if (!strcmp(line, "CHECK")) reply(NULL, "CHECK simulated");
+    else if (!strcmp(line, "CHECK_CANCEL")) reply(NULL, "CHECK cancelled");
+    else return false;
+    return true;
+}
 
 static int reply(void *ctx, const char *line) {
     (void)ctx;
-    char buf[BADGE_URL_MAX + 64];
+    char buf[PASSPORT_URL_MAX + 64];
     int n = snprintf(buf, sizeof(buf), "%s\n", line);
     if (n < 0 || g_client < 0) {
         return -1;
@@ -37,8 +58,8 @@ static const char *join(void *ctx, const char *ssid, const char *pass, bool keep
 
 static void persist(void) {
     uint8_t blob[2048];
-    int n = badge_store_save(&g_store, blob, sizeof(blob));
-    FILE *fp = n > 0 ? fopen("/tmp/badge-store.bin", "wb") : NULL;
+    int n = passport_store_save(&g_store, blob, sizeof(blob));
+    FILE *fp = n > 0 ? fopen("/tmp/passport-store.bin", "wb") : NULL;
     if (fp != NULL) {
         fwrite(blob, 1, (size_t)n, fp);
         fclose(fp);
@@ -46,7 +67,7 @@ static void persist(void) {
 }
 
 static void serve(int client) {
-    char line[BADGE_CONFIG_LINE_MAX];
+    char line[PASSPORT_CONFIG_LINE_MAX];
     size_t got = 0;
     g_client = client;
     while (1) {
@@ -60,15 +81,17 @@ static void serve(int client) {
                 continue;
             }
             line[got] = '\0';
-            badge_usb_t usb;
+            if (device_control(line)) { got = 0; continue; }
+            passport_usb_t usb;
             memset(&usb, 0, sizeof(usb));
             usb.store = &g_store;
+            usb.capabilities = "device-control";
             usb.scan = g_scan;
             usb.scan_count = 2;
             usb.reply = reply;
             usb.join = join;
             uint32_t generation = g_store.generation;
-            badge_usb_line(&usb, line);
+            passport_usb_line(&usb, line);
             if (g_store.generation != generation) {
                 persist();
             }
@@ -84,7 +107,7 @@ static void serve(int client) {
 }
 
 int main(void) {
-    badge_store_init(&g_store);
+    passport_store_init(&g_store);
     snprintf(g_scan[0].ssid, sizeof(g_scan[0].ssid), "home-wifi");
     g_scan[0].rssi = -48;
     snprintf(g_scan[1].ssid, sizeof(g_scan[1].ssid), "Cafe");

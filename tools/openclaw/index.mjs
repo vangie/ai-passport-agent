@@ -2,6 +2,7 @@ import {getRealtimeVoiceProvider} from 'openclaw/plugin-sdk/realtime-voice';
 import WebSocket, {WebSocketServer} from 'ws';
 import {createPassportProvider, PASSPORT_PATH, PASSPORT_PROTOCOL} from './passport-plugin.mjs';
 import {createPassportTransport} from './passport-proxy.mjs';
+import {registerPassportTranscripts} from './passport-transcript.mjs';
 
 export default {
     id: 'ai-passport-openclaw',
@@ -13,6 +14,7 @@ export default {
             typeof api.registerService !== 'function' || typeof api.registerGatewayMethod !== 'function')
             throw new Error('OpenClaw plugin SDK is incompatible; run the Passport doctor');
         api.registerRealtimeVoiceProvider(createPassportProvider(getRealtimeVoiceProvider, upstreamId));
+        registerPassportTranscripts(api);
         let transport;
         api.registerHttpRoute({path: PASSPORT_PATH, auth: 'plugin', match: 'exact',
             handler(_req, res) {

@@ -6,7 +6,7 @@
   "keywords": ["openclaw", "ai-passport", "realtime", "voice"],
   "engines": {"node": ">=22"},
   "type": "module",
-  "files": ["index.mjs", "passport-plugin.mjs", "passport-proxy.mjs", "passport-relay.mjs", "passport-ima.mjs", "doctor.mjs", "manage-plugin.py", "install-passport-relay.py", "openclaw.plugin.json", "README.md", "README.zh_CN.md", "LICENSE"],
+  "files": ["index.mjs", "passport-plugin.mjs", "passport-proxy.mjs", "passport-relay.mjs", "passport-ima.mjs", "passport-transcript.mjs", "doctor.mjs", "manage-plugin.py", "install-passport-relay.py", "openclaw.plugin.json", "README.md", "README.zh_CN.md", "LICENSE"],
   "openclaw": {"extensions": ["./index.mjs"]},
   "peerDependencies": {"openclaw": ">=2026.10.5"},
   "peerDependenciesMeta": {"openclaw": {"optional": true}},

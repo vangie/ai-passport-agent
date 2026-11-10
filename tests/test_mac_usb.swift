@@ -4,6 +4,20 @@ import Foundation
 
 @main struct USBRegressionTests {
     static func main() throws {
+        let status = PassportDeviceStatus(line: "DEVICE volume=65 battery=-1 wifi=1 busy=0 sleeping=0 usb_host=1 idle_s=60")!
+        precondition(status.volume == 65 && status.battery == nil && status.wifi && !status.busy && status.usbHost)
+        let changed = PassportDeviceStatus(line: "DEVICE volume=65 battery=90 wifi=1 busy=0 sleeping=0 usb_host=1 idle_s=60 generation=42 network=2 agent=1")!
+        precondition(changed.generation == 42 && changed.network == 2 && changed.agent == 1)
+        precondition(PassportDeviceStatus(line: "DEVICE volume=101 battery=50 wifi=1 busy=0 sleeping=0 usb_host=1 idle_s=60") == nil)
+        precondition(PassportDeviceStatus(line: "DEVICE volume=50 battery=50 wifi=3 busy=0 sleeping=0 usb_host=1 idle_s=60") == nil)
+        precondition(PassportDeviceStatus(line: "DEVICE volume=50") == nil)
+        let report = PassportCheckReport(line: "CHECK done gateway=1 ask=1 plugin=1 call=2")!
+        precondition(report.gateway && report.ask && report.summary.contains("尚未就绪"))
+        precondition(PassportCheckReport(line: "CHECK failed gateway=0 ask=0 plugin=0 call=0")!.summary.contains("未能连接"))
+        precondition(PassportCheckReport(line: "CHECK started") == nil)
+        precondition(PassportCheckReport(line: "CHECK done gateway=1 ask=1 plugin=99 call=2") == nil)
+        precondition(PassportDeviceCheck.checking.running && PassportDeviceCheck.cancelling.running)
+        precondition(!PassportDeviceCheck.report(report).running)
         var application = Data(repeating: 0, count: 512)
         application[0] = 0xe9
         application[12] = 5

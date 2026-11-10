@@ -1,4 +1,4 @@
-#include "badge.h"
+#include "passport.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -11,7 +11,7 @@
 
 #define PORTAL_PORT 8787
 
-static badge_store_t g_store;
+static passport_store_t g_store;
 static char g_page[8192];
 
 static const char *json_get(const char *json, const char *key, char *out, size_t cap) {
@@ -78,7 +78,7 @@ static void handle(int fd) {
     }
     if (strncmp(req, "POST /save", 10) == 0) {
         const char *body = strstr(req, "\r\n\r\n");
-        badge_portal_form_t form;
+        passport_portal_form_t form;
         memset(&form, 0, sizeof(form));
         if (body != NULL) {
             body += 4;
@@ -87,11 +87,11 @@ static void handle(int fd) {
             json_get(body, "gateway_url", form.gateway_url, sizeof(form.gateway_url));
             json_get(body, "bootstrap", form.bootstrap, sizeof(form.bootstrap));
         }
-        const char *result = badge_portal_apply(&g_store, &form);
+        const char *result = passport_portal_apply(&g_store, &form);
         if (strcmp(result, "ok") == 0) {
             uint8_t blob[2048];
-            int n = badge_store_save(&g_store, blob, sizeof(blob));
-            FILE *fp = fopen("/tmp/badge-store.bin", "wb");
+            int n = passport_store_save(&g_store, blob, sizeof(blob));
+            FILE *fp = fopen("/tmp/passport-store.bin", "wb");
             if (fp != NULL && n > 0) {
                 fwrite(blob, 1, (size_t)n, fp);
                 fclose(fp);
@@ -124,15 +124,15 @@ int main(void) {
     g_page[n] = '\0';
     fclose(page);
 
-    FILE *blob = fopen("/tmp/badge-store.bin", "rb");
-    badge_store_init(&g_store);
+    FILE *blob = fopen("/tmp/passport-store.bin", "rb");
+    passport_store_init(&g_store);
     if (blob != NULL) {
         uint8_t raw[2048];
         size_t len = fread(raw, 1, sizeof(raw), blob);
         fclose(blob);
-        badge_store_load(&g_store, raw, len);
+        passport_store_load(&g_store, raw, len);
     }
-    badge_setup_wifi_qr(qr, sizeof(qr));
+    passport_setup_wifi_qr(qr, sizeof(qr));
     printf("setup qr: %s\n", qr);
     printf("portal http://127.0.0.1:%d\n", PORTAL_PORT);
 

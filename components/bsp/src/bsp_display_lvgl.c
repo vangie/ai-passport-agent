@@ -14,6 +14,7 @@ static const char *TAG = "bsp_lvgl";
 static lv_display_t *s_disp;
 static bool s_port_initialized;
 static bool s_port_init_failed;
+static bool s_sleeping;
 
 static void rounded_flush_event(lv_event_t *event)
 {
@@ -126,6 +127,26 @@ lv_display_t *bsp_lvgl_init(void) {
 bool bsp_lvgl_lock(int timeout_ms) {
     if (!s_disp) return false;
     return lvgl_port_lock(timeout_ms);
+}
+
+esp_err_t bsp_lvgl_set_sleep(bool sleep) {
+    if (!bsp_lvgl_lock(500)) return ESP_ERR_INVALID_STATE;
+    esp_err_t error = ESP_OK;
+    if (sleep != s_sleeping) {
+        if (sleep) {
+            error = lvgl_port_stop();
+            if (error == ESP_OK) error = bsp_display_set_sleep(true);
+            if (error == ESP_OK) s_sleeping = true;
+            else (void)lvgl_port_resume();
+        } else {
+            error = bsp_display_set_sleep(false);
+            if (error == ESP_OK) error = lvgl_port_resume();
+            if (error == ESP_OK) s_sleeping = false;
+            else (void)bsp_display_set_sleep(true);
+        }
+    }
+    bsp_lvgl_unlock();
+    return error;
 }
 void bsp_lvgl_unlock(void) {
     if (s_disp) lvgl_port_unlock();

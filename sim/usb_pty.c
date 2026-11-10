@@ -1,4 +1,4 @@
-#include "badge.h"
+#include "passport.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -12,12 +12,12 @@ extern int grantpt(int);
 extern int unlockpt(int);
 extern char *ptsname(int);
 
-static badge_store_t g_store;
-static badge_scan_t g_scan[2];
+static passport_store_t g_store;
+static passport_scan_t g_scan[2];
 
 static int reply(void *ctx, const char *line) {
     int fd = *(int *)ctx;
-    char buf[BADGE_URL_MAX + 64];
+    char buf[PASSPORT_URL_MAX + 64];
     int n = snprintf(buf, sizeof(buf), "%s\n", line);
     if (n < 0) {
         return -1;
@@ -38,11 +38,11 @@ static const char *join(void *ctx, const char *ssid, const char *pass, bool keep
 
 static void persist(void) {
     uint8_t blob[2048];
-    int n = badge_store_save(&g_store, blob, sizeof(blob));
+    int n = passport_store_save(&g_store, blob, sizeof(blob));
     if (n < 0) {
         return;
     }
-    FILE *fp = fopen("/tmp/badge-store.bin", "wb");
+    FILE *fp = fopen("/tmp/passport-store.bin", "wb");
     if (fp == NULL) {
         return;
     }
@@ -60,13 +60,13 @@ int main(void) {
     printf("%s\n", name);
     fflush(stdout);
 
-    badge_store_init(&g_store);
+    passport_store_init(&g_store);
     snprintf(g_scan[0].ssid, sizeof(g_scan[0].ssid), "home-wifi");
     g_scan[0].rssi = -48;
     snprintf(g_scan[1].ssid, sizeof(g_scan[1].ssid), "Cafe");
     g_scan[1].rssi = -61;
 
-    char line[BADGE_CONFIG_LINE_MAX];
+    char line[PASSPORT_CONFIG_LINE_MAX];
     size_t got = 0;
     while (1) {
         char ch = 0;
@@ -79,7 +79,7 @@ int main(void) {
                 continue;
             }
             line[got] = '\0';
-            badge_usb_t usb;
+            passport_usb_t usb;
             memset(&usb, 0, sizeof(usb));
             usb.store = &g_store;
             usb.scan = g_scan;
@@ -88,7 +88,7 @@ int main(void) {
             usb.reply_ctx = &master;
             usb.join = join;
             uint32_t generation = g_store.generation;
-            badge_usb_line(&usb, line);
+            passport_usb_line(&usb, line);
             if (g_store.generation != generation) {
                 persist();
             }

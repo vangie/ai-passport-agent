@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / 'tools/openclaw'
 PACKAGE_FILES = {
     'package.json', 'openclaw.plugin.json', 'index.mjs', 'passport-plugin.mjs',
-    'passport-proxy.mjs', 'passport-relay.mjs', 'passport-ima.mjs', 'doctor.mjs',
+    'passport-proxy.mjs', 'passport-relay.mjs', 'passport-ima.mjs', 'passport-transcript.mjs', 'doctor.mjs',
     'manage-plugin.py', 'install-passport-relay.py', 'README.md', 'README.zh_CN.md', 'LICENSE'
 }
 

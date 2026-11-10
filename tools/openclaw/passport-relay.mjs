@@ -5,8 +5,13 @@ export function resolvePassportConsultRouting(consultRouting, passportClient = f
     return {autoRespondToAudio: !forceAgentConsultOnFinalTranscript, forceAgentConsultOnFinalTranscript};
 }
 
-export function withPassportVoiceInstructions(instructions, language, enabled = false) {
+export function withPassportVoiceInstructions(instructions, language, enabled = false, canEndCall = false) {
     if (!enabled) return instructions;
+    const hangup = canEndCall ?
+        'When the user clearly asks to end this voice call, stop chatting, or hang up (for example ' +
+        '“挂掉吧”, “结束通话”, “我不想聊了”, or “hang up”), call passport_end_call immediately. ' +
+        'Do not merely say you have hung up, consult the agent to do it, or claim you cannot end the call. ' +
+        'Cancelling a task, pausing, muting, quoted examples, and requests not to hang up do not end the call. ' : '';
     const routing = '# AI Passport realtime conversation\n' +
         'Use the configured OpenClaw agent identity and persona above. ' +
         'For this call, answer greetings, ordinary conversation and general knowledge directly from live audio. ' +
@@ -17,6 +22,7 @@ export function withPassportVoiceInstructions(instructions, language, enabled = 
         'because the agent may not have the preceding direct conversation. ' +
         'Never invent live facts, private memories or action results; report tool failures honestly. ' +
         'Retain existing tool permissions and confirmation requirements. ' +
+        hangup +
         'Use openclaw_agent_control for progress, cancellation or redirection of active work. ' +
         'While waiting, give at most one brief acknowledgement, then use the authoritative tool result. ' +
         'If speech is ambiguous, ask a short clarification rather than silently changing the question. ' +
@@ -105,6 +111,7 @@ export function createPassportRelayOutput({send, enabled = false, ima = false, f
     }
     return {
         project,
+        discardOutput: clear,
         decodeAudio(encoded) {
             if (enabled && ima && encoded.startsWith('passport-ima:')) {
                 const payload = encoded.slice(13);

@@ -8,6 +8,24 @@ static lv_display_t display;
 static int panel_present = 1, lock_depth, port_live, display_live, callback_live;
 static int fail_lock, fail_port, fail_display, fail_event, init_calls, unlocked_flushes;
 static int panel_token, io_token;
+static int port_stopped, panel_sleeping, fail_sleep, fail_resume, fail_stop;
+esp_err_t bsp_display_set_sleep(bool sleep) {
+    assert(lock_depth);
+    if (fail_sleep) return ESP_FAIL;
+    panel_sleeping = sleep;
+    return ESP_OK;
+}
+esp_err_t lvgl_port_stop(void) {
+    assert(lock_depth);
+    port_stopped = 1;
+    return fail_stop ? ESP_FAIL : ESP_OK;
+}
+esp_err_t lvgl_port_resume(void) {
+    assert(lock_depth);
+    if (fail_resume) return ESP_FAIL;
+    port_stopped = 0;
+    return ESP_OK;
+}
 esp_lcd_panel_handle_t bsp_display_panel(void) { return panel_present ? &panel_token : NULL; }
 esp_lcd_panel_io_handle_t bsp_display_io(void) { return &io_token; }
 esp_err_t lvgl_port_init(const lvgl_port_cfg_t *cfg) {
@@ -83,5 +101,27 @@ int main(void) {
     lv_event_t ev = { .target = &display, .area = &area };
     rounded_flush_event(&ev);
     assert(pixels[0] == 0 && pixels[BSP_LCD_W - 1] == 0 && pixels[BSP_LCD_W / 2] == 0xffff);
+    fail_lock = 1;
+    assert(bsp_lvgl_set_sleep(true) == ESP_ERR_INVALID_STATE);
+    fail_lock = 0;
+    fail_stop = 1;
+    assert(bsp_lvgl_set_sleep(true) == ESP_FAIL && !port_stopped && !s_sleeping);
+    fail_stop = 0;
+    fail_sleep = 1;
+    assert(bsp_lvgl_set_sleep(true) == ESP_FAIL && !port_stopped && !s_sleeping);
+    fail_sleep = 0;
+    for (unsigned cycle = 0; cycle < 100; cycle++) {
+        assert(bsp_lvgl_set_sleep(true) == ESP_OK && port_stopped && panel_sleeping);
+        assert(bsp_lvgl_set_sleep(true) == ESP_OK && s_sleeping);
+        if (!cycle) {
+            fail_sleep = 1;
+            assert(bsp_lvgl_set_sleep(false) == ESP_FAIL && s_sleeping && port_stopped);
+            fail_sleep = 0;
+            fail_resume = 1;
+            assert(bsp_lvgl_set_sleep(false) == ESP_FAIL && s_sleeping && panel_sleeping);
+            fail_resume = 0;
+        }
+        assert(bsp_lvgl_set_sleep(false) == ESP_OK && !s_sleeping && !panel_sleeping && !port_stopped);
+    }
     puts("BSP LVGL initialization tests: PASS");
 }

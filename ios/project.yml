@@ -1,4 +1,4 @@
-name: Badge
+name: Passport
 options:
   bundleIdPrefix: ai.mirasim
   deploymentTarget:
@@ -9,16 +9,16 @@ settings:
   CODE_SIGN_STYLE: Automatic
   DEVELOPMENT_TEAM: ""
 targets:
-  Badge:
+  Passport:
     type: application
     platform: iOS
     sources:
-      - path: Badge
+      - path: Passport
       - path: ../shared
     info:
-      path: Badge/Info.plist
+      path: Passport/Info.plist
       properties:
-        CFBundleDisplayName: OpenClaw
+        CFBundleDisplayName: AI Passport
         CFBundleShortVersionString: "0.1"
         CFBundleVersion: "1"
         CFBundleURLTypes:
@@ -28,10 +28,23 @@ targets:
               - ai-passport-openclaw
         UILaunchScreen: {}
         NSBluetoothAlwaysUsageDescription: 用来读取和修改 AI Passport 上的 Wi-Fi 与 OpenClaw 配置。
+        UIBackgroundModes:
+          - bluetooth-central
+        NSCameraUsageDescription: 用来扫描 OpenClaw 的配对二维码。
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
     settings:
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-      PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.badge
+      PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport
       TARGETED_DEVICE_FAMILY: "1"
       GENERATE_INFOPLIST_FILE: NO
+  PassportUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PassportUITests
+    dependencies:
+      - target: Passport
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport.uitests
+      GENERATE_INFOPLIST_FILE: YES

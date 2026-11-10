@@ -51,3 +51,11 @@ jobs:
           xcodegen generate
           xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -configuration Release \
             -destination 'generic/platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+
+      - name: Build iPhone configuration app for Simulator
+        run: |
+          cd ios
+          xcodegen generate
+          xcodebuild -project Passport.xcodeproj -scheme Passport -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build

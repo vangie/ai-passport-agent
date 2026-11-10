@@ -131,7 +131,23 @@ Before terminal deep sleep, stop new page work and hold the LVGL lock long enoug
 
 LVGL is not thread-safe. Timer callbacks in LVGL context may access objects directly. Button callbacks must not access LVGL; they enqueue input for the lifecycle task. The lifecycle task and other workers must use `bsp_lvgl_lock()`/`bsp_lvgl_unlock()` for short UI operations. Stop producers before deleting a page and clear static object pointers afterward.
 
+For reversible application standby, `bsp_lvgl_set_sleep()` serializes against LVGL,
+stops/resumes its tick and timer processing, and calls `bsp_display_set_sleep()`
+without releasing pins, buffers or the display. These blocking APIs belong in a
+control task, not a button callback. The lower-level display API requires the
+caller to stop drawing first; brightness is restored after successful wake.
+Failures leave the application awake or retain the sleeping state for retry.
+They are distinct from terminal deep-sleep preparation. The application holds
+CPU-max/no-light-sleep locks while visible, preserving backlight PWM and active
+audio/network performance; only standby releases them. An enumerated USB host
+inhibits automatic light sleep and keeps this application's screen awake.
+
 ## 6. ADC button ladder
+
+`bsp_button_set_polling()` pauses/resumes the shared button-component timer, not
+the ADC. An application using it must own all button devices and still poll
+`bsp_button_read_mv()` for wake; the GPIO0 digital low-level wake source must not
+be armed while the ADC owns the pad.
 
 GPIO0 has an external 10 kΩ pull-up to 3.3 V. UP, DOWN, and OK connect it to ground through 0 Ω, 1 kΩ, and 2.2 kΩ respectively.
 
@@ -192,6 +208,17 @@ When extending the tone demo into continuous BGM with UI updates and NVS saves, 
 IRAM-safe interrupts do not keep a Flash-resident producer running or provide unlimited buffering. Budget queued PCM for measured stalls and internal RAM, or schedule saves at a safe playback boundary. On the exact application build, keep BGM playing while repeatedly navigating and confirming actions that really save to NVS, then check save/reload behavior. Compare feed gaps and listen on the device: clean logs or a successful standalone tone do not establish glitch-free concurrent playback.
 
 ## 9. CW2017 fuel gauge
+
+Do not infer charging from SOC or voltage. The [CW2017 register map](https://uploadcdn.oneyac.com/upload/document/1737612108523_8373.pdf)
+has no charge-state register. The [official Passport Xiaozhi board implementation](https://github.com/FoloToy/folo-ai-passport-xiaozhi/blob/main/main/boards/folotoy/ai-passport/ai_passport_board.cc)
+explicitly states that the gauge reports no charge state and the board has no
+charge-detect GPIO; its fixed `charging=false` is not a measurement. The
+[official getting-started guide](https://ai-passport.folotoy.cn/guides/getting-started/)
+directs users to the green charging LED, not an on-screen charge indicator.
+This evidence describes documented hardware, not a guarantee about every future
+revision or proof that a hardware modification is impossible. Reliable software
+charge detection needs a documented charger-status/VBUS connection or a readable
+charger IC. USB host enumeration alone is only a configuration/flashing guard.
 
 The configured cell is Wanli New Energy 500 mAh, using profile2 / XIL40X dated
 2026-10-20. The exact [80-byte vendor profile](../../assets/battery/wanli-500mah-profile2-xil40x-20261020.txt)

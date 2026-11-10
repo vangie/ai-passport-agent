@@ -7,10 +7,11 @@ set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CONFIG_LV_USE_THORVG_INTERNAL OFF CACHE BOOL "" FORCE)
 add_subdirectory("${REPO}/managed_components/lvgl__lvgl" lvgl)
 add_executable(preview
-    "${REPO}/tests/test_badge_screen.c"
-    "${REPO}/app/badge_ui.c" "${REPO}/app/badge_store.c" "${REPO}/app/badge_proxy.c"
-    "${REPO}/assets/fonts/badge_font_16.c" "${REPO}/assets/fonts/badge_font_20.c"
-    "${REPO}/assets/images/badge_lobster_22.c")
+    "${REPO}/tests/test_passport_screen.c"
+    "${REPO}/app/passport_ui.c" "${REPO}/app/passport_store.c" "${REPO}/app/passport_proxy.c"
+    "${REPO}/app/passport_network.c"
+    "${REPO}/assets/fonts/passport_font_16.c" "${REPO}/assets/fonts/passport_font_20.c"
+    "${REPO}/assets/images/passport_lobster_22.c")
 target_include_directories(preview PRIVATE "${REPO}/app")
 target_link_libraries(preview PRIVATE lvgl m)
 enable_testing()

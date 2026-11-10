@@ -225,7 +225,7 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
         return -1;
     }
 
-    ESP_LOGI("badge_timing", "tcp_tls=%lldms", (long long)((esp_timer_get_time()-started)/1000));
+    ESP_LOGI("passport_timing", "tcp_tls=%lldms", (long long)((esp_timer_get_time()-started)/1000));
     int socket_fd = esp_transport_get_socket(ws->parent), nodelay = 1;
     if (socket_fd >= 0) (void)setsockopt(socket_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
     unsigned char random_key[16];

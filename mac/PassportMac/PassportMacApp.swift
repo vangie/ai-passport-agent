@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct PassportMacApp: App {
-    @StateObject private var link = BadgeSocket(path: "/tmp/badge-config.sock")
+    @StateObject private var link = PassportSocket(path: "/tmp/passport-config.sock")
     @StateObject private var wifi = WifiScan()
     @StateObject private var incoming = ConfigurationInbox()
 

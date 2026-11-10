@@ -1,7 +1,7 @@
 import Foundation
 
 /// Shadowsocks route for one OpenClaw gateway (aes-256-cfb). Off means the
-/// badge connects to that gateway directly.
+/// passport connects to that gateway directly.
 struct ProxySettings: Equatable {
     var enabled = false
     var host = ""

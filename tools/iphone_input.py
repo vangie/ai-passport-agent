@@ -43,7 +43,7 @@ def main():
             y = int(float(event["y"]) * 2622)
             run(["io", "booted", "enumerate"])
             subprocess.run(
-                ["xcrun", "simctl", "spawn", "booted", "notifyutil", "-p", "badge.tap"],
+                ["xcrun", "simctl", "spawn", "booted", "notifyutil", "-p", "passport.tap"],
                 check=False,
                 capture_output=True,
             )

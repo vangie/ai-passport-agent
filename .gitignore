@@ -1,13 +1,12 @@
 build/
-sim/badge-sim
+sim/*-sim
 sim/portal-host
 sim/usb-pty
 sim/shots/
 sim/passport-web/
-ios/Badge.xcodeproj/
+ios/*.xcodeproj/
 ios/build/
-mac/BadgeMac.xcodeproj/
-mac/PassportMac.xcodeproj/
+mac/*.xcodeproj/
 mac/build/
 sim/config-sock
 sdkconfig

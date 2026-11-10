@@ -87,6 +87,11 @@ static void cb_release(void *a, void *u) { on_event(a, u, BSP_BTN_RELEASE); }
 // button driver 仍在轮询时不能先删 ADC，否则 timer callback 会访问失效句柄。
 // 返回 ESP_OK 表示按键、校准与 ADC unit 都已完整回收；否则返回首个错误码，
 // 供 prepare_deep_sleep 判断能否安全切回数字输入。
+esp_err_t bsp_button_set_polling(bool enabled) {
+    if (!s_ready) return ESP_ERR_INVALID_STATE;
+    return enabled ? iot_button_resume() : iot_button_stop();
+}
+
 static esp_err_t button_cleanup(void) {
     esp_err_t first_err = ESP_OK;
     s_cb = NULL;

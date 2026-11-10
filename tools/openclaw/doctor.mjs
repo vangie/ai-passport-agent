@@ -5,7 +5,7 @@ import {createPassportProvider, PASSPORT_PATH, PASSPORT_PROTOCOL} from './passpo
 import {gatewayTarget} from './passport-proxy.mjs';
 
 export async function checkCompatibility({config, getProvider, WebSocket, api, version}) {
-    for (const method of ['registerHttpRoute', 'registerGatewayMethod', 'registerService', 'registerRealtimeVoiceProvider'])
+    for (const method of ['registerHttpRoute', 'registerGatewayMethod', 'registerService', 'registerRealtimeVoiceProvider', 'on'])
         if (typeof api[method] !== 'function') throw new Error(`Unsupported OpenClaw plugin API: ${method}`);
     const upstreamId = config?.plugins?.entries?.['ai-passport-openclaw']?.config?.upstreamProvider ?? 'openai';
     const upstream = getProvider(upstreamId, config);
@@ -43,7 +43,7 @@ async function main() {
     const config = JSON.parse(await readFile(configFile, 'utf8'));
     const entry = await import('./index.mjs');
     const registrations = {};
-    const api = Object.fromEntries(['registerHttpRoute', 'registerGatewayMethod', 'registerService', 'registerRealtimeVoiceProvider']
+    const api = Object.fromEntries(['registerHttpRoute', 'registerGatewayMethod', 'registerService', 'registerRealtimeVoiceProvider', 'on']
         .map(method => [method, (...args) => { registrations[method] = args; }]));
     entry.default.register({...api, config, pluginConfig: config.plugins?.entries?.['ai-passport-openclaw']?.config,
         logger: {info() {}, warn() {}, error() {}}});

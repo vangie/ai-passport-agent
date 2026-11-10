@@ -1,8 +1,8 @@
-#include "badge.h"
+#include "passport.h"
 
 #include <stdio.h>
 
-int badge_openclaw_chat_send(char *out, size_t out_len, const badge_turn_t *turn) {
+int passport_openclaw_chat_send(char *out, size_t out_len, const passport_turn_t *turn) {
     const char *session = "agent:main:passport";
     const char *format = "audio/ogg";
     const char *message = "";

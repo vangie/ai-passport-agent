@@ -159,7 +159,19 @@ LVGL 非线程安全：
 
 显示和圆角回调必须在同一个可递归 LVGL port 锁内注册，先于第一帧 flush。注册失败后不能留下未遮罩的显示，也不能重新初始化旧任务可能仍在运行的 port。
 
+应用的可恢复待机使用 `bsp_lvgl_set_sleep()`：持 LVGL 锁暂停及恢复其时钟和
+定时器处理，并调用 `bsp_display_set_sleep()`，不释放引脚、缓冲和显示对象。
+这些阻塞接口由控制任务调用，不在按键回调内使用。底层显示接口要求调用方先
+停止绘制，成功唤醒后恢复原亮度。失败时回滚保持唤醒，或保留休眠状态供重试；
+它们不同于不可逆的 deep sleep 准备接口。应用亮屏时持有 CPU 全速及禁止浅睡眠锁，
+保证背光 PWM 和音频、网络性能，只在待机时释放。已枚举的 USB 主机连接既阻止
+自动浅睡眠，也让本应用保持亮屏。
+
 ## 6. ADC 三按键
+
+`bsp_button_set_polling()` 暂停及恢复共享按键组件定时器，不释放 ADC。调用它的
+应用必须拥有全部按键设备，并继续读取 `bsp_button_read_mv()` 检测唤醒；ADC
+仍拥有 GPIO0 时不得启用其数字低电平唤醒源。
 
 三个物理按键共享 GPIO0：3.3 V 经外部 10 kΩ 上拉到 ADC 节点，按键按下后分别通过 0 Ω、1 kΩ、2.2 kΩ 接地。
 
@@ -243,6 +255,14 @@ Audio demo 的工作任务在 PCM 分块之间检查取消状态，并在页面�
 中断放入 IRAM 并不能让位于 Flash 的音频生产任务持续运行，也不代表缓冲无限。应根据实测停顿和内部 RAM 预算准备排队的 PCM，或在安全的播放边界保存。在最终应用固件上，持续播放 BGM，反复切换选项并确认会实际写入 NVS 的操作，再验证保存和重新载入。对照供给间隔并实机试听：日志无告警或单独播放音调成功，都不能证明并发播放没有杂音。
 
 ## 9. CW2017 电池计
+
+不得用 SOC 或电压推断正在充电。[CW2017 寄存器表](https://uploadcdn.oneyac.com/upload/document/1737612108523_8373.pdf)
+没有充电状态寄存器。[官方 Passport 小智板级实现](https://github.com/FoloToy/folo-ai-passport-xiaozhi/blob/main/main/boards/folotoy/ai-passport/ai_passport_board.cc)
+明确写出电量计不报告充电状态、板上没有充电检测 GPIO；其中固定的
+`charging=false` 不是实测结果。[官方入门指南](https://ai-passport.folotoy.cn/guides/getting-started/)
+要求以绿色充电指示灯为准，不显示屏幕充电状态。这些证据描述当前已公开硬件，
+不保证未来批次相同，也不证明硬件改造绝对不可行。可靠的软件检测需要明确的
+充电状态或 VBUS 信号连线，或可读取的充电芯片。USB 主机枚举只用于配置和刷机保护。
 
 当前配置对应万锂新能源 500 mAh 电芯，参数版本为 profile2 / XIL40X，日期为
 2026-10-20。[厂家原始 80 字节参数](../../assets/battery/wanli-500mah-profile2-xil40x-20261020.txt)

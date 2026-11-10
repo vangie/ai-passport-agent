@@ -38,6 +38,17 @@ run_static_checks() {
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
         tests/test_key_guard.c -o "${test_dir}/test_key_guard"
     "${test_dir}/test_key_guard"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_passport_power.c -o "${test_dir}/test_passport_power"
+    "${test_dir}/test_passport_power"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain -Iapp \
+        tests/test_passport_buttons.c -o "${test_dir}/test_passport_buttons"
+    "${test_dir}/test_passport_buttons"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_passport_control.c -o "${test_dir}/test_passport_control"
+    "${test_dir}/test_passport_control"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/power_stubs -Imain \
+        tests/test_passport_power_runtime.c -o "${test_dir}/test_passport_power_runtime"
+    "${test_dir}/test_passport_power_runtime"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Icomponents/bsp/src \
         tests/test_bsp_display_rounding.c components/bsp/src/bsp_display_rounding.c \
         -o "${test_dir}/test_bsp_display_rounding"
@@ -76,32 +87,38 @@ run_static_checks() {
         "${test_dir}/test_demo_${demo}_runtime"
     done
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
-        tests/test_badge.c app/badge_store.c app/badge_ui.c app/badge_usb.c \
-        app/badge_pair.c app/badge_proxy.c app/openclaw_frame.c \
-        -o "${test_dir}/test_badge"
-    "${test_dir}/test_badge"
+        tests/test_passport.c app/passport_store.c app/passport_ui.c app/passport_usb.c \
+        app/passport_pair.c app/passport_proxy.c app/openclaw_frame.c \
+        -o "${test_dir}/test_passport"
+    "${test_dir}/test_passport"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/nvs_stubs -Itests/gateway_stubs -Iapp \
-        tests/test_badge_nvs.c app/badge_store.c app/badge_proxy.c -o "${test_dir}/test_badge_nvs"
-    "${test_dir}/test_badge_nvs"
+        tests/test_passport_nvs.c app/passport_store.c app/passport_proxy.c -o "${test_dir}/test_passport_nvs"
+    "${test_dir}/test_passport_nvs"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
+        tests/test_passport_network.c app/passport_network.c app/passport_store.c app/passport_proxy.c \
+        -o "${test_dir}/test_passport_network"
+    "${test_dir}/test_passport_network"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
-        -Itests/demo_stubs -Imain -Iapp tests/test_badge_audio_runtime.c \
-        "${gc_sections}" -o "${test_dir}/test_badge_audio_runtime"
-    "${test_dir}/test_badge_audio_runtime"
+        -Itests/demo_stubs -Imain -Iapp tests/test_passport_audio_runtime.c \
+        "${gc_sections}" -o "${test_dir}/test_passport_audio_runtime"
+    "${test_dir}/test_passport_audio_runtime"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_passport_barge.c -o "${test_dir}/test_passport_barge"
+    "${test_dir}/test_passport_barge"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/clip_stubs \
-        tests/test_badge_clip.c -o "${test_dir}/test_badge_clip"
-    "${test_dir}/test_badge_clip"
+        tests/test_passport_clip.c -o "${test_dir}/test_passport_clip"
+    "${test_dir}/test_passport_clip"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
-        tests/test_badge_json.c app/badge_json.c -o "${test_dir}/test_badge_json"
-    "${test_dir}/test_badge_json"
+        tests/test_passport_json.c app/passport_json.c -o "${test_dir}/test_passport_json"
+    "${test_dir}/test_passport_json"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
-        tests/test_badge_reply.c app/badge_reply.c -o "${test_dir}/test_badge_reply"
-    "${test_dir}/test_badge_reply"
-    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_badge_ima.c -o "${test_dir}/test_badge_ima"
-    "${test_dir}/test_badge_ima"
-    node tests/test_passport_ima.mjs "${test_dir}/test_badge_ima"
+        tests/test_passport_reply.c app/passport_reply.c -o "${test_dir}/test_passport_reply"
+    "${test_dir}/test_passport_reply"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_passport_ima.c -o "${test_dir}/test_passport_ima"
+    "${test_dir}/test_passport_ima"
+    node tests/test_passport_ima.mjs "${test_dir}/test_passport_ima"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
-        tests/test_badge_radio_policy.c app/badge_radio.c -o "${test_dir}/test_badge_radio_policy"
-    "${test_dir}/test_badge_radio_policy"
+        tests/test_passport_radio_policy.c app/passport_radio.c -o "${test_dir}/test_passport_radio_policy"
+    "${test_dir}/test_passport_radio_policy"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
         -Itests/transport_stubs -Icomponents/passport_transport \
         tests/test_passport_transport.c "${gc_sections}" -o "${test_dir}/test_passport_transport"
@@ -113,39 +130,52 @@ run_static_checks() {
         return 1
     fi
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/gateway_stubs -Imain -Iapp \
-        -Icomponents/passport_crypto -I"${json_dir}" tests/test_badge_gateway.c \
-        app/badge_reply.c app/badge_json.c components/passport_crypto/monocypher.c \
+        -Icomponents/passport_crypto -I"${json_dir}" tests/test_passport_gateway.c \
+        app/passport_reply.c app/passport_json.c components/passport_crypto/monocypher.c \
         components/passport_crypto/monocypher-ed25519.c "${json_dir}/cJSON.c" \
-        ${mbedtls_flags} -o "${test_dir}/test_badge_gateway"
-    "${test_dir}/test_badge_gateway"
+        ${mbedtls_flags} -o "${test_dir}/test_passport_gateway"
+    "${test_dir}/test_passport_gateway"
     node tests/test_passport_relay.mjs
     node tests/test_passport_plugin.mjs
     python3 tests/test_passport_relay_install.py
     python3 tests/test_passport_plugin_migration.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_plugin_package.py
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -pthread -Itests/tls_stubs -Imain -Iapp \
-        tests/test_badge_tls_cancel.c main/badge_tls.c app/badge_proxy.c app/badge_ss.c \
-        ${mbedtls_flags} -o "${test_dir}/test_badge_tls_cancel"
-    "${test_dir}/test_badge_tls_cancel"
-    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_badge_ss.c app/badge_ss.c \
-        ${mbedtls_flags} -o "${test_dir}/test_badge_ss"
-    "${test_dir}/test_badge_ss"
+        tests/test_passport_tls_cancel.c main/passport_tls.c app/passport_proxy.c app/passport_ss.c \
+        ${mbedtls_flags} -o "${test_dir}/test_passport_tls_cancel"
+    "${test_dir}/test_passport_tls_cancel"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_passport_ss.c app/passport_ss.c \
+        ${mbedtls_flags} -o "${test_dir}/test_passport_ss"
+    "${test_dir}/test_passport_ss"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Icomponents/passport_crypto \
         tests/test_passport_crypto.c components/passport_crypto/monocypher.c \
         components/passport_crypto/monocypher-ed25519.c -o "${test_dir}/test_passport_crypto"
     "${test_dir}/test_passport_crypto"
     if [[ "$(uname -s)" == Darwin ]] && command -v swiftc >/dev/null 2>&1; then
         swiftc tests/test_mac_usb.swift mac/PassportMac/ConfigConnection.swift \
-            mac/PassportMac/SerialPort.swift mac/PassportMac/FirmwareUpdate.swift shared/ProxySettings.swift \
+            mac/PassportMac/SerialPort.swift mac/PassportMac/FirmwareUpdate.swift mac/PassportMac/DeviceControl.swift shared/ProxySettings.swift \
             -o "${test_dir}/test_mac_usb"
         "${test_dir}/test_mac_usb"
         swiftc tests/test_pair_prompt.swift shared/PairPrompt.swift shared/ConfigurationLink.swift \
             -o "${test_dir}/test_pair_prompt"
         "${test_dir}/test_pair_prompt"
+        swiftc tests/test_phone_provisioning.swift ios/Passport/ProvisioningProtocol.swift \
+            -o "${test_dir}/test_phone_provisioning"
+        "${test_dir}/test_phone_provisioning"
+        PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phone_link_runtime.py
+        swiftc tests/test_configuration_draft.swift mac/PassportMac/ConfigurationDraft.swift shared/ProxySettings.swift \
+            -o "${test_dir}/test_configuration_draft"
+        "${test_dir}/test_configuration_draft"
+        swiftc tests/test_disclosure_cursor.swift mac/PassportMac/PassportDisclosureStyle.swift \
+            -o "${test_dir}/test_disclosure_cursor"
+        "${test_dir}/test_disclosure_cursor"
     fi
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_battery_profile.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_deep_sleep_contract.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_key_wake_contract.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_startup.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_network_runtime.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_naming.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_check_repo.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_verify_firmware.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_archive_firmware.py

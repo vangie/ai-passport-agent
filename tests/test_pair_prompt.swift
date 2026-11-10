@@ -11,7 +11,7 @@ import Foundation
         precondition(PairPrompt.decode(payload: first)?.url == "wss://first.example")
         precondition(PairPrompt.resolve(url: "", code: first)?.code == first)
         precondition(PairPrompt.resolve(url: "wss://first.example/", code: first)?.url == "wss://first.example")
-        // The address tested by the app must equal the address the badge decodes.
+        // The address tested by the app must equal the address the passport decodes.
         precondition(PairPrompt.resolve(url: "wss://first.example", code: second) == nil)
         precondition(PairPrompt.resolve(url: "wss://first.example", code: "not-a-code") == nil)
         let wrapped = String(first.prefix(15)) + "\n \t" + String(first.dropFirst(15))
