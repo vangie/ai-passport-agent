@@ -14,7 +14,9 @@ and app bundle versions instead of assuming a firmware protocol version changed.
 - `ios.yml`: unsigned physical-device and Simulator builds, Simulator UI tests
   for layout/provisioning with synthetic data, an allowlisted source kit and a
   Simulator ZIP. Selects an installed iPhone runtime rather than hardcoding a
-  model name. Runs for relevant PR/main changes and is reused by Release.
+  model name. Uses the explicit `macos-15-intel` runner to avoid the shared
+  ARM runner capacity queue. Runs for relevant PR/main changes and is reused
+  by Release.
 - `firmware-checks.yml`: ESP-IDF 5.5.3 build and verified merged firmware.
 - `openclaw-plugin.yml`: Node 22/24/26 locked dependency install, plugin tests and
   actual npm tarball inspection.

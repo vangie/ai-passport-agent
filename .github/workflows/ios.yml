@@ -32,7 +32,7 @@ concurrency:
 jobs:
   ios:
     name: Build, test and package iPhone app
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803

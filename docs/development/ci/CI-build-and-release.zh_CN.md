@@ -9,7 +9,8 @@
 
 - `static-checks.yml`：仓库规范、私人地址检查、固定版本 Gitleaks、actionlint、C／Python／Swift 主机测试，以及 macOS 未签名构建。
 - `ios.yml`：未签名真机／模拟器构建、使用虚构数据的布局／配网 UI 测试、白名单源码包与模拟器 ZIP。
-  自动选择已安装的 iPhone 运行时，不写死机型。相关 PR／main 变更触发，Release 复用。
+  自动选择已安装的 iPhone 运行时，不写死机型。显式使用 `macos-15-intel` 运行器，
+  避开共享 ARM 运行器的容量排队。相关 PR／main 变更触发，Release 复用。
 - `firmware-checks.yml`：ESP-IDF 5.5.3 构建并校验合并固件。
 - `openclaw-plugin.yml`：Node 22／24／26，锁定依赖安装、插件测试和实际 npm 压缩包检查。
 
