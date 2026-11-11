@@ -12,7 +12,7 @@
 
 ## Unreleased
 
-## v0.4.1 - 2026-11-11
+## v0.4.2 - 2026-11-11
 
 - Localized macOS App / iOS App interfaces, messages, permission descriptions and
   setup prompts in English and Simplified Chinese, automatically following system
@@ -22,9 +22,11 @@
   and report Ask/Call readiness before returning limited pairing details.
 - Clarified bilingual setup, public-access security, optional iOS App hotspot
   configuration and NFC guidance, with sanitized product screenshots.
-- Aligned app/plugin versions at 0.4.1 and hardened GitHub releases with tag/version
+- Aligned app/plugin versions at 0.4.2 and hardened GitHub releases with tag/version
   checks, mandatory localization resources, complete asset validation, source
   commit provenance and draft/download/hash verification before publication.
+- Made progressive-scan UI fixtures deterministic on slow CI simulators. The
+  v0.4.1 candidate failed this check and was never published; its tag is retained.
 - No firmware protocol change, Apple signing/notarization, TestFlight distribution
   or new on-device audio acceptance is implied by this app-focused update.
 

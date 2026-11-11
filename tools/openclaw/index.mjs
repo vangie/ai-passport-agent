@@ -36,7 +36,7 @@ export default {
                 const providerConfig = provider.resolveConfig({cfg: config, rawConfig: {}, agentId, surface: 'gateway-relay'});
                 upstreamConfigured = provider.isConfigured({cfg: config, providerConfig, agentId});
             } catch {}
-            respond(true, {pluginVersion: '0.4.1', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
+            respond(true, {pluginVersion: '0.4.2', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
                 upstreamProvider: upstreamId, upstreamAvailable: Boolean(upstream), upstreamConfigured,
                 providerRegistered: Boolean(getRealtimeVoiceProvider('passport-realtime', config)),
                 ...(transport?.diagnostics() ?? {connections: 0})});

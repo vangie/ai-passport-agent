@@ -2,7 +2,7 @@
 
 # CI 与 Release
 
-本仓库只发布 AI Passport OpenClaw 一个产品，标签采用 `v<semver>`，如 `v0.4.1`；Release 标题包含产品名。
+本仓库只发布 AI Passport OpenClaw 一个产品，标签采用 `v<semver>`，如 `v0.4.2`；Release 标题包含产品名。
 当前 macOS App、iOS App 与插件的营销版本对齐；请检查包清单及 App 版本，不要把它等同于固件协议版本变化。
 
 ## PR 与 main
@@ -47,7 +47,7 @@
 中途失败保留草稿；重跑不会覆盖已公开版本。
 
 准备版本时对齐所有版本字段和双语说明／日志，以目标版本执行
-`python3 tools/release.py check-version --tag v0.4.1`，完成静态与 App 测试，
+`python3 tools/release.py check-version --tag v0.4.2`，完成静态与 App 测试，
 合并检查过的源码，再在准确提交上推送不可变版本标签。必须观察 Release 工作流完成，
 不能把推送标签或构建成功当成发布完成。草稿上传失败先检查同标签草稿，再重跑失败任务；
 不要为了重试移动已公开标签、另建版本或覆盖公开文件。回退选用旧版兼容产物，

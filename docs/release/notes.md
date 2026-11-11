@@ -1,6 +1,6 @@
 [Simplified Chinese](notes.zh_CN.md) · **English**
 
-# AI Passport OpenClaw v0.4.1
+# AI Passport OpenClaw v0.4.2
 
 ## Highlights
 
@@ -15,6 +15,9 @@
 - Release tags, app/plugin versions, bilingual notes and changelogs must agree.
   All ten assets are checked before publication, with source-commit provenance,
   SHA-256 verification and a verified draft upload before making a release public.
+- Progressive-scan UI fixtures no longer race an elapsed-time deadline on slow
+  hosted simulators. The v0.4.1 candidate was blocked by this CI check and was
+  not published; its tag is retained rather than rewritten.
 
 ## Downloads
 
@@ -43,7 +46,7 @@
 
 There is **no signed iOS IPA or TestFlight release**. Download the source kit
 for a physical iPhone; the Simulator ZIP is only a preview. The macOS App, iOS App
-and plugin versions are 0.4.1; the existing wire protocol and OpenClaw baseline are unchanged.
+and plugin versions are 0.4.2; the existing wire protocol and OpenClaw baseline are unchanged.
 
 ## Upgrade notes
 

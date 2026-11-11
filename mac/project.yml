@@ -37,6 +37,6 @@ targets:
       INFOPLIST_KEY_CFBundleDisplayName: AI Passport OpenClaw
       INFOPLIST_KEY_NSLocationUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
       INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
-      MARKETING_VERSION: "0.4.1"
+      MARKETING_VERSION: "0.4.2"
       CURRENT_PROJECT_VERSION: "1"
       ENABLE_APP_SANDBOX: NO

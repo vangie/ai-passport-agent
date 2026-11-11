@@ -40,7 +40,7 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport
       TARGETED_DEVICE_FAMILY: "1"
       GENERATE_INFOPLIST_FILE: NO
-      MARKETING_VERSION: "0.4.1"
+      MARKETING_VERSION: "0.4.2"
       CURRENT_PROJECT_VERSION: "1"
   PassportUITests:
     type: bundle.ui-testing

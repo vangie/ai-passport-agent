@@ -232,7 +232,8 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
                     }
                 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + (networkPreview == "progressive" ? 8 : 1)) { [weak self] in
+            if networkPreview == "progressive" { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
                 guard let self else { return }
                 if networkPreview == "failure" {
                     self.fail(L10n.string("模拟扫描失败，请重新连接设备。"))

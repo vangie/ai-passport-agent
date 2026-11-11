@@ -3,7 +3,7 @@
 # CI and Release
 
 This repository releases one product, AI Passport OpenClaw. Tags use `v<semver>`
-(for example `v0.4.1`); the release title includes the product name. The current
+(for example `v0.4.2`); the release title includes the product name. The current
 macOS App, iOS App and plugin marketing versions are aligned. Inspect package
 manifests and app bundle versions instead of assuming a firmware protocol changed.
 
@@ -61,7 +61,7 @@ local settings, build products and other repository files. Review staged sources
 before committing; the allowlist is not a substitute for secret scanning.
 
 For release preparation, align the version fields, update both release notes and
-changelogs, and run `python3 tools/release.py check-version --tag v0.4.1` with the
+changelogs, and run `python3 tools/release.py check-version --tag v0.4.2` with the
 intended version. Run the static gate and app tests, merge the reviewed source,
 and push a new immutable version tag at that exact commit. Monitor the Release
 workflow to completion; a pushed tag or successful build alone is not a release.
