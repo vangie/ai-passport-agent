@@ -154,9 +154,7 @@ final class PassportLayoutTests: XCTestCase {
 
     func testSavedNetworkReusesPassword() {
         previewNetworks("success")
-        let disclosure = application.buttons["已保存的网络, 1"]
-        if disclosure.exists { disclosure.tap() }
-        else { application.buttons["已保存的网络"].tap() }
+        application.staticTexts["wifi.savedNetworks"].tap()
         let saved = application.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Saved iPhone")).firstMatch
         XCTAssertTrue(saved.waitForExistence(timeout: 5))
         saved.tap()
@@ -168,7 +166,7 @@ final class PassportLayoutTests: XCTestCase {
         application.terminate()
         application.launchArguments += ["--preview-networks", "success", "--preview-saved-networks"]
         application.launch()
-        let disclosure = application.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "已保存的网络")).firstMatch
+        let disclosure = application.staticTexts["wifi.savedNetworks"]
         XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
         disclosure.tap()
         let first = application.buttons["wifi.saved.0"]

@@ -66,16 +66,16 @@ struct PassportCheckReport: Equatable {
     }
 
     var summary: String {
-        guard gateway else { return "设备未能连接并认证网关，请检查设备网络、连接方式和配对状态。" }
-        let askText = ask ? "提问会话可访问" : "提问会话检查未通过"
+        guard gateway else { return L10n.string("设备未能连接并认证网关，请检查设备网络、连接方式和配对状态。") }
+        let askText = ask ? L10n.string("提问会话可访问") : L10n.string("提问会话检查未通过")
         let callText: String
         switch plugin {
-        case 1: callText = call == 1 ? "通话服务已配置" : "通话服务尚未就绪，请检查网关的实时语音模型配置"
-        case 2: callText = "插件状态不可读取，请检查插件安装和设备权限"
-        case 3: callText = "插件协议不兼容，请更新插件"
-        default: callText = "插件状态请求未完成，请检查网关连接"
+        case 1: callText = call == 1 ? L10n.string("通话服务已配置") : L10n.string("通话服务尚未就绪，请检查网关的实时语音模型配置")
+        case 2: callText = L10n.string("插件状态不可读取，请检查插件安装和设备权限")
+        case 3: callText = L10n.string("插件协议不兼容，请更新插件")
+        default: callText = L10n.string("插件状态请求未完成，请检查网关连接")
         }
-        return "设备网关认证通过 · \(askText)；\(callText)。"
+        return L10n.string("设备网关认证通过 · %@；%@。", String(describing: askText), String(describing: callText))
     }
 }
 

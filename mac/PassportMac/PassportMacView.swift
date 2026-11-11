@@ -141,7 +141,7 @@ struct PassportMacView: View {
         .onChange(of: link.loaded) { _, loaded in
             if loaded { prefill(); continueConfigurationSave() }
             else if configurationSave != nil {
-                link.result = .failed("设备连接已断开，未保存的修改已保留。重新连接后可继续保存。")
+                link.result = .failed(L10n.string("设备连接已断开，未保存的修改已保留。重新连接后可继续保存。"))
             }
         }
         .onChange(of: link.configurationRevision) { _, _ in
@@ -161,9 +161,9 @@ struct PassportMacView: View {
             guard let configuration else { return }
             DispatchQueue.main.async { applyImportedConfiguration(configuration) }
         }
-        .alert("无法导入配置", isPresented: Binding(
+        .alert(L10n.string("无法导入配置"), isPresented: Binding(
             get: { incoming.error != nil }, set: { if !$0 { incoming.error = nil } }
-        )) { Button("好", role: .cancel) {} }
+        )) { Button(L10n.string("好"), role: .cancel) {} }
         message: { Text(incoming.error ?? "") }
     }
 
@@ -192,18 +192,18 @@ struct PassportMacView: View {
 
     var body: some View {
         formLifecycle
-        .confirmationDialog("让 AI Passport 忘掉「\(forgetting ?? "")」？", isPresented: Binding(
+        .confirmationDialog(L10n.string("让 AI Passport 忘掉「%@」？", String(describing: forgetting ?? "")), isPresented: Binding(
             get: { forgetting != nil }, set: { if !$0 { forgetting = nil } }
         )) {
-            Button("忘掉网络", role: .destructive) {
+            Button(L10n.string("忘掉网络"), role: .destructive) {
                 if let network = forgetting { link.forget(ssid: network) }
                 forgetting = nil
             }
-        } message: { Text("删除设备保存的网络和密码。这台 Mac 记住的密码会保留。") }
-        .confirmationDialog("删除「\(dropping?.name ?? "")」？", isPresented: Binding(
+        } message: { Text(L10n.string("删除设备保存的网络和密码。这台 Mac 记住的密码会保留。")) }
+        .confirmationDialog(L10n.string("删除「%@」？", String(describing: dropping?.name ?? "")), isPresented: Binding(
             get: { dropping != nil }, set: { if !$0 { dropping = nil } }
         )) {
-            Button("删除配置", role: .destructive) {
+            Button(L10n.string("删除配置"), role: .destructive) {
                 if let agent = dropping {
                     routeDrafts.removeValue(forKey: "saved:\(agent.name)")
                     pairingDrafts.removeValue(forKey: "saved:\(agent.name)")
@@ -212,13 +212,13 @@ struct PassportMacView: View {
                 }
                 dropping = nil
             }
-        } message: { Text("从 AI Passport 删除这套 OpenClaw 配置。") }
+        } message: { Text(L10n.string("从 AI Passport 删除这套 OpenClaw 配置。")) }
     }
 
     private func applyImportedConfiguration(_ configuration: ConfigurationLink) {
         guard incoming.pending == configuration else { return }
         guard !writing else {
-            incoming.error = "正在保存配置，请稍后重新打开链接。"
+            incoming.error = L10n.string("正在保存配置，请稍后重新打开链接。")
             incoming.pending = nil
             return
         }
@@ -248,16 +248,16 @@ struct PassportMacView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 13))
             VStack(alignment: .leading, spacing: 5) {
                 Text("AI Passport").font(.title2.weight(.semibold))
-                Text("配置网络与助手，保存到设备。")
+                Text(L10n.string("配置网络与助手，保存到设备。"))
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
             if hasChanges {
-                Label("有未保存的修改", systemImage: "circle.fill")
+                Label(L10n.string("有未保存的修改"), systemImage: "circle.fill")
                     .font(.caption).foregroundStyle(.orange)
             }
             if link.configurationBusy {
-                Label(link.deviceCheck?.running == true ? "正在检测设备" : "设备正在使用", systemImage: "waveform")
+                Label(link.deviceCheck?.running == true ? L10n.string("正在检测设备") : L10n.string("设备正在使用"), systemImage: "waveform")
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
@@ -267,30 +267,31 @@ struct PassportMacView: View {
     private var deviceSettings: some View {
         card {
             HStack {
-                sectionTitle("设备偏好", symbol: "slider.horizontal.3")
+                sectionTitle(L10n.string("设备偏好"), symbol: "slider.horizontal.3")
                 Spacer()
                 draftIndicator(preferencesChanged)
             }
             HStack {
-                Text("屏幕语言").font(.callout)
+                Text(L10n.string("屏幕语言")).font(.callout)
                 Spacer()
-                Picker("设备屏幕语言", selection: $languageDraft.value) {
-                    Text("中文").tag("zh")
+                Picker(L10n.string("设备屏幕语言"), selection: $languageDraft.value) {
+                    Text(L10n.string("中文")).tag("zh")
                     Text("English").tag("en")
                 }
-                .pickerStyle(.segmented).labelsHidden().frame(width: 142)
+                .pickerStyle(.segmented).labelsHidden()
+                .frame(width: L10n.language() == "en" ? 228 : 142)
                 .disabled(!link.loaded || writing || link.tried == .trying || link.configurationBusy)
             }
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
-                    Text("扬声器音量").font(.caption).foregroundStyle(.secondary)
+                    Text(L10n.string("扬声器音量")).font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     Text(link.device == nil ? "—" : "\(volumeDraft.value)%")
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
                 Slider(value: Binding(get: { Double(volumeDraft.value) }, set: { volumeDraft.value = Int($0) }),
                        in: 0...100, step: 5)
-                .accessibilityLabel("设备扬声器音量")
+                .accessibilityLabel(L10n.string("设备扬声器音量"))
                 .disabled(!link.loaded || !link.supportsDeviceControl || link.device == nil ||
                           writing || link.configurationBusy || link.tried == .trying)
             }
@@ -301,32 +302,32 @@ struct PassportMacView: View {
         DisclosureGroup(isExpanded: $showMaintenance) {
             HStack(alignment: .center, spacing: 24) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("固件是设备运行的软件。仅在修复问题或增加功能时更新，需要重启设备。")
-                    Text("不会保存当前表单的修改；兼容分区布局下保留设备已保存的配置。")
+                    Text(L10n.string("固件是设备运行的软件。仅在修复问题或增加功能时更新，需要重启设备。"))
+                    Text(L10n.string("不会保存当前表单的修改；兼容分区布局下保留设备已保存的配置。"))
                         .foregroundStyle(.secondary)
                 }.font(.caption)
                 Spacer(minLength: 0)
-                Button("更新固件") { updateFirmware() }
+                Button(L10n.string("更新固件")) { updateFirmware() }
                     .disabled(link.linkKind != "usb" || !link.loaded || firmware == nil ||
                               firmware?.matches(link.build) == true || writing ||
                               link.configurationBusy || link.tried == .trying)
-                    .help("只更新应用区，不写入尚未保存的配置")
+                    .help(L10n.string("只更新应用区，不写入尚未保存的配置"))
             }.padding(.top, 8)
         } label: {
             HStack {
-                Label("设备维护", systemImage: "cpu").font(.callout.weight(.medium))
+                Label(L10n.string("设备维护"), systemImage: "cpu").font(.callout.weight(.medium))
                 Spacer()
                 Text(firmwareStatus).font(.caption).foregroundStyle(.secondary)
-                    .help(link.build == "-" ? "连接设备后读取固件标识" : "当前固件：\(link.build)")
+                    .help(link.build == "-" ? L10n.string("连接设备后读取固件标识") : L10n.string("当前固件：%@", String(describing: link.build)))
             }
         }
         .padding(.horizontal, 24).padding(.vertical, 12)
     }
 
     private var firmwareStatus: String {
-        guard link.loaded else { return "等待连接" }
-        guard let firmware else { return "未找到可用更新" }
-        return firmware.matches(link.build) ? "固件已是配套版本" : "有可用固件更新"
+        guard link.loaded else { return L10n.string("等待连接") }
+        guard let firmware else { return L10n.string("未找到可用更新") }
+        return firmware.matches(link.build) ? L10n.string("固件已是配套版本") : L10n.string("有可用固件更新")
     }
 
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -390,19 +391,19 @@ struct PassportMacView: View {
                 draftIndicator(wifiDraft.isDirty)
                 Spacer()
                 Button { wifi.scanIfAuthorized(); link.scan() } label: {
-                    Label("重新扫描", systemImage: "arrow.clockwise")
+                    Label(L10n.string("重新扫描"), systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless).font(.callout)
                 .foregroundStyle(accent)
                 .disabled(wifi.scanning || writing)
             }
-            Text("选择设备连接的网络，保存后生效。")
+            Text(L10n.string("选择设备连接的网络，保存后生效。"))
                 .font(.callout).foregroundStyle(.secondary)
             if wifi.locationDenied && link.sees.isEmpty {
                 HStack {
-                    Text("允许定位后可读取 Mac 扫描到的网络名。")
+                    Text(L10n.string("允许定位后可读取 Mac 扫描到的网络名。"))
                         .font(.caption).foregroundStyle(.secondary)
-                    Button("打开设置") {
+                    Button(L10n.string("打开设置")) {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices")!)
                     }.buttonStyle(.link)
                 }
@@ -410,7 +411,7 @@ struct PassportMacView: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     if choices.isEmpty {
-                        Text(wifi.scanning ? "正在查找附近网络…" : "没找到网络，也可以手动添加。")
+                        Text(wifi.scanning ? L10n.string("正在查找附近网络…") : L10n.string("没找到网络，也可以手动添加。"))
                             .font(.callout).foregroundStyle(.secondary).padding(.vertical, 24)
                     }
                     ForEach(showAll ? choices : Array(choices.prefix(4))) { row in wifiRow(row) }
@@ -420,33 +421,33 @@ struct PassportMacView: View {
             .background(.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 8))
             HStack {
                 if choices.count > 4 {
-                    Button(showAll ? "收起列表" : "查看全部 \(choices.count) 个网络") { showAll.toggle() }
+                    Button(showAll ? L10n.string("收起列表") : L10n.string("查看全部 %@ 个网络", String(describing: choices.count))) { showAll.toggle() }
                         .buttonStyle(.link)
                 }
                 Spacer()
                 if !wifi.canScanSilently && !wifi.locationDenied {
-                    Button("扫描 Mac 网络") { wifi.scan() }.buttonStyle(.link)
+                    Button(L10n.string("扫描 Mac 网络")) { wifi.scan() }.buttonStyle(.link)
                 }
-                Button(manualNetwork ? "从列表选择" : "手动添加") {
+                Button(manualNetwork ? L10n.string("从列表选择") : L10n.string("手动添加")) {
                     manualNetwork.toggle()
                     if manualNetwork { ssid = manualSSID.isEmpty ? nil : manualSSID }
                 }.buttonStyle(.link)
             }.font(.caption)
             if manualNetwork {
-                TextField("网络名称（SSID）", text: $manualSSID).textFieldStyle(.roundedBorder)
+                TextField(L10n.string("网络名称（SSID）"), text: $manualSSID).textFieldStyle(.roundedBorder)
             }
             passwordRow
             HStack {
-                Button("测试 Wi-Fi") {
+                Button(L10n.string("测试 Wi-Fi")) {
                     guard let ssid else { return }
                     link.tryWifi(ssid: ssid, password: password)
                 }
                 .disabled(!link.loaded || !wifiReady || writing || link.tried == .trying)
-                .help("由 AI Passport 试连，不会切换这台 Mac 的 Wi-Fi")
+                .help(L10n.string("由 AI Passport 试连，不会切换这台 Mac 的 Wi-Fi"))
                 Spacer(minLength: 4)
             }
             testResult(wifiTestText, busy: link.tried == .trying)
-            Text("支持 2.4 GHz。iPhone 热点需开启「最大兼容性」。")
+            Text(L10n.string("支持 2.4 GHz。iPhone 热点需开启「最大兼容性」。"))
                 .font(.caption).foregroundStyle(.secondary)
         }.disabled(link.configurationBusy || writing)
     }
@@ -465,11 +466,11 @@ struct PassportMacView: View {
                             .foregroundStyle(row.reach == .only5 ? .secondary : .primary)
                         HStack(spacing: 6) {
                             if remembered.contains(row.ssid) {
-                                Label("已存密码", systemImage: "key.fill").foregroundStyle(.green)
-                            } else if link.saved.contains(row.ssid) { Text("设备已保存") }
-                            if row.ssid == wifi.current { Text("Mac 当前连接") }
-                            if row.reach == .only5 { Text("未发现 2.4 GHz") }
-                            if row.reach == .away { Text("不在附近") }
+                                Label(L10n.string("已存密码"), systemImage: "key.fill").foregroundStyle(.green)
+                            } else if link.saved.contains(row.ssid) { Text(L10n.string("设备已保存")) }
+                            if row.ssid == wifi.current { Text(L10n.string("Mac 当前连接")) }
+                            if row.reach == .only5 { Text(L10n.string("未发现 2.4 GHz")) }
+                            if row.reach == .away { Text(L10n.string("不在附近")) }
                         }
                         .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                     }
@@ -491,7 +492,7 @@ struct PassportMacView: View {
               if remembered.contains(row.ssid) || link.saved.contains(row.ssid) {
                 Menu {
                     if remembered.contains(row.ssid) {
-                        Button("忘记这台 Mac 保存的密码") {
+                        Button(L10n.string("忘记这台 Mac 保存的密码")) {
                             WifiMemory.forget(row.ssid)
                             passwordDrafts.removeValue(forKey: row.ssid)
                             remembered = WifiMemory.ssids()
@@ -504,12 +505,12 @@ struct PassportMacView: View {
                         }
                     }
                     if link.saved.contains(row.ssid) {
-                        Button("从 AI Passport 删除网络", role: .destructive) { forgetting = row.ssid }
+                        Button(L10n.string("从 AI Passport 删除网络"), role: .destructive) { forgetting = row.ssid }
                     }
                 } label: { Image(systemName: "ellipsis") }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .disabled(writing)
-                .help("管理「\(row.ssid)」的密码与设备记录")
+                .help(L10n.string("管理「%@」的密码与设备记录", String(describing: row.ssid)))
               } else {
                 Color.clear.accessibilityHidden(true)
               }
@@ -530,21 +531,21 @@ struct PassportMacView: View {
     }
 
     private func signalDescription(_ rssi: Int?) -> String {
-        guard let rssi else { return "未检测到 Wi-Fi 信号" }
-        if rssi >= -55 { return "Wi-Fi 信号强" }
-        if rssi >= -67 { return "Wi-Fi 信号中等" }
-        return "Wi-Fi 信号弱"
+        guard let rssi else { return L10n.string("未检测到 Wi-Fi 信号") }
+        if rssi >= -55 { return L10n.string("Wi-Fi 信号强") }
+        if rssi >= -67 { return L10n.string("Wi-Fi 信号中等") }
+        return L10n.string("Wi-Fi 信号弱")
     }
 
     private var passwordRow: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text("Wi-Fi 密码").font(.callout.weight(.medium))
+                Text(L10n.string("Wi-Fi 密码")).font(.callout.weight(.medium))
                 Spacer()
                 if let ssid { Text(ssid).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }
             if choice?.secure == false {
-                Text("开放网络，无需密码").foregroundStyle(.secondary).frame(height: 24)
+                Text(L10n.string("开放网络，无需密码")).foregroundStyle(.secondary).frame(height: 24)
             } else {
                 HStack(spacing: 8) {
                     Group {
@@ -555,15 +556,15 @@ struct PassportMacView: View {
                     Button { showPassword.toggle() } label: {
                         Image(systemName: showPassword ? "eye.slash" : "eye")
                     }
-                    .buttonStyle(.borderless).help(showPassword ? "隐藏密码" : "显示密码")
+                    .buttonStyle(.borderless).help(showPassword ? L10n.string("隐藏密码") : L10n.string("显示密码"))
                 }
             }
             if password.isEmpty && ssid != nil && choice?.secure != false {
                 HStack {
-                    Text(keychainNote ?? "也可以从系统钥匙串读取。")
+                    Text(keychainNote ?? L10n.string("也可以从系统钥匙串读取。"))
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button(readingPassword ? "正在读取…" : "读取密码", action: readKeychain)
+                    Button(readingPassword ? L10n.string("正在读取…") : L10n.string("读取密码"), action: readKeychain)
                         .font(.caption).disabled(readingPassword)
                 }
             }
@@ -571,14 +572,14 @@ struct PassportMacView: View {
     }
 
     private var passwordPlaceholder: String {
-        guard let ssid else { return "先选择一个网络" }
-        return link.saved.contains(ssid) ? "留空沿用设备已保存的密码" : "输入网络密码"
+        guard let ssid else { return L10n.string("先选择一个网络") }
+        return link.saved.contains(ssid) ? L10n.string("留空沿用设备已保存的密码") : L10n.string("输入网络密码")
     }
 
     private func readKeychain() {
         guard let selected = ssid, password.isEmpty, !readingPassword else { return }
         readingPassword = true
-        keychainNote = "请在系统弹窗中允许…"
+        keychainNote = L10n.string("请在系统弹窗中允许…")
         DispatchQueue.global(qos: .userInitiated).async {
             let found = WifiScan.savedPassword(ssid: selected)
             DispatchQueue.main.async {
@@ -589,7 +590,7 @@ struct PassportMacView: View {
                     WifiMemory.remember(found, for: selected)
                     remembered = WifiMemory.ssids()
                     keychainNote = nil
-                } else { keychainNote = "没有读取到，请手动输入。" }
+                } else { keychainNote = L10n.string("没有读取到，请手动输入。") }
             }
         }
     }
@@ -600,7 +601,7 @@ struct PassportMacView: View {
         card {
             VStack(alignment: .leading, spacing: 12) {
             HStack {
-                sectionTitle("助手", symbol: "bubble.left.and.bubble.right")
+                sectionTitle(L10n.string("助手"), symbol: "bubble.left.and.bubble.right")
                 Spacer()
                 draftIndicator(agentChanged)
             }
@@ -609,17 +610,17 @@ struct PassportMacView: View {
                     ForEach(link.agents) { agent in
                         Text(agentPickerTitle(agent)).tag(agent.id)
                     }
-                    Text("添加新的 OpenClaw").tag(-1)
+                    Text(L10n.string("添加新的 OpenClaw")).tag(-1)
                 }
             }
             if let agent = pickedSaved {
                 HStack {
-                    Label(agent.state == "ready" ? "已配对" : "等待配对完成",
+                    Label(agent.state == "ready" ? L10n.string("已配对") : L10n.string("等待配对完成"),
                           systemImage: agent.state == "ready" ? "checkmark.shield" : "clock")
                         .font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     Button(role: .destructive) { dropping = agent } label: { Image(systemName: "trash") }
-                        .buttonStyle(.borderless).help("删除设备上的这套 OpenClaw")
+                        .buttonStyle(.borderless).help(L10n.string("删除设备上的这套 OpenClaw"))
                 }
                 Text(agent.url).font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary).textSelection(.enabled)
@@ -629,14 +630,14 @@ struct PassportMacView: View {
                 get: { agentPick == -1 || showPairing }, set: { showPairing = $0 }
             )) {
                 pairingForm.padding(.top, 8)
-            } label: { Text(pickedSaved == nil ? "连接新的 OpenClaw" : "重新配对").font(.callout.weight(.medium)) }
+            } label: { Text(pickedSaved == nil ? L10n.string("连接新的 OpenClaw") : L10n.string("重新配对")).font(.callout.weight(.medium)) }
             Divider()
-            DisclosureGroup("连接方式 · \(routeForm.enabled ? "Shadowsocks" : "直连")", isExpanded: $showRoute) {
+            DisclosureGroup(L10n.string("连接方式 · %@", String(describing: routeForm.enabled ? "Shadowsocks" : L10n.string("直连"))), isExpanded: $showRoute) {
                 routeRow.padding(.top, 8)
             }.font(.callout)
             }.disabled(link.configurationBusy || writing)
             Divider()
-            DisclosureGroup("连接检测", isExpanded: $showDiagnostics) {
+            DisclosureGroup(L10n.string("连接检测"), isExpanded: $showDiagnostics) {
                 diagnostics.padding(.top, 8)
             }.font(.callout)
         }
@@ -645,35 +646,35 @@ struct PassportMacView: View {
     private var pairingForm: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("从 OpenClaw 获取一次性配对码").font(.caption).foregroundStyle(.secondary)
+                Text(L10n.string("让 OpenClaw 准备接入并生成配对码")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button {
                     PairPrompt.copyToPasteboard()
                     copied = true
                 } label: {
-                    Label(copied ? "已复制" : "复制提示词",
+                    Label(copied ? L10n.string("已复制") : L10n.string("复制提示词"),
                           systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .buttonStyle(.borderless).font(.callout)
                 .foregroundStyle(copied ? .green : accent)
-                .help(copied ? "贴给 OpenClaw，让它生成配对码" : "复制配对提示词，然后贴给你的 OpenClaw")
+                .help(L10n.string("贴给 OpenClaw，检查插件和公网入口，缺少时协助配置并生成配对码"))
             }
             if copied {
-                Text("贴给 OpenClaw，再把回复的配对码粘贴到下面。")
+                Text(L10n.string("贴给 OpenClaw，完成接入准备后再粘贴配对码。"))
                     .font(.caption).foregroundStyle(.secondary)
             }
             VStack(alignment: .leading, spacing: 7) {
-                Text("配对码").font(.callout.weight(.medium))
+                Text(L10n.string("配对码")).font(.callout.weight(.medium))
                 ZStack(alignment: .topLeading) {
                     if setupCode.isEmpty {
-                        Text("粘贴 OpenClaw 回复的完整配对码")
+                        Text(L10n.string("粘贴 OpenClaw 回复的完整配对码"))
                             .foregroundStyle(.tertiary).padding(.horizontal, 5).padding(.vertical, 8)
                             .allowsHitTesting(false)
                     }
                     TextEditor(text: Binding(get: { setupCode }, set: { setupCode = $0 }))
                         .scrollContentBackground(.hidden)
                         .frame(height: 78)
-                        .accessibilityLabel("配对码")
+                        .accessibilityLabel(L10n.string("配对码"))
                 }
                     .font(.system(.callout, design: .monospaced))
                     .padding(8)
@@ -683,23 +684,23 @@ struct PassportMacView: View {
                     .disabled(writing)
                 if !setupCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     if parsed != nil {
-                        Label(pairingChanged ? "已识别配对码，尚未保存" : "此配对码已保存，无需重复提交",
+                        Label(pairingChanged ? L10n.string("已识别配对码，尚未保存") : L10n.string("此配对码已保存，无需重复提交"),
                               systemImage: "checkmark.circle.fill")
                             .foregroundStyle(pairingChanged ? accent : .green).font(.caption)
                     } else {
-                        Label("配对码不完整或格式不对，请重新粘贴。", systemImage: "exclamationmark.circle.fill")
+                        Label(L10n.string("配对码不完整或格式不对，请重新粘贴。"), systemImage: "exclamationmark.circle.fill")
                             .foregroundStyle(.orange).font(.caption)
                     }
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("网关地址").font(.callout.weight(.medium))
+                    Text(L10n.string("网关地址")).font(.callout.weight(.medium))
                     Spacer()
-                    Text(parsed != nil ? "来自配对码" : "已保存的地址")
+                    Text(parsed != nil ? L10n.string("来自配对码") : L10n.string("已保存的地址"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Text(displayURL.isEmpty ? "粘贴配对码后自动显示，无需手填" : displayURL)
+                Text(displayURL.isEmpty ? L10n.string("粘贴配对码后自动显示，无需手填") : displayURL)
                     .id(displayURL)
                     .font(.system(.callout, design: .monospaced))
                     .foregroundStyle(displayURL.isEmpty ? .secondary : .primary)
@@ -710,12 +711,12 @@ struct PassportMacView: View {
             HStack {
                 testResult(probeText, busy: probe == .testing)
                 Spacer(minLength: 4)
-                Button("测试地址") {
+                Button(L10n.string("测试地址")) {
                     probe = .testing
                     prober.run(url: displayURL, token: "") { probe = $0 }
                 }
                 .disabled(!PairPrompt.validGateway(displayURL) || probe == .testing || writing || invalidCode)
-                .help("从这台 Mac 检查网关响应，不使用也不消耗配对码")
+                .help(L10n.string("从这台 Mac 检查网关响应，不使用也不消耗配对码"))
             }
         }
     }
@@ -723,14 +724,14 @@ struct PassportMacView: View {
     private var diagnostics: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("设备连接检测").font(.callout.weight(.medium))
+                Text(L10n.string("设备连接检测")).font(.callout.weight(.medium))
                 Spacer()
                 if link.deviceCheck?.running == true {
                     ProgressView().controlSize(.small)
-                    Button(link.deviceCheck == .cancelling ? "正在停止…" : "停止") { link.cancelDeviceCheck() }
+                    Button(link.deviceCheck == .cancelling ? L10n.string("正在停止…") : L10n.string("停止")) { link.cancelDeviceCheck() }
                         .disabled(link.deviceCheck == .cancelling)
                 } else {
-                    Button("检测当前助手") { link.checkDevice() }
+                    Button(L10n.string("检测当前助手")) { link.checkDevice() }
                         .disabled(!link.loaded || !link.supportsDeviceControl || link.currentAgent == nil ||
                                   writing || link.tried == .trying || link.configurationBusy)
                 }
@@ -742,41 +743,41 @@ struct PassportMacView: View {
 
     private var deviceCheckText: String {
         switch link.deviceCheck {
-        case .checking: return "正在通过设备当前 Wi-Fi 和连接方式检测「\(link.currentAgent?.name ?? "OpenClaw")」，不会录音或发起模型对话。"
-        case .cancelling: return "正在停止检测，等待设备释放连接。"
-        case .report(let report): return report.summary + "不代表实际语音收发已验收。"
+        case .checking: return L10n.string("正在通过设备当前 Wi-Fi 和连接方式检测「%@」，不会录音或发起模型对话。", String(describing: link.currentAgent?.name ?? "OpenClaw"))
+        case .cancelling: return L10n.string("正在停止检测，等待设备释放连接。")
+        case .report(let report): return report.summary + L10n.string("不代表实际语音收发已验收。")
         case .failed(let reason): return reason
-        case .cancelled: return "检测已停止。"
+        case .cancelled: return L10n.string("检测已停止。")
         case nil:
-            return link.loaded && !link.supportsDeviceControl ? "更新设备固件后可使用音量同步与设备端检测。" :
-                "检测设备当前助手的网关认证、提问会话和通话服务配置。"
+            return link.loaded && !link.supportsDeviceControl ? L10n.string("更新设备固件后可使用音量同步与设备端检测。") :
+                L10n.string("检测设备当前助手的网关认证、提问会话和通话服务配置。")
         }
     }
 
     private var routeRow: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("连接方式").font(.callout.weight(.medium))
+                Text(L10n.string("连接方式")).font(.callout.weight(.medium))
                 Spacer()
-                Picker("连接方式", selection: routeBinding(\.enabled)) {
-                    Text("直连").tag(false)
+                Picker(L10n.string("连接方式"), selection: routeBinding(\.enabled)) {
+                    Text(L10n.string("直连")).tag(false)
                     Text("Shadowsocks").tag(true)
                 }
                 .pickerStyle(.segmented).labelsHidden().fixedSize()
             }
             if routeForm.enabled {
                 HStack(spacing: 10) {
-                    TextField("服务器", text: routeBinding(\.host)).accessibilityLabel("Shadowsocks 服务器")
-                    TextField("端口", text: routeBinding(\.port)).frame(width: 70).accessibilityLabel("Shadowsocks 端口")
+                    TextField(L10n.string("服务器"), text: routeBinding(\.host)).accessibilityLabel(L10n.string("Shadowsocks 服务器"))
+                    TextField(L10n.string("端口"), text: routeBinding(\.port)).frame(width: 70).accessibilityLabel(L10n.string("Shadowsocks 端口"))
                 }.textFieldStyle(.roundedBorder)
                 HStack(spacing: 10) {
-                    SecureField(routeForm.hasSecret ? "留空沿用已保存的密码" : "密码", text: routeBinding(\.secret))
-                        .textFieldStyle(.roundedBorder).accessibilityLabel("Shadowsocks 密码")
+                    SecureField(routeForm.hasSecret ? L10n.string("留空沿用已保存的密码") : L10n.string("密码"), text: routeBinding(\.secret))
+                        .textFieldStyle(.roundedBorder).accessibilityLabel(L10n.string("Shadowsocks 密码"))
                     Text("aes-256-cfb").font(.caption).foregroundStyle(.secondary)
                 }
             }
             HStack {
-                Text(routeForm.enabled ? "这套 OpenClaw 经 Shadowsocks 连接。" : "这套 OpenClaw 直接连接，适合国内地址。")
+                Text(routeForm.enabled ? L10n.string("这套 OpenClaw 经 Shadowsocks 连接。") : L10n.string("这套 OpenClaw 直接连接，适合国内地址。"))
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -788,7 +789,7 @@ struct PassportMacView: View {
     }
 
     private func draftIndicator(_ dirty: Bool) -> some View {
-        Text(dirty ? "未保存" : link.loaded ? "与设备一致" : "等待设备")
+        Text(dirty ? L10n.string("未保存") : link.loaded ? L10n.string("与设备一致") : L10n.string("等待设备"))
             .font(.caption).foregroundStyle(dirty ? Color.orange : .secondary)
             .padding(.horizontal, 7).padding(.vertical, 3)
             .background(dirty ? Color.orange.opacity(0.10) : Color.primary.opacity(0.04), in: Capsule())
@@ -798,7 +799,7 @@ struct PassportMacView: View {
         let key = "saved:\(agent.name)"
         let dirty = routeDrafts[key]?.isDirty == true ||
             pairingDrafts[key].map { $0.isDirty && !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } == true
-        return agent.name + (agent.current ? "（正在使用）" : "") + (dirty ? " · 未保存" : "")
+        return agent.name + (agent.current ? L10n.string("（正在使用）") : "") + (dirty ? L10n.string(" · 未保存") : "")
     }
 
     private var parsed: (url: String, code: String)? { PairPrompt.decode(payload: setupCode) }
@@ -899,27 +900,27 @@ struct PassportMacView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(hasChanges ? "待保存：\(changedSections.joined(separator: "、"))" :
-                         link.loaded ? "配置与设备一致" : "连接设备后可保存配置")
+                    Text(hasChanges ? L10n.string("待保存：%@", String(describing: changedSections.joined(separator: L10n.language() == "en" ? ", " : "、"))) :
+                         link.loaded ? L10n.string("配置与设备一致") : L10n.string("连接设备后可保存配置"))
                         .font(.callout).foregroundStyle(hasChanges ? .primary : .secondary)
                     if hasChanges, let validationMessage {
                         Text(validationMessage).font(.caption).foregroundStyle(.orange)
                     }
                 }
                 Spacer(minLength: 4)
-                Button("撤销修改", action: discardConfiguration)
+                Button(L10n.string("撤销修改"), action: discardConfiguration)
                     .disabled(!hasChanges || writing)
-                Button("保存配置", action: saveConfiguration)
+                Button(L10n.string("保存配置"), action: saveConfiguration)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut("s", modifiers: .command)
                     .disabled(!link.loaded || !hasChanges || validationMessage != nil || writing ||
                               link.tried == .trying || link.configurationBusy)
-                    .help("统一保存 Wi-Fi、助手、屏幕语言和音量；不更新固件")
+                    .help(L10n.string("统一保存 Wi-Fi、助手、屏幕语言和音量；不更新固件"))
             }
             if writing {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(configurationSave?.waitingRevision != nil ? "正在确认设备已保存的配置…" : link.writeStatus)
+                    Text(configurationSave?.waitingRevision != nil ? L10n.string("正在确认设备已保存的配置…") : link.writeStatus)
                 }
             } else if let result = link.result {
                 switch result {
@@ -929,7 +930,7 @@ struct PassportMacView: View {
                     Label(savedText,
                           systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                 case .failed(let reason):
-                    Label((savedBeforeFailure > 0 ? "已保存 \(savedBeforeFailure) 项，其余修改已保留。" : "") + failure(reason),
+                    Label((savedBeforeFailure > 0 ? L10n.string("已保存 %@ 项，其余修改已保留。", String(describing: savedBeforeFailure)) : "") + failure(reason),
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
                 }
@@ -941,7 +942,7 @@ struct PassportMacView: View {
                 if let status = link.device {
                     Divider().frame(height: 12)
                     Image(systemName: status.wifi ? "wifi" : "wifi.slash")
-                    Text(status.wifi ? (link.savedCurrent ?? "Wi-Fi 已连接") : "Wi-Fi 未连接")
+                    Text(status.wifi ? (link.savedCurrent ?? L10n.string("Wi-Fi 已连接")) : L10n.string("Wi-Fi 未连接"))
                     if let agent = link.currentAgent { Text("· \(agent.name)") }
                     if let battery = status.battery {
                         Label("\(battery)%", systemImage: "battery.100").monospacedDigit()
@@ -949,7 +950,7 @@ struct PassportMacView: View {
                 }
                 Spacer()
                 Image(systemName: "moon.zzz").foregroundStyle(.secondary)
-                    .help("闲置 60 秒后息屏，不自动关机；连接电脑 USB 时保持唤醒。USB 连接不代表正在充电。")
+                    .help(L10n.string("闲置 60 秒后息屏，不自动关机；连接电脑 USB 时保持唤醒。USB 连接不代表正在充电。"))
             }
             .font(.caption).foregroundStyle(.secondary)
         }
@@ -957,27 +958,27 @@ struct PassportMacView: View {
     }
 
     private var savedText: String {
-        if configurationSaved { return "配置已保存到设备" }
+        if configurationSaved { return L10n.string("配置已保存到设备") }
         switch link.writeSection {
-        case .wifi: return "Wi-Fi 已保存到设备"
-        case .route: return "助手已保存到设备"
-        case .volume: return "音量已保存到设备"
-        case .language: return "屏幕语言已保存到设备"
-        case .firmware: return "固件已更新，设备已重新连接"
-        default: return "助手已保存到设备"
+        case .wifi: return L10n.string("Wi-Fi 已保存到设备")
+        case .route: return L10n.string("助手已保存到设备")
+        case .volume: return L10n.string("音量已保存到设备")
+        case .language: return L10n.string("屏幕语言已保存到设备")
+        case .firmware: return L10n.string("固件已更新，设备已重新连接")
+        default: return L10n.string("助手已保存到设备")
         }
     }
 
     private var connectionText: String {
-        if link.linkKind == "usb" { return "USB 已连上" }
-        if link.usbPresent { return "USB 已插上，等待设备响应" }
-        if link.linkKind == "socket" { return "本机模拟设备" }
-        return "请连接 AI Passport 的 USB 数据线"
+        if link.linkKind == "usb" { return L10n.string("USB 已连上") }
+        if link.usbPresent { return L10n.string("USB 已插上，等待设备响应") }
+        if link.linkKind == "socket" { return L10n.string("本机模拟设备") }
+        return L10n.string("请连接 AI Passport 的 USB 数据线")
     }
 
     private func testResult(_ value: (String, Bool)?, busy: Bool) -> some View {
         Group {
-            if busy { ProgressView().controlSize(.small); Text("正在测试…").foregroundStyle(.secondary) }
+            if busy { ProgressView().controlSize(.small); Text(L10n.string("正在测试…")).foregroundStyle(.secondary) }
             else if let (text, ok) = value {
                 Label(text, systemImage: ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                     .foregroundStyle(ok ? .green : .orange)
@@ -988,47 +989,47 @@ struct PassportMacView: View {
 
     private var wifiTestText: (String, Bool)? {
         switch link.tried {
-        case .ok: return ("设备试连成功", true)
+        case .ok: return (L10n.string("设备试连成功"), true)
         case .failed(let reason): return (wifiWhy(reason), false)
         default: return nil
         }
     }
     private func wifiWhy(_ reason: String) -> String {
         switch reason {
-        case "pass": return "Wi-Fi 密码不对"
-        case "notfound": return "设备没有找到这个网络"
-        case "security": return "不支持这个网络的加密方式"
-        case "timeout": return "连接超时，请检查密码和信号"
-        case "busy": return "设备正忙，请稍后再试"
-        default: return "设备未能连接 Wi-Fi"
+        case "pass": return L10n.string("Wi-Fi 密码不对")
+        case "notfound": return L10n.string("设备没有找到这个网络")
+        case "security": return L10n.string("不支持这个网络的加密方式")
+        case "timeout": return L10n.string("连接超时，请检查密码和信号")
+        case "busy": return L10n.string("设备正忙，请稍后再试")
+        default: return L10n.string("设备未能连接 Wi-Fi")
         }
     }
     private var probeText: (String, Bool)? {
         switch probe {
-        case .ok: return ("网关有响应", true)
-        case .badToken: return ("网关有响应，设备仍需配对", true)
+        case .ok: return (L10n.string("网关有响应"), true)
+        case .badToken: return (L10n.string("网关有响应，设备仍需配对"), true)
         case .unreachable(let reason): return (reason, false)
-        case .notOpenClaw: return ("未识别到 OpenClaw 网关", false)
+        case .notOpenClaw: return (L10n.string("未识别到 OpenClaw 网关"), false)
         default: return nil
         }
     }
     private func failure(_ reason: String) -> String {
         switch reason {
         case "pass", "notfound", "security", "timeout", "fail", "busy": return wifiWhy(reason)
-        case "url", "code", "token": return "配对码无法识别，请重新获取后粘贴。"
-        case "full": return "设备最多保存 8 个 Wi-Fi，请先删除不需要的网络。"
-        case "stale": return "设备设置有更新，已重新读取；你的修改已保留，请确认后再保存。"
-        case "storage": return "设备未能保存配置，请重试。表单仍然保留。"
-        case "proxy": return "Shadowsocks 服务器、端口或密码无效，请检查后重试。"
+        case "url", "code", "token": return L10n.string("配对码无法识别，请重新获取后粘贴。")
+        case "full": return L10n.string("设备最多保存 8 个 Wi-Fi，请先删除不需要的网络。")
+        case "stale": return L10n.string("设备设置有更新，已重新读取；你的修改已保留，请确认后再保存。")
+        case "storage": return L10n.string("设备未能保存配置，请重试。表单仍然保留。")
+        case "proxy": return L10n.string("Shadowsocks 服务器、端口或密码无效，请检查后重试。")
         default: return reason
         }
     }
     private var changedSections: [String] {
         var sections: [String] = []
         if wifiDraft.isDirty { sections.append("Wi-Fi") }
-        if unsavedAgents { sections.append("助手") }
-        if languageDraft.isDirty { sections.append("屏幕语言") }
-        if volumeDraft.isDirty { sections.append("音量") }
+        if unsavedAgents { sections.append(L10n.string("助手")) }
+        if languageDraft.isDirty { sections.append(L10n.string("屏幕语言")) }
+        if volumeDraft.isDirty { sections.append(L10n.string("音量")) }
         return sections
     }
 
@@ -1047,25 +1048,25 @@ struct PassportMacView: View {
     }
 
     private var validationMessage: String? {
-        if wifiDraft.isDirty && !wifiReady { return "请选择 2.4 GHz 网络并填写密码。" }
+        if wifiDraft.isDirty && !wifiReady { return L10n.string("请选择 2.4 GHz 网络并填写密码。") }
         for edit in agentEdits {
             if let code = edit.code, PairPrompt.decode(payload: code) == nil {
-                return "请检查「\(edit.name)」的配对码。"
+                return L10n.string("请检查「%@」的配对码。", String(describing: edit.name))
             }
-            if edit.key == "new" && edit.code == nil { return "请填写新助手的配对码。" }
+            if edit.key == "new" && edit.code == nil { return L10n.string("请填写新助手的配对码。") }
             if edit.key == "new", link.agents.contains(where: { $0.name == edit.name }) {
-                return "设备上已有「\(edit.name)」，请在列表中选择它并重新配对。"
+                return L10n.string("设备上已有「%@」，请在列表中选择它并重新配对。", String(describing: edit.name))
             }
             if edit.key != "new", !link.agents.contains(where: { "saved:\($0.name)" == edit.key }) {
-                return "「\(edit.name)」已从设备移除，请撤销修改后重试。"
+                return L10n.string("「%@」已从设备移除，请撤销修改后重试。", String(describing: edit.name))
             }
             if let route = edit.route {
-                if !link.supportsRoute { return "连接方式设置需要先在「设备维护」中更新固件。" }
-                if !route.settings.valid { return "请检查「\(edit.name)」的 Shadowsocks 设置。" }
+                if !link.supportsRoute { return L10n.string("连接方式设置需要先在「设备维护」中更新固件。") }
+                if !route.settings.valid { return L10n.string("请检查「%@」的 Shadowsocks 设置。", String(describing: edit.name)) }
             }
         }
         if volumeDraft.isDirty && (!link.supportsDeviceControl || link.device == nil) {
-            return "音量设置需要连接支持设备控制的固件。"
+            return L10n.string("音量设置需要连接支持设备控制的固件。")
         }
         return nil
     }
@@ -1096,7 +1097,7 @@ struct PassportMacView: View {
             return
         }
         guard link.loaded, !link.configurationBusy, link.tried != .trying else {
-            link.result = .failed("设备暂时无法保存。未完成的修改已保留，请稍后重试。")
+            link.result = .failed(L10n.string("设备暂时无法保存。未完成的修改已保留，请稍后重试。"))
             return
         }
         switch step {
@@ -1109,24 +1110,24 @@ struct PassportMacView: View {
             link.saveAgent(setupCode: parsed.code, name: name)
         case .route(let name, let value):
             guard let agent = link.agents.first(where: { $0.name == name }) else {
-                link.result = .failed("设备未返回这套助手配置。修改已保留，请重新连接后确认。")
+                link.result = .failed(L10n.string("设备未返回这套助手配置。修改已保留，请重新连接后确认。"))
                 return
             }
             link.setRoute(agent, route: value.settings)
         case .selection(let name):
             guard let agent = link.agents.first(where: { $0.name == name }) else {
-                link.result = .failed("设备未返回所选助手，未完成的修改已保留。")
+                link.result = .failed(L10n.string("设备未返回所选助手，未完成的修改已保留。"))
                 return
             }
             link.useAgent(agent)
         case .language(let language): link.setLanguage(language)
         case .volume(let volume): link.setVolume(volume)
         case .wifi(let value):
-            guard let ssid = value.ssid else { link.result = .failed("请选择网络。"); return }
+            guard let ssid = value.ssid else { link.result = .failed(L10n.string("请选择网络。")); return }
             link.saveWiFi(ssid: ssid, password: value.password)
         }
         if configurationSave != nil && link.result != .writing {
-            link.result = .failed("设备暂时无法保存。未完成的修改已保留，请重新连接后重试。")
+            link.result = .failed(L10n.string("设备暂时无法保存。未完成的修改已保留，请重新连接后重试。"))
         }
     }
 
@@ -1157,7 +1158,7 @@ struct PassportMacView: View {
         saveReadbackTimer?.invalidate()
         saveReadbackTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { _ in
             guard configurationSave != nil else { return }
-            link.result = .failed("保存已获确认，但未能读回完整配置。请重新连接后检查。")
+            link.result = .failed(L10n.string("保存已获确认，但未能读回完整配置。请重新连接后检查。"))
         }
     }
 
@@ -1167,14 +1168,14 @@ struct PassportMacView: View {
         saveReadbackTimer?.invalidate()
         if case .pairing(let key, let name, _) = step {
             guard let target = link.agents.first(where: { $0.name == name }) else {
-                link.result = .failed("设备未返回这套助手配置。修改已保留，请重新连接后确认。")
+                link.result = .failed(L10n.string("设备未返回这套助手配置。修改已保留，请重新连接后确认。"))
                 return
             }
             reconcilePairing(key: key, target: target)
         }
         if case .selection(let name) = step {
             guard let target = link.currentAgent, target.name == name else {
-                link.result = .failed("设备未能切换到所选助手，请重试。")
+                link.result = .failed(L10n.string("设备未能切换到所选助手，请重试。"))
                 return
             }
             selectionDraft.accept(target.id)
@@ -1209,7 +1210,7 @@ struct PassportMacView: View {
                     }
                     self.link.resumeAfterFlash { ready in
                         self.link.result = ready && firmware.matches(self.link.build) ? .saved :
-                            .failed("固件已写入，USB 尚未恢复。请重新连接；表单已保留。")
+                            .failed(L10n.string("固件已写入，USB 尚未恢复。请重新连接；表单已保留。"))
                     }
                 }
             }

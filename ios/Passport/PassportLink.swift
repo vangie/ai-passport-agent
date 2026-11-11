@@ -12,7 +12,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     static let rxUUID = CBUUID(string: "D2B48E2A-7051-339C-7E4A-104D2E8A1C6B")
     static let txUUID = CBUUID(string: "D3B48E2A-7051-339C-7E4A-104D2E8A1C6B")
 
-    @Published private(set) var status = "请开启手机蓝牙"
+    @Published private(set) var status = L10n.string("请开启手机蓝牙")
     @Published private(set) var devices: [NearbyPassport] = []
     @Published private(set) var snapshot = PassportSnapshot()
     @Published private(set) var nearby: [NearbyNetwork] = []
@@ -45,7 +45,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     override init() {
         super.init()
         #if targetEnvironment(simulator)
-        status = "模拟器仅预览界面，蓝牙配网需要真实 iPhone"
+        status = L10n.string("模拟器仅预览界面，蓝牙配网需要真实 iPhone")
         #if DEBUG
         if networkPreview != nil {
             let saved = ProcessInfo.processInfo.arguments.contains("--preview-saved-networks")
@@ -60,8 +60,8 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
             try? snapshot.receive("AGENTS 1 0 -1")
             try? snapshot.receive("AGENTS END")
             ready = true
-            deviceName = "AI Passport · 预览"
-            status = "模拟数据，不连接真实设备"
+            deviceName = L10n.string("AI Passport · 预览")
+            status = L10n.string("模拟数据，不连接真实设备")
         }
         #endif
         #else
@@ -73,7 +73,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         if central.state == .poweredOn { search() }
         else {
             disconnect()
-            status = central.state == .unauthorized ? "请在系统设置中允许蓝牙访问" : "请开启手机蓝牙"
+            status = central.state == .unauthorized ? L10n.string("请在系统设置中允许蓝牙访问") : L10n.string("请开启手机蓝牙")
         }
     }
 
@@ -83,13 +83,13 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         devices = []
         discovered = [:]
         scanning = true
-        status = "正在寻找 AI Passport"
+        status = L10n.string("正在寻找 AI Passport")
         central.scanForPeripherals(withServices: [Self.service])
         armTimeout(20) { [weak self] in
             guard let self else { return }
             self.central.stopScan()
             self.scanning = false
-            self.status = self.devices.isEmpty ? "尚未发现设备，请在 Passport「设置」中开启蓝牙" : "选择要配置的设备"
+            self.status = self.devices.isEmpty ? L10n.string("尚未发现设备，请在 Passport「设置」中开启蓝牙") : L10n.string("选择要配置的设备")
         }
     }
 
@@ -102,9 +102,9 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         error = nil
         self.peripheral = peripheral
         deviceName = device.name
-        status = "正在连接 \(device.name)"
+        status = L10n.string("正在连接 %@", String(describing: device.name))
         central.connect(peripheral)
-        armTimeout(30) { [weak self] in self?.fail("连接超时，请靠近设备后重试。") }
+        armTimeout(30) { [weak self] in self?.fail(L10n.string("连接超时，请靠近设备后重试。")) }
     }
 
     func disconnect() {
@@ -125,7 +125,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         nearby = []
         networkScanInProgress = false
         buffer = BLELineBuffer()
-        status = "设备已断开，可重新搜索"
+        status = L10n.string("设备已断开，可重新搜索")
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
@@ -145,18 +145,18 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         guard peripheral == self.peripheral else { return }
-        fail("没有连上设备，请在工牌设置里重新开启蓝牙。")
+        fail(L10n.string("没有连上设备，请在工牌设置里重新开启蓝牙。"))
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         guard peripheral == self.peripheral else { return }
-        fail("蓝牙连接已断开。输入内容仍保留；重新连接后可继续。")
+        fail(L10n.string("蓝牙连接已断开。输入内容仍保留；重新连接后可继续。"))
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard peripheral == self.peripheral else { return }
         guard error == nil, let service = peripheral.services?.first(where: { $0.uuid == Self.service }) else {
-            fail("设备没有配置服务，请检查固件。")
+            fail(L10n.string("设备没有配置服务，请检查固件。"))
             return
         }
         peripheral.discoverCharacteristics([Self.rxUUID, Self.txUUID], for: service)
@@ -167,7 +167,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         rx = service.characteristics?.first { $0.uuid == Self.rxUUID }
         tx = service.characteristics?.first { $0.uuid == Self.txUUID }
         guard error == nil, rx?.properties.contains(.write) == true, let tx else {
-            fail("设备配置接口不完整，请更新固件。")
+            fail(L10n.string("设备配置接口不完整，请更新固件。"))
             return
         }
         peripheral.setNotifyValue(true, for: tx)
@@ -176,17 +176,17 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         guard peripheral == self.peripheral, characteristic.uuid == Self.txUUID else { return }
         guard error == nil, characteristic.isNotifying else {
-            fail("无法订阅设备状态，请重新连接。")
+            fail(L10n.string("无法订阅设备状态，请重新连接。"))
             return
         }
-        status = "正在建立加密连接并读取配置"
+        status = L10n.string("正在建立加密连接并读取配置")
         readSnapshot()
     }
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         guard peripheral == self.peripheral, characteristic.uuid == Self.rxUUID, writer != nil else { return }
         guard error == nil else {
-            fail("蓝牙写入未完成。请确认系统蓝牙配对提示后重连。")
+            fail(L10n.string("蓝牙写入未完成。请确认系统蓝牙配对提示后重连。"))
             return
         }
         writer?.acknowledge()
@@ -197,7 +197,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard peripheral == self.peripheral, characteristic.uuid == Self.txUUID else { return }
         guard error == nil, let data = characteristic.value else {
-            fail("读取设备状态失败，请重连。")
+            fail(L10n.string("读取设备状态失败，请重连。"))
             return
         }
         do {
@@ -215,7 +215,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         error = nil
         nearby = []
         networkScanInProgress = true
-        status = "正在由工牌扫描 2.4 GHz Wi-Fi"
+        status = L10n.string("正在由工牌扫描 2.4 GHz Wi-Fi")
         nearbyRows = []
         #if DEBUG && targetEnvironment(simulator)
         if let networkPreview {
@@ -235,12 +235,12 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
             DispatchQueue.main.asyncAfter(deadline: .now() + (networkPreview == "progressive" ? 8 : 1)) { [weak self] in
                 guard let self else { return }
                 if networkPreview == "failure" {
-                    self.fail("模拟扫描失败，请重新连接设备。")
+                    self.fail(L10n.string("模拟扫描失败，请重新连接设备。"))
                     return
                 }
                 self.networkScanInProgress = false
                 self.busy = false
-                self.status = "模拟扫描完成"
+                self.status = L10n.string("模拟扫描完成")
             }
             return
         }
@@ -248,7 +248,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         request(snapshot.liveScan ? "SCAN LIVE" : "SCAN", ending: "SCAN END", timeout: 60) { [weak self] in
             guard let self else { return }
             self.networkScanInProgress = false
-            self.status = self.nearby.isEmpty ? "未找到 Wi-Fi，也可以手动输入名称" : "选择 Wi-Fi 并填写密码"
+            self.status = self.nearby.isEmpty ? L10n.string("未找到 Wi-Fi，也可以手动输入名称") : L10n.string("选择 Wi-Fi 并填写密码")
         }
     }
 
@@ -278,11 +278,11 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
 
     private func saveNext() {
         guard let step = mutations.first else {
-            status = "配置已保存到 AI Passport"
+            status = L10n.string("配置已保存到 AI Passport")
             return
         }
-        if case .wifi = step { status = "正在连接 Wi-Fi 并保存，最长约 60 秒" }
-        else { status = "正在保存配置" }
+        if case .wifi = step { status = L10n.string("正在连接 Wi-Fi 并保存，最长约 60 秒") }
+        else { status = L10n.string("正在保存配置") }
         let ending: String
         switch step {
         case .wifi: ending = "OK saved"
@@ -302,7 +302,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         request("HELLO", ending: "HELLO ", timeout: 60) { [weak self] in
             guard let self else { return }
             guard self.candidate.secureBLE else {
-                self.fail("此固件不支持加密蓝牙配网，请先用 Mac 更新固件。未发送 Wi-Fi 密码。")
+                self.fail(L10n.string("此固件不支持加密蓝牙配网，请先用 Mac 更新固件。未发送 Wi-Fi 密码。"))
                 return
             }
             self.request("NETS", ending: "NETS END") {
@@ -311,7 +311,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
                     self.ready = true
                     self.connecting = false
                     self.snapshotRevision += 1
-                    self.status = "已读取设备配置"
+                    self.status = L10n.string("已读取设备配置")
                     after?()
                 }
             }
@@ -327,7 +327,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
         self.completion = completion
         writer = BLECommandWriter(command)
         armTimeout(timeout) { [weak self] in
-            self?.fail("等待设备超时，可能已保存。请重连读取确认后再试，输入内容仍保留。")
+            self?.fail(L10n.string("等待设备超时，可能已保存。请重连读取确认后再试，输入内容仍保留。"))
         }
         sendFragment()
     }
@@ -372,7 +372,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
             networkScanInProgress = false
             if ready {
                 error = rejection
-                status = "操作未完成，蓝牙仍已连接"
+                status = L10n.string("操作未完成，蓝牙仍已连接")
             } else {
                 fail(rejection)
             }
@@ -384,7 +384,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     private func fail(_ message: String) {
         disconnect()
         error = message
-        status = "操作未完成"
+        status = L10n.string("操作未完成")
     }
 
     private func armTimeout(_ interval: TimeInterval, action: @escaping () -> Void) {

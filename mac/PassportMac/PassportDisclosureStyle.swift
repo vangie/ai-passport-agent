@@ -20,7 +20,7 @@ struct PassportDisclosureStyle: DisclosureGroupStyle {
             }
             .buttonStyle(.plain)
             .background(DisclosureHeaderCursor())
-            .accessibilityValue(configuration.isExpanded ? "已展开" : "已收起")
+            .accessibilityValue(configuration.isExpanded ? L10n.string("已展开") : L10n.string("已收起"))
             if configuration.isExpanded {
                 configuration.content
             }

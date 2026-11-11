@@ -11,7 +11,7 @@ final class ConfigurationInbox: ObservableObject {
             error = nil
             pending = configuration
         } catch {
-            self.error = (error as? LocalizedError)?.errorDescription ?? "无法导入配置。"
+            self.error = (error as? LocalizedError)?.errorDescription ?? L10n.string("无法导入配置。")
         }
     }
 }

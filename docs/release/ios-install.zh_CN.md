@@ -1,10 +1,14 @@
 [English](ios-install.md) · **简体中文**
 
-# AI Passport iPhone App
+# AI Passport iOS App
 
-本版本提供 **iPhone 源码安装包**，不是可直接安装的未签名 IPA。
+本版本提供 **iOS App 源码安装包**，不是可直接安装的未签名 IPA。
 单独的模拟器 ZIP 只能在 Mac 上使用，无法访问真实蓝牙。
 两者都不是 App Store 或 TestFlight 分发。
+
+模拟器 App 不能通过重签装到真实 iPhone。免构建重签需要兼容的真机二进制、
+有效证书与描述文件、匹配的权限和安装工具。本版不提供真机重签套件，
+请使用下方源码安装流程。
 
 ## 安装到自己的 iPhone
 
@@ -31,8 +35,8 @@
 
 ## 配置 Passport
 
-先使用 Mac App 给设备更新匹配固件，在 Passport 设置中打开蓝牙，
-在 iPhone App 选择 `AI Passport XXXX`。由设备扫描附近 2.4 GHz 网络，填写密码并保存。
+先使用 macOS App 给设备更新匹配固件，在 Passport 设置中打开蓝牙，
+在 iOS App 选择 `AI Passport XXXX`。由设备扫描附近 2.4 GHz 网络，填写密码并保存。
 已存网络留空密码可以沿用设备的密码。
 助手使用 OpenClaw 受限配对码授权，不要填管理员 token。
 

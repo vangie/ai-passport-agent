@@ -34,9 +34,9 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>用来读取和修改 AI Passport 上的 Wi-Fi 与 OpenClaw 配置。</string>
+	<string>Read and update Wi-Fi and OpenClaw settings on your AI Passport.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>用来扫描 OpenClaw 的配对二维码。</string>
+	<string>Scan OpenClaw pairing QR codes.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

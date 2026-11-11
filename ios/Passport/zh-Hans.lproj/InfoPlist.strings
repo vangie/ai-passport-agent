@@ -1,0 +1,2 @@
+"NSBluetoothAlwaysUsageDescription" = "用来读取和修改 AI Passport 上的 Wi-Fi 与 OpenClaw 配置。";
+"NSCameraUsageDescription" = "用来扫描 OpenClaw 的配对二维码。";

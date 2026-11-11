@@ -2,8 +2,8 @@
 
 # Gateway connectivity
 
-The Passport connects over Wi-Fi directly to your OpenClaw gateway. The Mac/iPhone
-app configures it; neither app forwards conversations. Install the
+The Passport connects over Wi-Fi directly to your OpenClaw gateway. The macOS App
+or iOS App configures it; neither app forwards conversations. Install the
 [project plugin](../tools/openclaw/README.md) on the gateway host first. Examples
 use reserved placeholders, not a working shared service.
 
@@ -21,7 +21,20 @@ the device, not gateway authentication. Set it per assistant only when needed.
 Use direct routing to a reliable regional endpoint when possible. Never disable
 certificate checks, expose an unauthenticated gateway, or publish credentials.
 
+The apps' **Copy Prompt** can ask an agent on the gateway host to install a
+missing plugin and establish a missing public ingress using authorized resources.
+It reuses working entries and keeps authentication enabled. Missing account
+access, domains, certificates or quota still require user action; see
+[agent-assisted setup](configuration.md#let-openclaw-prepare-the-gateway).
+The following sections also support manual setup.
+
 ## Cloudflare Tunnel
+
+The path is **Passport → public WSS → Cloudflare Tunnel → local OpenClaw**.
+`cloudflared` establishes an outbound connection from the gateway host, so no
+router port forwarding or all-interface gateway binding is needed. The public
+hostname can still be probed by anyone; TLS, gateway device authentication and
+optional Access policies provide the actual protection.
 
 1. Install `cloudflared` on the OpenClaw host and authenticate with your own
    Cloudflare account. Create a named tunnel and a DNS route in a zone you own.
@@ -75,6 +88,31 @@ across networks before blaming an ISP or changing ports. Do not delete working
 tunnels or rotate account credentials as a diagnostic default.
 
 ## Pairing and troubleshooting
+
+### Before exposing an ingress
+
+- Use public `wss://` with a valid certificate. Keep the gateway bound to
+  loopback; do not forward plaintext port `18789` to the internet or disable
+  certificate validation to work around connection failures.
+- Preserve OpenClaw device pairing/token authentication. Exchange limited setup
+  codes for device credentials; never distribute the administrator token or
+  Cloudflare/tunnel account credentials in firmware, screenshots or issues.
+- Pair only intended devices and revoke lost devices. Possession of a paired
+  Passport grants its configured authority; voiceprints do not identify users.
+- Give the dedicated `passport` agent only the tools it needs. Disable high-risk
+  actions such as transfers, deletion and publishing, or require a separate
+  approval through OpenClaw rather than approving them from speech alone.
+- With Cloudflare Access, use supported non-interactive service tokens. Do not
+  impose a browser login page that blocks WebSockets or mistake an allow-all
+  visitor policy for additional protection.
+- Test from the device's actual external network: no authorized session without
+  device credentials, a working Ask after pairing, and no new authorized session
+  after revocation. Keep the gateway and plugin updated.
+
+These are deployment requirements, not a completed security audit of an existing
+tunnel. Public reachability and safe authorization are separate concerns.
+
+### Generate a setup code and investigate failures
 
 Once an ingress already exists, generate a limited setup code on the gateway
 with `openclaw qr --json --no-ascii --limited --url wss://passport.example`.

@@ -19,7 +19,7 @@ The checked-in `partitions.csv` contains:
 | `cardid` | data/0x40 | `0x350000` | `0x10000` | Reserved device identity data |
 | `audio` | data/0x41 | `0x360000` | `0x4A0000` | Recorded audio storage |
 
-There are no OTA slots. The Mac updater writes only the application at
+There are no OTA slots. The macOS App firmware updater writes only the application at
 `0x10000`, with `0x350000` as its exclusive upper bound. Changing these
 boundaries requires updating the updater and its tests, not just this table.
 

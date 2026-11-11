@@ -210,7 +210,7 @@ provide reference material. Choose the entry that matches your task.
 
 | Resource | What you will find |
 | --- | --- |
-| [OpenClaw configuration](configuration.md) | Mac/iPhone setup, saved networks, Bluetooth, personal hotspots and NFC tips |
+| [OpenClaw configuration](configuration.md) | macOS/iOS setup, saved networks, Bluetooth, personal hotspots and NFC tips |
 | [Development](development/README.md) | AI workflow, engineering conventions, CI, and release guidance |
 | [AI skills](../skills/README.md) | Development, environment setup, builds, device testing, and debugging |
 | [Hardware](hardware-design/README.md) | Board facts, interface boundaries, acceptance checklists, and troubleshooting |

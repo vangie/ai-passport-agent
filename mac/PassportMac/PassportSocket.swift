@@ -100,7 +100,7 @@ final class PassportSocket: ObservableObject {
               tried != .trying, let device, (0...100).contains(percent) else { return }
         writeSection = .volume
         result = .writing
-        writeStatus = "正在保存音量…"
+        writeStatus = L10n.string("正在保存音量…")
         armTimeout()
         send("VOLUME \(device.volume) \(percent)")
     }
@@ -121,7 +121,7 @@ final class PassportSocket: ObservableObject {
         send("CHECK_CANCEL")
         checkTimer?.invalidate()
         checkTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
-            self?.deviceCheck = .failed("设备尚未确认检测已停止，正在重新读取状态。")
+            self?.deviceCheck = .failed(L10n.string("设备尚未确认检测已停止，正在重新读取状态。"))
             self?.send("DEVICE")
         }
     }
@@ -129,7 +129,7 @@ final class PassportSocket: ObservableObject {
     /// 刷固件前放开 USB 口。刷完再连。
     func pauseForFlash(_ completion: @escaping () -> Void) {
         flashing = true
-        writeStatus = "正在更新固件…"
+        writeStatus = L10n.string("正在更新固件…")
         dropCurrent()
         // A pending probe is already ahead of this block on the same queue.
         transportQueue.async { DispatchQueue.main.async(execute: completion) }
@@ -137,7 +137,7 @@ final class PassportSocket: ObservableObject {
 
     func resumeAfterFlash(_ completion: @escaping (Bool) -> Void = { _ in }) {
         flashing = false
-        writeStatus = "固件已更新，正在重新连接…"
+        writeStatus = L10n.string("固件已更新，正在重新连接…")
         // esptool 的 reset 后，USB JTAG 口要等固件重新启动才会再次应答。
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self else { completion(false); return }
@@ -206,7 +206,7 @@ final class PassportSocket: ObservableObject {
             DispatchQueue.main.async {
                 guard let self, self.connectionID == id else { return }
                 self.dropCurrent()
-                self.failPending("USB 连接已断开，请重新连接后再试")
+                self.failPending(L10n.string("USB 连接已断开，请重新连接后再试"))
             }
         })
     }
@@ -223,7 +223,7 @@ final class PassportSocket: ObservableObject {
         supportsRoute = false
         supportsDeviceControl = false
         device = nil
-        if deviceCheck?.running == true { deviceCheck = .failed("USB 连接已断开，请重新连接后检测。") }
+        if deviceCheck?.running == true { deviceCheck = .failed(L10n.string("USB 连接已断开，请重新连接后检测。")) }
         checkTimer?.invalidate()
         usbPort = nil
         linkKind = "none"
@@ -269,7 +269,7 @@ final class PassportSocket: ObservableObject {
         guard loaded, !configurationBusy, result != .writing, tried != .trying else { return }
         writeSection = .language
         result = .writing
-        writeStatus = "正在保存屏幕语言…"
+        writeStatus = L10n.string("正在保存屏幕语言…")
         armTimeout()
         send("LANG \(generation) \(lang)")
     }
@@ -278,7 +278,7 @@ final class PassportSocket: ObservableObject {
         guard loaded, !configurationBusy, result != .writing, tried != .trying else { return }
         writeSection = .openClaw
         result = .writing
-        writeStatus = "正在切换 OpenClaw…"
+        writeStatus = L10n.string("正在切换 OpenClaw…")
         armTimeout()
         send("USE \(generation) \(agent.id)")
     }
@@ -308,7 +308,7 @@ final class PassportSocket: ObservableObject {
         guard loaded, !configurationBusy, result != .writing, tried != .trying else { return }
         writeSection = .wifi
         result = .writing
-        writeStatus = "正在写入 Wi-Fi…"
+        writeStatus = L10n.string("正在写入 Wi-Fi…")
         armTimeout()
         send(["SAVE", "\(generation)", enc(ssid), enc(password)].joined(separator: " "))
     }
@@ -318,9 +318,9 @@ final class PassportSocket: ObservableObject {
         guard loaded, !configurationBusy, result != .writing, tried != .trying else { return }
         writeSection = .route
         guard route.valid else { result = .failed("proxy"); return }
-        guard supportsRoute else { result = .failed("设备固件尚不支持按助手设置代理，请先更新固件。"); return }
+        guard supportsRoute else { result = .failed(L10n.string("设备固件尚不支持按助手设置代理，请先更新固件。")); return }
         result = .writing
-        writeStatus = "正在写入连接方式…"
+        writeStatus = L10n.string("正在写入连接方式…")
         armTimeout()
         if route.enabled {
             send(["ROUTE", "\(generation)", "\(agent.id)", "ss", enc(route.host.trimmingCharacters(in: .whitespaces)),
@@ -335,7 +335,7 @@ final class PassportSocket: ObservableObject {
         guard loaded, !configurationBusy, result != .writing, tried != .trying else { return }
         writeSection = .openClaw
         result = .writing
-        writeStatus = "正在写入 OpenClaw…"
+        writeStatus = L10n.string("正在写入 OpenClaw…")
         armTimeout()
         send(["AGENT", "\(generation)", enc(name), enc(setupCode)]
             .joined(separator: " "))
@@ -353,7 +353,7 @@ final class PassportSocket: ObservableObject {
 
     private func send(_ line: String) {
         guard let link = connection else {
-            failPending("USB 配置连接尚未就绪")
+            failPending(L10n.string("USB 配置连接尚未就绪"))
             return
         }
         let id = connectionID
@@ -361,7 +361,7 @@ final class PassportSocket: ObservableObject {
             if !link.send(line) {
                 DispatchQueue.main.async {
                     guard self.connectionID == id else { return }
-                    self.failPending("写入 USB 失败，请检查数据线后重试")
+                    self.failPending(L10n.string("写入 USB 失败，请检查数据线后重试"))
                 }
             }
         }
@@ -370,7 +370,7 @@ final class PassportSocket: ObservableObject {
     private func armTimeout() {
         operationTimer?.invalidate()
         operationTimer = Timer.scheduledTimer(withTimeInterval: 45, repeats: false) { [weak self] _ in
-            self?.failPending("设备未在 45 秒内确认，请重试；表单已保留")
+            self?.failPending(L10n.string("设备未在 45 秒内确认，请重试；表单已保留"))
         }
     }
 
@@ -414,8 +414,8 @@ final class PassportSocket: ObservableObject {
             checkTimer?.invalidate()
             if parts.count >= 2, parts[1] == "cancelled" { deviceCheck = .cancelled }
             else if let report = PassportCheckReport(line: line) { deviceCheck = .report(report) }
-            else if parts.dropFirst().first == "simulated" { deviceCheck = .failed("本机模拟设备不连接真实网关，请连接 Passport 后检测。") }
-            else { deviceCheck = .failed(parts.dropFirst().first == "busy" ? "设备正在使用，请先结束通话或提问。" : "检测未能启动，请检查设备网络和配对状态。") }
+            else if parts.dropFirst().first == "simulated" { deviceCheck = .failed(L10n.string("本机模拟设备不连接真实网关，请连接 Passport 后检测。")) }
+            else { deviceCheck = .failed(parts.dropFirst().first == "busy" ? L10n.string("设备正在使用，请先结束通话或提问。") : L10n.string("检测未能启动，请检查设备网络和配对状态。")) }
             send("DEVICE")
         case "NETS" where parts.count >= 4:
             generation = UInt(parts[1]) ?? generation
@@ -479,7 +479,7 @@ final class PassportSocket: ObservableObject {
             }
             if deviceCheck?.running == true {
                 checkTimer?.invalidate()
-                deviceCheck = .failed("设备暂时无法检测，请稍后重试。")
+                deviceCheck = .failed(L10n.string("设备暂时无法检测，请稍后重试。"))
             }
         default:
             break

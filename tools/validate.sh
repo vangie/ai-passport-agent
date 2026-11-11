@@ -153,20 +153,23 @@ run_static_checks() {
     "${test_dir}/test_passport_crypto"
     if [[ "$(uname -s)" == Darwin ]] && command -v swiftc >/dev/null 2>&1; then
         swiftc tests/test_mac_usb.swift mac/PassportMac/ConfigConnection.swift \
-            mac/PassportMac/SerialPort.swift mac/PassportMac/FirmwareUpdate.swift mac/PassportMac/DeviceControl.swift shared/ProxySettings.swift \
+            mac/PassportMac/SerialPort.swift mac/PassportMac/FirmwareUpdate.swift mac/PassportMac/DeviceControl.swift shared/ProxySettings.swift shared/AppLocalization.swift \
             -o "${test_dir}/test_mac_usb"
         "${test_dir}/test_mac_usb"
-        swiftc tests/test_pair_prompt.swift shared/PairPrompt.swift shared/ConfigurationLink.swift \
+        swiftc tests/test_pair_prompt.swift shared/PairPrompt.swift shared/ConfigurationLink.swift shared/AppLocalization.swift \
             -o "${test_dir}/test_pair_prompt"
         "${test_dir}/test_pair_prompt"
-        swiftc tests/test_phone_provisioning.swift ios/Passport/ProvisioningProtocol.swift \
+        swiftc tests/test_phone_provisioning.swift ios/Passport/ProvisioningProtocol.swift shared/AppLocalization.swift \
             -o "${test_dir}/test_phone_provisioning"
         "${test_dir}/test_phone_provisioning"
+        swiftc tests/test_app_localization.swift shared/AppLocalization.swift shared/PairPrompt.swift \
+            -o "${test_dir}/test_app_localization"
+        "${test_dir}/test_app_localization" "${repo_root}"
         PYTHONDONTWRITEBYTECODE=1 python3 tests/test_phone_link_runtime.py
         swiftc tests/test_configuration_draft.swift mac/PassportMac/ConfigurationDraft.swift shared/ProxySettings.swift \
             -o "${test_dir}/test_configuration_draft"
         "${test_dir}/test_configuration_draft"
-        swiftc tests/test_disclosure_cursor.swift mac/PassportMac/PassportDisclosureStyle.swift \
+        swiftc tests/test_disclosure_cursor.swift mac/PassportMac/PassportDisclosureStyle.swift shared/AppLocalization.swift \
             -o "${test_dir}/test_disclosure_cursor"
         "${test_dir}/test_disclosure_cursor"
     fi

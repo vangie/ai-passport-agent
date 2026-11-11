@@ -2,9 +2,14 @@
 
 # AI Passport for iPhone
 
-This release provides an **iPhone source kit**, not an installable unsigned IPA.
+This release provides an **iOS App source kit**, not an installable unsigned IPA.
 The separate Simulator ZIP runs on a Mac only and cannot access real Bluetooth.
 Neither artifact is an App Store or TestFlight distribution.
+
+A Simulator app cannot be re-signed for a physical iPhone. Re-signing without
+rebuilding requires a compatible device binary, valid certificate and provisioning
+profile, matching entitlements and an installation tool. This release does not
+distribute a device re-signing kit; use the source workflow below.
 
 ## Install on your iPhone
 
@@ -35,8 +40,8 @@ does not install anything on a phone.
 
 ## Configure a Passport
 
-Update the device with matching firmware using the Mac app first. In Passport
-Settings, enable Bluetooth and select `AI Passport XXXX` in the iPhone app.
+Update the device with matching firmware using the macOS App first. In Passport
+Settings, enable Bluetooth and select `AI Passport XXXX` in the iOS App.
 Scan nearby 2.4 GHz networks from the device, enter a password and save. For a
 saved network, an empty password reuses the device's saved password. Pair an
 assistant using a limited OpenClaw setup code, never the administrator token.
@@ -47,7 +52,7 @@ Hotspot** open and the screen awake if the hotspot is missing from device scans.
 iOS does not let this app read your hotspot password or silently enable it.
 
 The Passport stores settings and connects directly to OpenClaw over Wi-Fi;
-the iPhone app is not a voice relay. Audio/gateway work temporarily disconnects
+the iOS App is not a voice relay. Audio/gateway work temporarily disconnects
 configuration Bluetooth to free memory. Just Works pairing encrypts traffic but
 does not authenticate ownership or protect against active man-in-the-middle.
 

@@ -79,11 +79,11 @@ enum FirmwareFlasher {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try FileManager.default.copyItem(at: URL(fileURLWithPath: built.path),
                                             to: directory.appendingPathComponent("application.bin"))
-        } catch { return "无法准备固件文件" }
+        } catch { return L10n.string("无法准备固件文件") }
         defer { try? FileManager.default.removeItem(at: directory) }
         let log = directory.appendingPathComponent("flash.log")
         FileManager.default.createFile(atPath: log.path, contents: nil)
-        guard let output = try? FileHandle(forWritingTo: log) else { return "无法创建刷机日志" }
+        guard let output = try? FileHandle(forWritingTo: log) else { return L10n.string("无法创建刷机日志") }
         defer { try? output.close() }
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -104,14 +104,14 @@ enum FirmwareFlasher {
                 while task.isRunning && Date() < stop { Thread.sleep(forTimeInterval: 0.05) }
                 if task.isRunning { kill(task.processIdentifier, SIGKILL) }
                 task.waitUntilExit()
-                return "刷机超时，已停止本次写入"
+                return L10n.string("刷机超时，已停止本次写入")
             }
         } catch {
-            return "刷机工具没有跑起来"
+            return L10n.string("刷机工具没有跑起来")
         }
         if task.terminationStatus == 0 { return nil }
         let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-        return text.split(separator: "\n").last.map(String.init) ?? "固件没写进去"
+        return text.split(separator: "\n").last.map(String.init) ?? L10n.string("固件没写进去")
     }
 
     /// 工牌自己的 USB 下载口。外接串口芯片只能传配置，不能刷固件。

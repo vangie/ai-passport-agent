@@ -1,5 +1,7 @@
 name: PassportMac
 options:
+  developmentLanguage: en
+  knownRegions: [en, zh-Hans]
   bundleIdPrefix: ai.mirasim
   deploymentTarget:
     macOS: "14.0"
@@ -33,8 +35,8 @@ targets:
       GENERATE_INFOPLIST_FILE: YES
       PRODUCT_NAME: AI Passport OpenClaw
       INFOPLIST_KEY_CFBundleDisplayName: AI Passport OpenClaw
-      INFOPLIST_KEY_NSLocationUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
-      INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: macOS 要定位授权才给出附近 Wi-Fi 的名字，用来让你挑 AI Passport 要连的网络。
-      MARKETING_VERSION: "0.4.0"
+      INFOPLIST_KEY_NSLocationUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
+      INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
+      MARKETING_VERSION: "0.4.1"
       CURRENT_PROJECT_VERSION: "1"
       ENABLE_APP_SANDBOX: NO

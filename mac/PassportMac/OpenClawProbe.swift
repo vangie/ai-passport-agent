@@ -19,7 +19,7 @@ final class OpenClawProbe: NSObject, URLSessionWebSocketDelegate {
     func run(url: String, token: String, done: @escaping (ProbeResult) -> Void) {
         cancel()
         guard let target = URL(string: url), target.scheme == "ws" || target.scheme == "wss" else {
-            done(.unreachable("地址要以 wss:// 开头"))
+            done(.unreachable(L10n.string("地址要以 wss:// 开头")))
             return
         }
         finish = done
@@ -28,7 +28,7 @@ final class OpenClawProbe: NSObject, URLSessionWebSocketDelegate {
         self.session = session
         self.task = task
         timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: false) { [weak self] _ in
-            self?.end(.unreachable("8 秒内没有回应"))
+            self?.end(.unreachable(L10n.string("8 秒内没有回应")))
         }
         task.resume()
         receive(token: token)
@@ -102,20 +102,20 @@ final class OpenClawProbe: NSObject, URLSessionWebSocketDelegate {
         if detail.hasPrefix("AUTH_") || message.localizedCaseInsensitiveContains("device identity") {
             return .badToken
         }
-        return .unreachable(message.isEmpty ? "网关拒绝了连接" : message)
+        return .unreachable(message.isEmpty ? L10n.string("网关拒绝了连接") : message)
     }
 
     private static func describe(_ error: Error) -> String {
         let code = (error as NSError).code
         switch code {
-        case NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed: return "找不到这个地址"
-        case NSURLErrorCannotConnectToHost: return "连不上，网关可能没开"
-        case NSURLErrorTimedOut: return "超时了"
+        case NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed: return L10n.string("找不到这个地址")
+        case NSURLErrorCannotConnectToHost: return L10n.string("连不上，网关可能没开")
+        case NSURLErrorTimedOut: return L10n.string("超时了")
         case NSURLErrorSecureConnectionFailed, NSURLErrorServerCertificateUntrusted,
              NSURLErrorServerCertificateHasBadDate, NSURLErrorServerCertificateNotYetValid:
             // 开了代理时，不存在的域名也会解析成功，然后在 TLS 这一步失败。
-            return "安全连接没建立起来，检查地址或证书"
-        case NSURLErrorBadServerResponse: return "这个地址不是 OpenClaw 网关"
+            return L10n.string("安全连接没建立起来，检查地址或证书")
+        case NSURLErrorBadServerResponse: return L10n.string("这个地址不是 OpenClaw 网关")
         default: return error.localizedDescription
         }
     }

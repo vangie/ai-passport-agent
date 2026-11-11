@@ -3,14 +3,14 @@
 # CI and Release
 
 This repository releases one product, AI Passport OpenClaw. Tags use `v<semver>`
-(for example `v0.4.0`); the release title includes the product name. The current
-Mac, iPhone and plugin marketing versions are aligned. Inspect package manifests
-and app bundle versions instead of assuming a firmware protocol version changed.
+(for example `v0.4.1`); the release title includes the product name. The current
+macOS App, iOS App and plugin marketing versions are aligned. Inspect package
+manifests and app bundle versions instead of assuming a firmware protocol changed.
 
 ## Pull requests and main
 
 - `static-checks.yml`: repository rules, private endpoint audit, pinned Gitleaks
-  scan, actionlint, C/Python/Swift host tests and an unsigned Mac build on macOS.
+  scan, actionlint, C/Python/Swift host tests and an unsigned macOS App build.
 - `ios.yml`: unsigned physical-device and Simulator builds, Simulator UI tests
   for layout/provisioning with synthetic data, an allowlisted source kit and a
   Simulator ZIP. Selects an installed iPhone runtime rather than hardcoding a
@@ -32,24 +32,43 @@ pairing material, local logs or older locally built firmware.
 
 `.github/workflows/release.yml` builds from the pushed tag:
 
-1. Repository, private endpoint, secret and workflow audit.
+1. Repository, private endpoint, secret and workflow audit. Check that the stable
+   tag, app/plugin runtime and lockfile versions, bilingual release notes and
+   dated changelog entries all agree.
 2. Full host checks via the reusable static workflow.
 3. Fresh ESP-IDF build and layout/hash verification. Package firmware from its
    verified content-addressed archive; exclude ELF/MAP from public artifacts.
 4. Locked plugin package build.
-5. Universal Intel/Apple Silicon Mac build. Bundle that release's verified
+5. Universal Intel/Apple Silicon macOS App build. Bundle that release's verified
    firmware and flash helper, then ad-hoc sign and verify the complete bundle.
-6. Reuse the iPhone workflow: build for physical devices and Simulator without
+6. Reuse the iOS App workflow: build for physical devices and Simulator without
    signing credentials, run Debug UI tests with synthetic state, and package a
-   Release Simulator app plus the iPhone source kit. No unsigned IPA is published.
-7. Only after all dependencies, including iPhone checks, pass, create the GitHub
-   Release and upload firmware, plugin, Mac ZIP, iPhone ZIPs and `SHA256SUMS.txt`.
+   Release Simulator app plus the iOS App source kit. No unsigned IPA is published.
+7. Only after all dependencies, including iOS App checks, pass, collect the exact
+   eight required distributable files; reject missing/empty/unsafe inputs. Add
+   `release-manifest.json` with the source commit, version, sizes and SHA-256
+   hashes, then generate `SHA256SUMS.txt` for all nine preceding files.
+8. Create or resume a draft for the same tag, upload all ten files, download them
+   again and verify the complete filename set, source provenance and checksums.
+   Only then make the release public/latest. Failed uploads remain drafts;
+   published releases are not overwritten by reruns.
 
-`tools/release.py ios-source` packages only tracked iPhone sources/assets,
-UI tests, `shared/*.swift`, the XcodeGen specification, MIT license and bilingual
+`tools/release.py ios-source` packages only tracked iOS App sources/assets,
+UI tests, shared Swift code and both language catalogs, localized permission
+descriptions, the XcodeGen specification, MIT license and bilingual
 installation instructions. It excludes generated Xcode projects, signing files,
 local settings, build products and other repository files. Review staged sources
 before committing; the allowlist is not a substitute for secret scanning.
+
+For release preparation, align the version fields, update both release notes and
+changelogs, and run `python3 tools/release.py check-version --tag v0.4.1` with the
+intended version. Run the static gate and app tests, merge the reviewed source,
+and push a new immutable version tag at that exact commit. Monitor the Release
+workflow to completion; a pushed tag or successful build alone is not a release.
+For a failed draft upload, inspect the same tag's draft and rerun the failed job;
+do not move a published tag, create another release for a retry, or replace public
+files. Roll back by choosing a previous release's compatible artifacts, not by
+silently rewriting its assets. Historical tags retain their original workflow.
 
 All Actions are pinned to full commit SHAs. Default permissions are read-only;
 only the final publishing job receives `contents: write`. Manual dispatch runs
@@ -58,19 +77,26 @@ deployment steps and no automatic changes to someone's OpenClaw installation.
 
 ## Signing and installation limits
 
-The default Mac artifact is **ad-hoc signed, not Apple notarized**. This pipeline
-does not contain or require a developer certificate. A future notarized channel
+The default macOS App artifact is **ad-hoc signed, not Apple notarized**. This
+pipeline does not contain or require a developer certificate. A future notarized channel
 must use GitHub encrypted secrets and an isolated temporary keychain; never put
 certificates or signing passwords in the source tree. A paid account alone does
 not notarize existing artifacts.
 
-The iPhone source kit requires local Xcode signing with the recipient's own
+The macOS App is already compiled: downloading it does not require a rebuild or
+another ad-hoc signature. Re-signing locally does not provide notarization.
+
+The iOS App source kit requires local Xcode signing with the recipient's own
 team, including a free Personal Team where supported. There is no App Store,
 TestFlight or downloadable signed physical-device app in this workflow. The
 unsigned `iphoneos` build is only a compilation gate and is not uploaded.
+Re-signing can avoid rebuilding only for a compatible physical-device binary,
+with a valid certificate, provisioning profile and matching entitlements plus
+an installation tool. Re-signing cannot convert a Simulator app into a device
+app; this release does not provide a physical-device re-signing kit.
 The Simulator ZIP is for the runner's architecture/SDK, cannot access real BLE,
 and may require building from source on other hosts. See
-[iPhone installation](../../release/ios-install.md).
+[iOS App installation](../../release/ios-install.md).
 
 Signed iOS distribution would need a separate explicit distribution decision,
 Apple team, bundle registration, certificates/profiles and protected CI secrets.

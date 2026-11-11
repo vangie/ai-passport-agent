@@ -143,6 +143,7 @@ class PhoneLinkRuntimeTests(unittest.TestCase):
             executable = Path(directory) / "test"
             harness.write_text(HARNESS.replace("METHODS", methods))
             subprocess.run(["swiftc", str(harness), str(ROOT / "ios/Passport/ProvisioningProtocol.swift"),
+                            str(ROOT / "shared/AppLocalization.swift"),
                             "-o", str(executable)], check=True)
             subprocess.run([str(executable)], check=True)
 

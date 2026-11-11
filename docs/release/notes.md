@@ -1,17 +1,20 @@
 [Simplified Chinese](notes.zh_CN.md) · **English**
 
-# AI Passport OpenClaw v0.4.0
+# AI Passport OpenClaw v0.4.1
 
 ## Highlights
 
-- iPhone configuration over Bluetooth: progressive 2.4 GHz discovery, saved
-  networks, personal hotspot hints and limited-code OpenClaw pairing.
-- Improved voice controls, Ask transcript/chat display, connected standby and
-  the Mac's unified configuration/maintenance workflow.
-- Product-style bilingual README with sanitized firmware, Mac and iPhone
-  screenshots, plus the tested NFC-to-hotspot Shortcuts tip.
-- iPhone physical-device/Simulator compile gates and Simulator UI tests now
-  block publication on failure. No Apple signing secrets are required by CI.
+- macOS App / iOS App automatically follow English or Simplified Chinese system
+  preferences, including status messages, errors, permissions and setup prompts.
+  The device's screen language remains independent. English Wi-Fi actions use
+  Scan; the language option reads Simplified Chinese without truncation.
+- The copied setup prompt checks plugin compatibility, a dedicated assistant,
+  voice readiness and a secure persistent gateway entrance before limited pairing.
+- Refined bilingual setup/networking guides and the distinction between optional
+  iOS App hotspot configuration and direct device-to-gateway voice traffic.
+- Release tags, app/plugin versions, bilingual notes and changelogs must agree.
+  All ten assets are checked before publication, with source-commit provenance,
+  SHA-256 verification and a verified draft upload before making a release public.
 
 ## Downloads
 
@@ -27,23 +30,31 @@
   or intentional full refresh. It can reset settings; do not use it for a
   configuration-preserving update.
 - `FoloToy-AI-Passport.bin`: application-only update at `0x10000`, only with the
-  matching partition layout. The Mac app uses this route and preserves NVS,
+  matching partition layout. The macOS App uses this route and preserves NVS,
   Card ID and audio partitions.
 - `ai-passport-openclaw-*.tgz`: independent OpenClaw plugin source package.
-- `ai-passport-openclaw-ios-source.zip`: iPhone source kit with `ios/`, shared
+- `ai-passport-openclaw-ios-source.zip`: iOS App source kit with `ios/`, shared
   Swift code and bilingual Xcode signing/install instructions. **Requires your
   own local signing team**, including Personal Team where supported; iOS 17+.
 - `ai-passport-openclaw-ios-simulator.zip`: Simulator-only app for a compatible
   Mac architecture/runtime. **Cannot install on an iPhone or use real BLE.**
 - `SHA256SUMS.txt`: release-asset checksums.
+- `release-manifest.json`: exact source commit, version, asset sizes and hashes.
 
-There is **no signed iPhone IPA or TestFlight release**. Download the source kit
-for a physical iPhone; the Simulator ZIP is only a preview. Mac, iPhone and plugin
-versions are 0.4.0; the existing wire protocol and OpenClaw baseline are unchanged.
+There is **no signed iOS IPA or TestFlight release**. Download the source kit
+for a physical iPhone; the Simulator ZIP is only a preview. The macOS App, iOS App
+and plugin versions are 0.4.1; the existing wire protocol and OpenClaw baseline are unchanged.
 
 ## Upgrade notes
 
-Back up settings you need to preserve. Prefer the Mac app's compatible
+App localization does not require re-pairing, changing the device language or
+flashing firmware. The macOS App is prebuilt and does not need rebuilding or
+another ad-hoc signature; local signing does not replace Apple notarization.
+An iOS Simulator binary cannot be re-signed into a physical-device app. A prebuilt
+device app could be re-signed only with valid signing/provisioning and compatible
+entitlements; this release does not distribute such a device binary.
+
+Back up settings you need to preserve. Prefer the macOS App's compatible
 application-only update; do not write the merged image for a routine update.
 Unreleased prototype device/app identities are not migrated and may require
 new Wi-Fi configuration and pairing. Never use a shared administrator gateway

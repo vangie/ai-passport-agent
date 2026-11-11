@@ -48,8 +48,8 @@ enum ProvisioningFailure: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "设备返回的数据不完整，请重新连接。"
-        case .tooLong: return "设备返回的数据过长，请更新固件后重试。"
+        case .invalidResponse: return L10n.string("设备返回的数据不完整，请重新连接。")
+        case .tooLong: return L10n.string("设备返回的数据过长，请更新固件后重试。")
         }
     }
 }
@@ -59,25 +59,25 @@ enum ProvisioningRejection {
         let reason: String
         switch line {
         case "ERR join notfound":
-            reason = "Passport 未发现这个 Wi-Fi。若是 iPhone 热点，请开启「允许其他人加入」和「最大兼容性」，核对热点名称。再次保存后，切到系统「个人热点」页并保持亮屏，直到设备连上。"
+            reason = L10n.string("Passport 未发现这个 Wi-Fi。若是 iPhone 热点，请开启「允许其他人加入」和「最大兼容性」，核对热点名称。再次保存后，切到系统「个人热点」页并保持亮屏，直到设备连上。")
         case "ERR join pass":
-            reason = "Wi-Fi 认证未通过，请核对密码。若是 iPhone 热点，请使用系统「个人热点」页显示的 Wi-Fi 密码。"
+            reason = L10n.string("Wi-Fi 认证未通过，请核对密码。若是 iPhone 热点，请使用系统「个人热点」页显示的 Wi-Fi 密码。")
         case "ERR join security":
-            reason = "Wi-Fi 的安全模式不兼容。若是 iPhone 热点，请开启「最大兼容性」；路由器请使用 WPA2 或 WPA2/WPA3 兼容模式。"
+            reason = L10n.string("Wi-Fi 的安全模式不兼容。若是 iPhone 热点，请开启「最大兼容性」；路由器请使用 WPA2 或 WPA2/WPA3 兼容模式。")
         case "ERR join timeout":
-            reason = "Wi-Fi 连接或获取 IP 地址超时。请靠近热点后重试；若是 iPhone 热点，请在连接期间停留于系统「个人热点」页。"
+            reason = L10n.string("Wi-Fi 连接或获取 IP 地址超时。请靠近热点后重试；若是 iPhone 热点，请在连接期间停留于系统「个人热点」页。")
         case "ERR stale":
-            reason = "配置已在别处更改，请在「设备操作」中重新读取配置后再保存。"
+            reason = L10n.string("配置已在别处更改，请在「设备操作」中重新读取配置后再保存。")
         case "ERR busy":
-            reason = "设备正在通话或处理其他操作，请结束后重试。"
+            reason = L10n.string("设备正在通话或处理其他操作，请结束后重试。")
         case "ERR scan":
-            reason = "Wi-Fi 扫描未完成，已发现的网络仍可选择，也可以重新扫描。"
+            reason = L10n.string("Wi-Fi 扫描未完成，已发现的网络仍可选择，也可以重新扫描。")
         default:
             reason = line.hasPrefix("ERR join")
-                ? "Passport 连接 Wi-Fi 失败，请检查热点设置后重试。"
-                : "设备未保存配置（\(line.dropFirst(4))）。"
+                ? L10n.string("Passport 连接 Wi-Fi 失败，请检查热点设置后重试。")
+                : L10n.string("设备未保存配置（%@）。", String(describing: line.dropFirst(4)))
         }
-        return reason + " 输入内容仍保留。"
+        return reason + L10n.string(" 输入内容仍保留。")
     }
 }
 
@@ -210,15 +210,15 @@ struct PhoneWiFi: Equatable {
 
     func validation(saved: [PassportNetwork]) -> String? {
         guard !ssid.isEmpty, ssid.utf8.count <= 32, !ssid.contains(where: { $0.isNewline || $0 == "\0" }) else {
-            return "Wi-Fi 名称需为 1–32 字节。"
+            return L10n.string("Wi-Fi 名称需为 1–32 字节。")
         }
         if password.isEmpty {
-            return open || saved.contains(where: { $0.ssid == ssid }) ? nil : "请输入密码，或明确选择无密码网络。"
+            return open || saved.contains(where: { $0.ssid == ssid }) ? nil : L10n.string("请输入密码，或明确选择无密码网络。")
         }
         let isHex = password.utf8.count == 64 && password.allSatisfy { $0.isASCII && $0.isHexDigit }
         guard (8...63).contains(password.utf8.count) || isHex,
               !password.contains(where: { $0.isNewline || $0 == "\0" }) else {
-            return "Wi-Fi 密码需为 8–63 字节，或 64 位十六进制密钥。"
+            return L10n.string("Wi-Fi 密码需为 8–63 字节，或 64 位十六进制密钥。")
         }
         return nil
     }

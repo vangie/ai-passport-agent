@@ -12,23 +12,39 @@
 
 ## Unreleased
 
+## v0.4.1 - 2026-11-11
+
+- Localized macOS App / iOS App interfaces, messages, permission descriptions and
+  setup prompts in English and Simplified Chinese, automatically following system
+  preferences. Device language stays independent; use Scan for Wi-Fi discovery.
+- Expanded the agent-assisted setup prompt to inspect/install the compatible
+  plugin, prepare the dedicated assistant and secure persistent gateway access,
+  and report Ask/Call readiness before returning limited pairing details.
+- Clarified bilingual setup, public-access security, optional iOS App hotspot
+  configuration and NFC guidance, with sanitized product screenshots.
+- Aligned app/plugin versions at 0.4.1 and hardened GitHub releases with tag/version
+  checks, mandatory localization resources, complete asset validation, source
+  commit provenance and draft/download/hash verification before publication.
+- No firmware protocol change, Apple signing/notarization, TestFlight distribution
+  or new on-device audio acceptance is implied by this app-focused update.
+
 ## v0.4.0 - 2026-11-11
 
-- Added the iPhone Bluetooth configuration companion: progressive device-side
+- Added the iOS App Bluetooth configuration companion: progressive device-side
   Wi-Fi discovery, saved networks, hotspot hints, pairing and shared draft/save
   behavior. Standby Bluetooth is enabled by default and configurable on-device.
 - Improved Call audio buffering, mute/interrupt/hangup controls, Ask transcript
   echo and recent conversation rendering, network switching and connected standby.
   USB-host presence prevents standby during desktop configuration/maintenance;
   it is not treated as proof of charging.
-- Refined the Mac configuration workflow, device diagnostics and unified Save /
-  Discard controls, with separate application-only firmware maintenance.
-- Added iPhone physical-device and Simulator build gates plus Simulator UI tests.
-  Releases now include an allowlisted iPhone source kit and Simulator preview;
+- Refined the macOS App configuration workflow, device diagnostics and unified
+  Save / Discard controls, with separate application-only firmware maintenance.
+- Added iOS App physical-device and Simulator build gates plus Simulator UI tests.
+  Releases now include an allowlisted iOS App source kit and Simulator preview;
   no signed IPA, TestFlight upload or Apple signing credentials are distributed.
-  Mac/iPhone marketing versions and the gateway plugin are now 0.4.0.
-- Reworked the bilingual product README with sanitized firmware/Mac/iPhone
-  screenshots, everyday setup guidance and a tested NFC hotspot automation tip.
+- macOS App / iOS App marketing versions and the gateway plugin are now 0.4.0.
+- Reworked the bilingual product README with sanitized firmware and macOS App /
+  iOS App screenshots, everyday setup guidance and a tested NFC hotspot tip.
   Network and endpoint examples contain only demonstration data.
 - Retained OpenClaw 2026.10.5 as the tested plugin baseline. Builds and Simulator
   tests do not replace physical BLE/hotspot, audio or battery acceptance.
@@ -36,11 +52,11 @@
 ## v0.3.1 - 2026-11-08
 
 - First standalone AI Passport OpenClaw source release: wearable Call/Ask firmware,
-  Mac USB configuration/flashing app and independent native OpenClaw plugin.
+  macOS App USB configuration/flashing app and independent native OpenClaw plugin.
 - Added generic LAN, Cloudflare Tunnel and SakuraFrp/TLS setup guidance without
   distributing deployment addresses or credentials.
-- Added tagged firmware/plugin/universal Mac releases, bundled firmware checks,
-  source secret scans and host/build gates. The Mac release is ad-hoc signed,
+- Added tagged firmware/plugin/universal macOS App releases, bundled firmware checks,
+  source secret scans and host/build gates. The macOS App release is ad-hoc signed,
   not Apple notarized; hardware acceptance is separate from CI.
 
 ## Inherited upstream development notes

@@ -71,7 +71,9 @@ class ReleaseTests(unittest.TestCase):
 
     def ios_inputs(self):
         names = ['ios/project.yml', 'ios/Passport/PassportApp.swift',
-                 'ios/Passport/Info.plist', 'shared/PairPrompt.swift',
+                 'ios/Passport/Info.plist', 'shared/PairPrompt.swift', 'shared/AppLocalization.swift',
+                 'shared/en.lproj/Localizable.strings', 'shared/zh-Hans.lproj/Localizable.strings',
+                 'ios/Passport/en.lproj/InfoPlist.strings', 'ios/Passport/zh-Hans.lproj/InfoPlist.strings',
                  'docs/release/ios-install.md', 'docs/release/ios-install.zh_CN.md', 'LICENSE']
         for name in names:
             source = self.root / name
@@ -82,6 +84,11 @@ class ReleaseTests(unittest.TestCase):
     def test_ios_source_allowlist(self):
         names = self.ios_inputs() + ['ios/Passport/.env', 'ios/Passport/private.mobileprovision',
                                    'ios/Passport/xcuserdata/private.json', 'shared/private.json']
+        for name in names:
+            if name.endswith('.strings'):
+                source = self.root / name
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_text('"key" = "translation";')
         (self.root / 'docs/release/ios-install.md').write_text('[Chinese](ios-install.zh_CN.md)')
         (self.root / 'docs/release/ios-install.zh_CN.md').write_text('[English](ios-install.md)')
         destination = self.root / 'source.zip'
@@ -92,7 +99,9 @@ class ReleaseTests(unittest.TestCase):
             prefix = 'ai-passport-openclaw-ios-source/'
             self.assertEqual(set(archive.namelist()), {prefix + name for name in [
                 'ios/project.yml', 'ios/Passport/PassportApp.swift', 'ios/Passport/Info.plist',
-                'shared/PairPrompt.swift', 'README.md', 'README.zh_CN.md', 'LICENSE']})
+                'shared/PairPrompt.swift', 'shared/AppLocalization.swift', 'README.md', 'README.zh_CN.md', 'LICENSE',
+                'shared/en.lproj/Localizable.strings', 'shared/zh-Hans.lproj/Localizable.strings',
+                'ios/Passport/en.lproj/InfoPlist.strings', 'ios/Passport/zh-Hans.lproj/InfoPlist.strings']})
             self.assertEqual(archive.read(prefix + 'README.md'), b'[Chinese](README.zh_CN.md)')
             self.assertEqual(archive.read(prefix + 'README.zh_CN.md'), b'[English](README.md)')
         with patch.object(release, 'ROOT', self.root), patch.object(
@@ -123,6 +132,98 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn(f"pluginVersion: '{version}'", (ROOT / 'tools/openclaw' / name).read_text())
         for name in ['mac/project.yml', 'ios/project.yml']:
             self.assertIn(f'MARKETING_VERSION: "{version}"', (ROOT / name).read_text())
+        self.assertEqual(release.check_version(f'v{version}'), version)
+        with self.assertRaises(ValueError):
+            release.check_version('v99.0.0')
+
+    def release_identity(self):
+        for name in ['tools/openclaw/package.json', 'tools/openclaw/package-lock.json',
+                     'tools/openclaw/index.mjs', 'tools/openclaw/doctor.mjs', 'mac/project.yml',
+                     'ios/project.yml', 'docs/release/notes.md', 'docs/release/notes.zh_CN.md',
+                     'docs/CHANGELOG.md', 'docs/CHANGELOG.zh_CN.md']:
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((ROOT / name).read_bytes())
+        return json.loads((ROOT / 'tools/openclaw/package.json').read_text())['version']
+
+    def release_downloads(self):
+        version = self.release_identity()
+        downloads = self.root / 'downloads'
+        for name in release.asset_names(version) - {'LICENSE.txt'}:
+            if name.endswith('.tgz'):
+                relative = f'release-plugin/{name}'
+            elif '-firmware.tar.gz' in name:
+                relative = f'release-firmware/{name}'
+            elif name.endswith('.bin'):
+                relative = f'release-firmware/firmware/{name}'
+            elif '-macos-' in name:
+                relative = f'release-mac/{name}'
+            else:
+                relative = f'release-ios/{name}'
+            path = downloads / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f'fixture: {name}')
+        (self.root / 'LICENSE').write_text('MIT fixture')
+        return downloads, f'v{version}', 'a' * 40
+
+    def test_release_identity_rejects_mismatch(self):
+        version = self.release_identity()
+        for name in ['tools/openclaw/package-lock.json', 'tools/openclaw/index.mjs',
+                     'mac/project.yml', 'ios/project.yml', 'docs/release/notes.md',
+                     'docs/CHANGELOG.zh_CN.md']:
+            path = self.root / name
+            original = path.read_text()
+            path.write_text(original.replace(version, '0.0.0'))
+            with self.subTest(name=name), patch.object(release, 'ROOT', self.root):
+                with self.assertRaises(ValueError):
+                    release.check_version()
+            path.write_text(original)
+
+    def test_release_assets_and_provenance(self):
+        source, tag, commit = self.release_downloads()
+        destination = self.root / 'dist'
+        with patch.object(release, 'ROOT', self.root):
+            release.prepare_assets(source, destination, tag, commit)
+            release.verify_assets(destination, tag, commit)
+            self.assertEqual(len(list(destination.iterdir())), 10)
+            with self.assertRaises(ValueError):
+                release.prepare_assets(source, destination, tag, commit)
+            with self.assertRaises(ValueError):
+                release.verify_assets(destination, tag, 'b' * 40)
+            (destination / 'FoloToy-AI-Passport.bin').write_text('tampered')
+            with self.assertRaises(ValueError):
+                release.verify_assets(destination, tag, commit)
+
+    def test_release_assets_reject_missing_empty_and_symlink(self):
+        source, tag, commit = self.release_downloads()
+        path = source / 'release-ios/ai-passport-openclaw-ios-source.zip'
+        for invalid in ['missing', 'empty', 'symlink']:
+            if path.exists():
+                path.unlink()
+            if invalid == 'empty':
+                path.touch()
+            elif invalid == 'symlink':
+                path.symlink_to(self.root / 'LICENSE')
+            with self.subTest(invalid=invalid), patch.object(release, 'ROOT', self.root):
+                with self.assertRaises(ValueError):
+                    release.prepare_assets(source, self.root / 'dist', tag, commit)
+                self.assertFalse((self.root / 'dist').exists())
+
+    def test_release_verification_rejects_incomplete_or_extra_assets(self):
+        source, tag, commit = self.release_downloads()
+        destination = self.root / 'dist'
+        with patch.object(release, 'ROOT', self.root):
+            release.prepare_assets(source, destination, tag, commit)
+            (destination / 'private.log').write_text('unexpected')
+            with self.assertRaises(ValueError):
+                release.verify_assets(destination, tag, commit)
+            (destination / 'private.log').unlink()
+            checksum = destination / 'SHA256SUMS.txt'
+            original = checksum.read_text()
+            for malformed in [original.splitlines()[0] + '\n', original + original.splitlines()[0] + '\n']:
+                checksum.write_text(malformed)
+                with self.assertRaises(ValueError):
+                    release.verify_assets(destination, tag, commit)
 
 
 if __name__ == '__main__':

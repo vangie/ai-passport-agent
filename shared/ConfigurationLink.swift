@@ -13,11 +13,11 @@ struct ConfigurationLink: Equatable {
         case invalidLink, invalidCode, addressMismatch, invalidNetwork, invalidName
         var errorDescription: String? {
             switch self {
-            case .invalidLink: return "无法识别这个配置链接。"
-            case .invalidCode: return "链接中的配对码不完整或格式不对。"
-            case .addressMismatch: return "链接中的地址与配对码不一致。"
-            case .invalidNetwork: return "Wi-Fi 名称或密码不符合设备要求。"
-            case .invalidName: return "OpenClaw 名称过长。"
+            case .invalidLink: return L10n.string("无法识别这个配置链接。")
+            case .invalidCode: return L10n.string("链接中的配对码不完整或格式不对。")
+            case .addressMismatch: return L10n.string("链接中的地址与配对码不一致。")
+            case .invalidNetwork: return L10n.string("Wi-Fi 名称或密码不符合设备要求。")
+            case .invalidName: return L10n.string("OpenClaw 名称过长。")
             }
         }
     }

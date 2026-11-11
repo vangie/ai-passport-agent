@@ -2,6 +2,28 @@ import Foundation
 
 @main struct PairPromptTests {
     static func main() throws {
+        let preparationSteps = ["1. 检查并安装插件", "2. 检查助手与语音服务",
+                                "3. 检查并建立公网入口", "4. 验证后再生成配对码"]
+        var previousStep = PairPrompt.chineseText.startIndex
+        for step in preparationSteps {
+            guard let match = PairPrompt.chineseText.range(of: step, range: previousStep..<PairPrompt.chineseText.endIndex) else {
+                preconditionFailure("Missing or out-of-order setup step: \(step)")
+            }
+            previousStep = match.upperBound
+        }
+        for requirement in ["https://github.com/vangie/ai-passport-openclaw", "SHA256SUMS.txt",
+                            "openclaw plugins install --link --accept-capabilities \"$PWD\"",
+                            "openclaw gateway call passport.status --json --params '{\"agentId\":\"passport\"}'",
+                            "优先查找并复用", "创建持久入口", "/passport/v1", "网关保持回环监听",
+                            "缺少凭据时只说明应在网关哪个安全配置入口填写", "修改前备份受影响配置",
+                            "保留原生设备签名、配对和鉴权", "不在命令中加 --token", "不输出 gateway.auth.token",
+                            "二维码应本地生成", "不把配对码交给第三方二维码或生图服务",
+                            "openclaw qr --json --no-ascii --limited --url", "gatewayUrl", "setupCode"] {
+            precondition(PairPrompt.chineseText.contains(requirement), "Missing setup requirement: \(requirement)")
+        }
+        for obsoleteAssumption in ["整站转到网关的外网通道已经有了", "不要新建入口", "不要改网关配置，不要重启网关"] {
+            precondition(!PairPrompt.chineseText.contains(obsoleteAssumption), "Obsolete pairing-only assumption")
+        }
         func code(_ url: String, token: String = "test-bootstrap") throws -> String {
             let data = try JSONSerialization.data(withJSONObject: ["url": url, "bootstrapToken": token])
             return data.base64EncodedString()
@@ -53,6 +75,7 @@ import Foundation
             do { _ = try ConfigurationLink.parse(bad); preconditionFailure("invalid link accepted") }
             catch {}
         }
+        print("Setup prompt: plugin, agent, public ingress, validation and credential boundaries PASS")
         print("Pairing: embedded address, mismatch rejection, folded codes and QR validation PASS")
         print("Deep links: validated imports, field preservation, special characters, duplicate and unsafe-action rejection PASS")
     }
