@@ -219,6 +219,15 @@ iOS App 真机／模拟器构建与 UI 测试，以及 Node 22／24／26 插件�
 版本标签需通过全部必要任务才发布；手动 Release 仅生成产物，不创建 GitHub Release。
 见 [CI 与发布](docs/development/ci/CI-build-and-release.zh_CN.md)。
 
+## 浏览器配置预览
+
+新增浏览器优先的配置台，支持 USB 配置与刷机，以及实验性的 Web Bluetooth 配置；
+现有原生应用继续保留。运行 `make web`，打开 `http://localhost:4173`，
+本机无需 HTTPS；`make web-tunnel` 可生成临时 HTTPS 地址供手机测试。
+依赖和准备好的固件同源提供，运行时不跳转 GitHub Release。
+详见[网页启动、兼容性与 Pages 部署](docs/web.zh_CN.md)。
+真实 USB 刷机和 iPhone 蓝牙仍需真机验收。
+
 ## 许可与致谢
 
 采用 [MIT](LICENSE)，保留 FoloToy 署名。硬件／BSP 与开发文档源于上游项目；

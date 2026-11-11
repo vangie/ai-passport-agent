@@ -1,0 +1,4 @@
+dist/
+public/firmware/
+public/setup-*.txt
+public/lobster.svg

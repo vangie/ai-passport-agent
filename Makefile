@@ -1,4 +1,21 @@
-.PHONY: sim-passport sim-iphone sim-mac preview-ui plugin-test plugin-package
+.PHONY: sim-passport sim-iphone sim-mac preview-ui plugin-test plugin-package web web-dev web-build web-tunnel web-test
+
+web:
+	python3 tools/web.py serve
+
+web-dev:
+	python3 tools/web.py dev
+
+web-build:
+	python3 tools/web.py build
+
+web-tunnel:
+	python3 tools/web.py tunnel
+
+web-test:
+	python3 tools/web.py prepare
+	npm test --prefix web
+	npm run test:ui --prefix web
 
 sim-passport:
 	tools/simulate.sh

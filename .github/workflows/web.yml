@@ -1,0 +1,71 @@
+name: Web configuration studio
+
+on:
+  pull_request:
+    paths: ['web/**', 'tools/web.py', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+  push:
+    branches: [main]
+    paths: ['web/**', 'tools/web.py', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+  release:
+    types: [published]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web --ignore-scripts --no-audit --no-fund
+      - run: python3 tools/web.py prepare
+      - run: npm test --prefix web
+      - run: npx --prefix web playwright install --with-deps chromium
+      - run: npm run test:ui --prefix web
+      - name: Stage verified release firmware on the same origin
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          tag="$EVENT_TAG"
+          if [ -z "$tag" ]; then tag="$(gh release view --json tagName --jq .tagName)"; fi
+          mkdir -p build/web-release
+          gh release download "$tag" --dir build/web-release \
+            --pattern release-manifest.json --pattern FoloToy-AI-Passport.bin --pattern FoloToy-AI-Passport-full.bin
+          python3 tools/web.py firmware --from-release build/web-release
+      - run: npm run build --prefix web
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        if: github.event_name != 'pull_request'
+        with:
+          path: web/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy static configuration studio
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

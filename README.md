@@ -256,6 +256,16 @@ Version tags publish only after the required jobs
 pass; manual Release runs keep artifacts without publishing a GitHub Release.
 See [CI and releases](docs/development/ci/CI-build-and-release.md).
 
+## Browser configuration preview
+
+The browser-first configuration studio supports USB settings and flashing,
+plus experimental Web Bluetooth settings. Existing native apps remain available.
+Run `make web` and open `http://localhost:4173`; this local address does not
+need HTTPS. Use `make web-tunnel` for a temporary HTTPS phone-testing address.
+Dependencies and staged firmware are served locally, without runtime GitHub
+Release redirects. See [browser setup, compatibility and Pages](docs/web.md).
+Real USB flashing and iPhone Bluetooth still require device acceptance.
+
 ## License and credits
 
 [MIT](LICENSE), retaining FoloToy's attribution. Hardware/BSP and development

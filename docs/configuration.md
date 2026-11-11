@@ -9,6 +9,10 @@ for LAN/public ingress and proxies, use [Gateway connectivity](networking.md).
 
 ## Choose an app for your situation
 
+For a no-install browser path, try the [web configuration preview](web.md):
+desktop USB configuration/flashing and experimental browser Bluetooth.
+The native apps remain supported alternatives.
+
 The macOS App provides USB configuration, checks and firmware maintenance. The
 iOS App is an optional Bluetooth configuration tool for when you are away
 from a computer, not a prerequisite for using Passport. Both edit settings on
