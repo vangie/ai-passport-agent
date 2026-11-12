@@ -1231,6 +1231,8 @@ try {
         assert.equal(await bluefyLink.getAttribute('href'), 'https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055');
         assert.equal(await bluefyLink.getAttribute('target'), '_blank');
         assert.match(await capabilityPage.locator('#ble-support').textContent(), /安装后，在 Bluefy 中打开本页/);
+        assert.match(await capabilityPage.locator('#ble-support').textContent(), /iPhone 的 Safari／Chrome 无法让网页连接设备/);
+        assert.match(await capabilityPage.locator('#ble-support').textContent(), /配置完成即可关闭 Bluefy/);
       }
       assert.equal(await capabilityPage.locator('#browser-security').count(), capability.secure ? 0 : 1);
       assert.equal(await capabilityPage.locator('#bluetooth-panel').count(), 0);
@@ -1284,7 +1286,10 @@ try {
       assert.ok((await capabilityPage.locator('header').boundingBox()).height <= 72);
       if (!hasSerial) assert.equal(await capabilityPage.locator('#firmware-card').textContent(), 'Update firmware via USB on a computer.');
       if (capability.secure && capability.usb !== 'available' && !hideUSB) assert.match(await capabilityPage.locator('#usb-support').textContent(), /Web Serial/);
-      if (capability.secure && capability.ble !== 'available') assert.match(await capabilityPage.locator('#ble-support').textContent(), /Web Bluetooth/);
+      if (capability.secure && capability.ble !== 'available') {
+        assert.match(await capabilityPage.locator('#ble-support').textContent(), /Safari and Chrome on iPhone cannot connect web pages to Bluetooth devices/);
+        assert.match(await capabilityPage.locator('#ble-support').textContent(), /You can close Bluefy after setup/);
+      }
       if (!capability.secure) assert.match(await capabilityPage.locator('#browser-security').textContent(), /secure context/);
       assert.deepEqual(await capabilityPage.evaluate(() => window.permissionRequests), { usb: 0, ble: 0 });
       if (capability.name === 'no-usb') {

@@ -5,6 +5,8 @@
 使用[配置网页](https://ai-passport-openclaw.codelife.me/)。电脑 Chrome／Edge 支持 USB 配置和刷机；
 兼容 Web Bluetooth 的浏览器支持无线配置。iPhone 请[在 App Store 获取 Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055)，
 安装后在 Bluefy 中打开配置网页，而非 Safari／Chrome。网页的蓝牙兼容提示也提供商店直达入口。
+iPhone 的 Safari／Chrome 不提供网页蓝牙能力；Bluefy 支持这一功能，网页才能通过蓝牙配置 Passport。
+Bluefy 仅用于配置，保存后即可关闭，Passport 会通过 Wi-Fi 独立连接 OpenClaw。
 更新固件仍需电脑与 USB，参见[兼容性说明](web.zh_CN.md)。
 
 ## 让 OpenClaw 完成网关接入准备

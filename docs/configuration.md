@@ -6,6 +6,9 @@ Use the [web studio](https://ai-passport-openclaw.codelife.me/). Desktop Chrome/
 supports USB configuration and firmware installation; compatible Web Bluetooth
 browsers support wireless settings. On iPhone, [get Bluefy from the App Store](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055)
 and open the configuration site inside it, not Safari/Chrome. The site's Bluetooth compatibility hint links directly to this listing.
+Safari/Chrome on iPhone do not provide Web Bluetooth; Bluefy does, letting this page
+configure Passport over Bluetooth. Bluefy is only a setup browser: close it after saving,
+and Passport connects to OpenClaw independently over Wi-Fi.
 Firmware flashing still needs a computer and USB. See [browser compatibility](web.md).
 
 ## Let OpenClaw prepare the gateway
