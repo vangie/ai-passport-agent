@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LineBuffer, encode, pairing, validateWiFi, hello, networks, agents, nearby, Session } from '../src/protocol.js';
 import { DemoTransport, BluetoothTransport } from '../src/transports.js';
-import { validateApplication, validatePartitions, validateManifest, getImage } from '../src/firmware.js';
+import { validateApplication, validatePartitions, validateManifest, getImage, matchesRelease, firmwareIdentity, firmwareUpdate, sha256 } from '../src/firmware.js';
 
 test('UTF-8 lines survive single-byte BLE fragments and bound memory', () => {
   const buffer = new LineBuffer();
@@ -91,6 +91,23 @@ test('Bluetooth sends acknowledged 20-byte UTF-8 chunks in order', async () => {
   assert.equal(Buffer.concat(chunks).toString(), command + '\n');
 });
 
+test('Bluetooth takeover rejects pending work and never reconnects automatically', async () => {
+  for (const pending of [false, true]) {
+    let closes = 0;
+    let disconnects = 0;
+    const transport = { send() {}, async close() { closes++; this.onDisconnect(); } };
+    const session = new Session(transport, () => { disconnects++; });
+    const request = pending ? session.request('NETS', 'NETS END') : null;
+    transport.onData(new TextEncoder().encode('SESSION TAKEN\n'));
+    if (request) await assert.rejects(request, /takenOver/);
+    assert.equal(session.closed, true);
+    assert.equal(session.disconnectReason, 'takenOver');
+    assert.equal(closes, 1);
+    assert.equal(disconnects, 1);
+    await assert.rejects(session.request('HELLO', 'HELLO'), /disconnected/);
+  }
+});
+
 test('unsafe chip images and partitions are refused', () => {
   const image = new Uint8Array(288); image[0] = 0xe9; image[12] = 5; image.set([0x32, 0x54, 0xcd, 0xab], 32);
   assert.doesNotThrow(() => validateApplication(image));
@@ -112,6 +129,63 @@ test('manifest paths cannot redirect firmware to third-party or traverse directo
   assert.doesNotThrow(() => validateManifest(manifest));
   assert.throws(() => validateManifest({ ...manifest, application: { ...entry, file: '../app.bin' } }), /integrity/);
   assert.throws(() => validateManifest({ ...manifest, application: { ...entry, file: 'https://files.example/app.bin' } }), /integrity/);
+  assert.doesNotThrow(() => validateManifest({ ...manifest, buildId: '1234567890abcdef' }));
+  assert.throws(() => validateManifest({ ...manifest, buildId: 'v0.4.2' }), /integrity/);
+  assert.doesNotThrow(() => validateManifest({ ...manifest, knownBuilds: { abcdef1234567890: { version: 'v0.4.1', channel: 'release' } } }));
+  for (const knownBuilds of [null, [], 'invalid', { invalid: { version: 'v0.4.1', channel: 'release' } }, { abcdef1234567890: { version: 'private descriptor', channel: 'development' } }, { abcdef1234567890: { version: '', channel: 'release' } }, { abcdef1234567890: { version: 'v0.4.1', channel: 'invalid' } }]) {
+    assert.throws(() => validateManifest({ ...manifest, knownBuilds }), /integrity/);
+  }
+});
+
+test('firmware actions distinguish updates, development builds, reinstall and downgrade', () => {
+  const build = 'abcdef1234567890';
+  const manifest = { version: 'v1.10.0', buildId: '1234567890abcdef', knownBuilds: {} };
+  assert.equal(firmwareUpdate(manifest.buildId, manifest).status, 'current');
+  assert.equal(firmwareUpdate(build, manifest).status, 'available');
+  assert.equal(firmwareUpdate(build, null).status, 'unavailable');
+  manifest.knownBuilds[build] = { version: 'v1.9.0', channel: 'release' };
+  assert.deepEqual(firmwareIdentity(build, manifest), { kind: 'version', value: 'v1.9.0' });
+  assert.deepEqual(firmwareUpdate(build, manifest), { status: 'update', action: 'application', confirm: 'confirmFlash' });
+  manifest.knownBuilds[build].version = 'v2.0.0';
+  assert.deepEqual(firmwareUpdate(build, manifest), { status: 'newer', action: 'installVersion', confirm: 'confirmOlderFlash' });
+  manifest.knownBuilds[build].version = 'v1.10.0';
+  assert.equal(firmwareUpdate(build, manifest).status, 'available');
+  manifest.knownBuilds[build].channel = 'development';
+  assert.deepEqual(firmwareIdentity(build, manifest), { kind: 'development', value: 'v1.10.0' });
+  assert.deepEqual(firmwareUpdate(build, manifest), { status: 'development', action: 'installRelease', confirm: 'confirmReleaseFlash' });
+  manifest.knownBuilds[build].channel = 'release';
+  assert.equal(firmwareUpdate(build, { ...manifest, version: 'v1.11.0-rc.1' }).status, 'available');
+});
+
+test('release versions are identified only by matching ELF build identifiers', () => {
+  const manifest = { version: 'v0.4.2', buildId: '1234567890abcdef' };
+  assert.equal(matchesRelease('1234567890abcdef', manifest), true);
+  for (const build of ['v0.4.2', '0.4.2', 'another-build', 'abcdef1234567890', undefined]) assert.equal(matchesRelease(build, manifest), false);
+  assert.equal(matchesRelease('1234567890abcdef', { version: 'v0.4.2' }), false);
+  assert.equal(matchesRelease(undefined, null), false);
+});
+
+test('firmware identity preserves unmatched builds without claiming a release version', () => {
+  const manifest = { version: 'v0.4.2', buildId: '1234567890abcdef' };
+  assert.deepEqual(firmwareIdentity('1234567890abcdef', manifest), { kind: 'release', value: 'v0.4.2' });
+  assert.deepEqual(firmwareIdentity('abcdef1234567890', manifest), { kind: 'build', value: 'abcdef1234567890' });
+  assert.deepEqual(firmwareIdentity('abcdef1234567890', null), { kind: 'build', value: 'abcdef1234567890' });
+  assert.deepEqual(firmwareIdentity('demo', manifest), { kind: 'demo', value: '' });
+  for (const build of [undefined, '', 'v0.4.2', 'invalid-build']) {
+    assert.deepEqual(firmwareIdentity(build, manifest), { kind: 'unknown', value: '' });
+  }
+});
+
+test('downloaded firmware must also match the declared ELF build identifier', async () => {
+  const original = globalThis.fetch;
+  const image = new Uint8Array(288); image[0] = 0xe9; image[12] = 5; image.set([0x32, 0x54, 0xcd, 0xab], 32);
+  image.set([0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef], 176);
+  const manifest = { buildId: '1234567890abcdef', application: { file: 'app.bin', size: image.length, sha256: await sha256(image) } };
+  globalThis.fetch = async () => new Response(image);
+  try {
+    assert.deepEqual(await getImage(manifest, 'application'), image);
+    await assert.rejects(getImage({ ...manifest, buildId: 'abcdef1234567890' }, 'application'), /integrity/);
+  } finally { globalThis.fetch = original; }
 });
 
 test('downloaded firmware must match its hash before flashing', async () => {

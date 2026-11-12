@@ -15,7 +15,7 @@ PATTERNS = {
     'Apple team identifier': re.compile(r'DEVELOPMENT_TEAM\s*[:=]\s*["\']?[A-Z0-9]{10}\b'),
     'deployment hostname': re.compile(r'\b[A-Za-z0-9-]+\.(?:online|local|trycloudflare\.com)\b', re.I),
 }
-SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com'}
+SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com', 'www.w3.org'}
 
 
 def findings(name, data):
@@ -23,7 +23,7 @@ def findings(name, data):
     for label, pattern in PATTERNS.items():
         if pattern.search(data):
             errors.append(f'{name}: {label}; remove or replace with a placeholder')
-    if name.startswith(('app/', 'main/', 'mac/', 'ios/', 'shared/', 'tools/openclaw/')) and not name.endswith('.md'):
+    if (name.startswith(('app/', 'main/', 'mac/', 'ios/', 'shared/', 'tools/openclaw/', 'web/src/', 'web/public/', 'web/dist/')) or name == 'web/index.html') and not name.endswith('.md'):
         for value in re.findall(r'(?:https?|wss?)://[A-Za-z0-9._-]+(?::[0-9]+)?', data):
             host = urlsplit(value).hostname
             if not host or host in SERVICE_HOSTS or host in {'localhost', 'ai-passport', '192.168.4.1'} or host.endswith(('.example', '.invalid')):

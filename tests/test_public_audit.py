@@ -29,6 +29,12 @@ class PublicAuditTests(unittest.TestCase):
         team = 'DEVELOPMENT_TEAM: ' + 'A' * 10
         self.assertTrue(audit.findings('mac/project.yml', team))
 
+    def test_browser_endpoints_require_placeholders(self):
+        self.assertTrue(audit.findings('web/src/main.js', 'wss://gateway.customer.net'))
+        self.assertTrue(audit.findings('web/public/settings.json', '10.23.45.67'))
+        self.assertEqual(audit.findings('web/src/main.js', 'wss://gateway.example'), [])
+        self.assertEqual(audit.findings('web/dist/index.html', 'http://www.w3.org'), [])
+
 
 if __name__ == '__main__':
     unittest.main()

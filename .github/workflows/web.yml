@@ -2,10 +2,10 @@ name: Web configuration studio
 
 on:
   pull_request:
-    paths: ['web/**', 'tools/web.py', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+    paths: &web-paths ['web/**', 'assets/logo/logo.png', 'assets/images/passport-lobster.svg', 'tools/web.py', 'tools/web_preview.py', 'tools/check_public.py', 'tools/check_web_public.py', 'tools/check-secrets.sh', 'tests/test_public_audit.py', 'tests/test_web_public.py', 'tests/test_web_preview.py', 'tests/test_web_firmware.py', 'Makefile', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
   push:
     branches: [main]
-    paths: ['web/**', 'tools/web.py', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+    paths: *web-paths
   release:
     types: [published]
   workflow_run:
@@ -26,6 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Audit source privacy before building
+        run: |
+          python3 tools/check_public.py
+          bash tools/check-secrets.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 tests/test_public_audit.py
+          PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_public.py
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24
@@ -33,6 +39,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci --prefix web --ignore-scripts --no-audit --no-fund
       - run: python3 tools/web.py prepare
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_preview.py
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_firmware.py
       - run: npm test --prefix web
       - run: npx --prefix web playwright install --with-deps chromium
       - run: npm run test:ui --prefix web
@@ -48,8 +56,19 @@ jobs:
           mkdir -p build/web-release
           gh release download "$tag" --dir build/web-release \
             --pattern release-manifest.json --pattern FoloToy-AI-Passport.bin --pattern FoloToy-AI-Passport-full.bin
-          python3 tools/web.py firmware --from-release build/web-release
+          gh release list --exclude-drafts --exclude-pre-releases --limit 12 --json tagName --jq '.[].tagName' > build/web-release-tags.txt
+          while IFS= read -r previous; do
+            if [[ ! "$previous" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then continue; fi
+            mkdir -p "build/web-history/$previous"
+            gh release download "$previous" --dir "build/web-history/$previous" \
+              --pattern release-manifest.json --pattern SHA256SUMS.txt --pattern FoloToy-AI-Passport.bin
+          done < build/web-release-tags.txt
+          python3 tools/web.py firmware --from-release build/web-release --release-history build/web-history
       - run: npm run build --prefix web
+      - name: Audit the exact Pages artifact
+        env:
+          REQUIRE_FIRMWARE: ${{ github.event_name != 'pull_request' && '--require-firmware' || '' }}
+        run: python3 tools/check_web_public.py web/dist $REQUIRE_FIRMWARE
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         if: github.event_name != 'pull_request'
         with:

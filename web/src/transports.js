@@ -33,8 +33,19 @@ export class SerialTransport {
 }
 
 export class BluetoothTransport {
+  helloTimeout = 90000;
+  constructor({ broadDiscovery = false } = {}) { this.broadDiscovery = broadDiscovery; }
   async connect() {
-    this.device = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE] }] });
+    try {
+      this.device = await navigator.bluetooth.requestDevice({
+        ...(this.broadDiscovery ? { acceptAllDevices: true } : { filters: [{ services: [SERVICE] }, { namePrefix: 'AI Passport ' }] }),
+        optionalServices: [SERVICE],
+      });
+    } catch (error) {
+      if (error.name === 'NotAllowedError' || error.name === 'SecurityError') throw new Error('bluetoothPermission', { cause: error });
+      if (error.name === 'NotFoundError') throw new Error('bluetoothNotSelected', { cause: error });
+      throw error;
+    }
     this.disconnected = () => this.onDisconnect?.();
     this.device.addEventListener('gattserverdisconnected', this.disconnected);
     try {
@@ -45,7 +56,11 @@ export class BluetoothTransport {
       this.changed = event => this.onData?.(new Uint8Array(event.target.value.buffer, event.target.value.byteOffset, event.target.value.byteLength));
       this.tx.addEventListener('characteristicvaluechanged', this.changed);
       await this.tx.startNotifications();
-    } catch (error) { await this.close(); throw error; }
+    } catch (error) {
+      await this.close();
+      if (error.name === 'NotFoundError') throw new Error('bluetoothServiceMissing', { cause: error });
+      throw error;
+    }
   }
   async send(command) {
     const data = new TextEncoder().encode(command + '\n');

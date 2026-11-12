@@ -107,7 +107,7 @@ export class Session {
       try { for (const line of this.buffer.append(fragment)) this.receive(line); }
       catch (error) { this.abort(error); }
     };
-    transport.onDisconnect = () => { this.closed = true; this.abort(new Error('disconnected')); onDisconnect(); };
+    transport.onDisconnect = () => { this.closed = true; this.abort(new Error(this.disconnectReason || 'disconnected')); onDisconnect(); };
   }
   abort(error) {
     if (!this.pending) return;
@@ -116,6 +116,13 @@ export class Session {
     this.pending = null;
   }
   receive(line) {
+    if (line === 'SESSION TAKEN') {
+      this.disconnectReason = 'takenOver';
+      this.closed = true;
+      this.abort(new Error('takenOver'));
+      void this.transport.close();
+      return;
+    }
     const request = this.pending;
     if (!request) return;
     if (line.startsWith('ERR ') || line.startsWith('TRY fail')) { this.abort(new Error(line)); return; }
@@ -143,7 +150,7 @@ export class Session {
     });
   }
   async snapshot() {
-    const state = hello((await this.request('HELLO', line => line.startsWith('HELLO '), 30000))[0]);
+    const state = hello((await this.request('HELLO', line => line.startsWith('HELLO '), this.transport.helloTimeout || 30000))[0]);
     state.networks = networks(await this.request('NETS', 'NETS END'), state.generation);
     state.agents = agents(await this.request('AGENTS', 'AGENTS END'), state.generation);
     state.device = {};
