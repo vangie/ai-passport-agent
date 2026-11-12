@@ -1,6 +1,6 @@
 <p align="right"><strong>简体中文</strong> · <a href="community.md">English</a></p>
 
-# 社区发布材料 · v0.5.0
+# 社区发布材料 · v0.5.1
 
 已准备供作者预览，**尚未提交审核**。简介、使用方法、更新日志分别填写。
 不复用已过期授权，不为更新而另建重复玩法；分类由服务端判断。
@@ -43,10 +43,10 @@ AI Passport OpenClaw · 随身语音助手
 ## 文件与来源
 
 - 源码：https://github.com/vangie/ai-passport-openclaw
-- 版本：https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.0
+- 版本：https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.1
 - 固件使用该 Release 经验证的 `FoloToy-AI-Passport-full.bin`，不使用旧本地构建；先核对发布回执与哈希。
 - 封面 `00-cover.png`，附图 `01-ask-and-call.png`、`02-web-studio.png`、`03-mobile-setup.png`。
   均为 1152 × 1536 竖版，使用虚构 Wi-Fi／助手及 `wss://gateway.example`。
 - 准备网页依赖后运行 `node tools/community_materials.mjs` 可复现。输出与独立 UTF-8 提交字段放在
-  忽略目录 `build/community-market/v0.5.0/materials/`，脚本不上传。
+  忽略目录 `build/community-market/v0.5.1/materials/`，脚本不上传。
 - 检查四张最终本地 PNG 与元数据预览，作者认可后才提交社区；GitHub 发布不等于社区审核通过。

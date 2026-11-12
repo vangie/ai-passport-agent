@@ -1,6 +1,6 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.5.0
+# Community submission · v0.5.1
 
 Prepared for author review; **not submitted**. Description, instructions and update
 notes are independent fields. Do not reuse expired one-time authorizations or create
@@ -57,7 +57,7 @@ project. Images show actual interfaces with fictional demo data, not device phot
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-openclaw
-- Release: https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.0
+- Release: https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.1
 - Firmware: the exact release's verified `FoloToy-AI-Passport-full.bin`, not an older
   local build. Validate the published receipt/checksums before preparing upload.
 - Cover: `00-cover.png`; gallery: `01-ask-and-call.png`, `02-web-studio.png`,
@@ -65,6 +65,6 @@ project. Images show actual interfaces with fictional demo data, not device phot
   use fictional Wi-Fi/assistant data and `wss://gateway.example`.
 - Rebuild with `node tools/community_materials.mjs` after preparing the browser
   dependencies. Output and separate UTF-8 publishing fields are under ignored
-  `build/community-market/v0.5.0/materials/`. The renderer does not upload anything.
+  `build/community-market/v0.5.1/materials/`. The renderer does not upload anything.
 - Inspect the final four local PNGs and the metadata preview. Ask for author
   approval before community upload; GitHub publication does not imply community approval.

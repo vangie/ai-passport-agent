@@ -12,7 +12,10 @@
 
 ## Unreleased
 
-## v0.5.0 - 2026-11-12
+## v0.5.1 - 2026-11-12
+
+- Fixed the Pages audit's ShellCheck word-splitting failure. Candidate v0.5.0 was
+  not published; its immutable tag is retained.
 
 - Made the web studio the recommended setup path: desktop USB flashing and
   configuration, experimental Web Bluetooth and iPhone Bluefy configuration.

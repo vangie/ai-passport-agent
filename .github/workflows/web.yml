@@ -68,7 +68,12 @@ jobs:
       - name: Audit the exact Pages artifact
         env:
           REQUIRE_FIRMWARE: ${{ github.event_name != 'pull_request' && '--require-firmware' || '' }}
-        run: python3 tools/check_web_public.py web/dist $REQUIRE_FIRMWARE
+        run: |
+          if [ -n "$REQUIRE_FIRMWARE" ]; then
+            python3 tools/check_web_public.py web/dist --require-firmware
+          else
+            python3 tools/check_web_public.py web/dist
+          fi
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         if: github.event_name != 'pull_request'
         with:

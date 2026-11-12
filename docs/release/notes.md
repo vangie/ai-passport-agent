@@ -1,6 +1,6 @@
 [Simplified Chinese](notes.zh_CN.md) · **English**
 
-# AI Passport OpenClaw v0.5.0
+# AI Passport OpenClaw v0.5.1
 
 ## Highlights
 
@@ -20,6 +20,8 @@
   connection icons, a full-width status row and compact aligned key labels.
 - **Lean releases:** firmware and the upgradeable OpenClaw plugin only. Native
   client source is retained but is no longer built, packaged or promoted.
+- Fixed a ShellCheck portability failure in the Pages artifact audit. The v0.5.0
+  candidate was stopped before publication; its tag is retained, not rewritten.
 
 ## Install
 
@@ -31,7 +33,7 @@ saves never reflash firmware. A new network must be reachable during first save.
 Manual downloads: `FoloToy-AI-Passport.bin` is application-only at `0x10000`;
 `FoloToy-AI-Passport-full.bin` is merged firmware at `0x0`. Do not interchange
 these offsets. The firmware tarball includes installation parameters. Install
-`ai-passport-openclaw-0.5.0.tgz` on the gateway host, not the configuration computer.
+`ai-passport-openclaw-0.5.1.tgz` on the gateway host, not the configuration computer.
 
 ## Integrity and compatibility
 

@@ -4,7 +4,7 @@ import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
-const output = resolve(root, 'build/community-market/v0.5.0/materials');
+const output = resolve(root, 'build/community-market/v0.5.1/materials');
 const shots = resolve(root, 'assets/images/screenshots');
 const server = spawn(process.execPath, [resolve(root, 'web/node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', '4189', '--strictPort'], { cwd: resolve(root, 'web'), stdio: ['ignore', 'pipe', 'pipe'] });
 await new Promise((accept, reject) => {
@@ -18,7 +18,7 @@ try {
   await mkdir(shots, { recursive: true });
   browser = await chromium.launch({ channel: 'chrome', args: ['--disable-gpu'] });
   const page = await browser.newPage({ viewport: { width: 1360, height: 1040 }, locale: 'zh-CN', deviceScaleFactor: 1 });
-  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: 'v0.5.0', commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'FoloToy-AI-Passport.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'FoloToy-AI-Passport-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: 'v0.5.0', channel: 'release' } } } }));
+  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: 'v0.5.1', commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'FoloToy-AI-Passport.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'FoloToy-AI-Passport-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: 'v0.5.1', channel: 'release' } } } }));
   await page.goto('http://127.0.0.1:4189/');
   await page.evaluate(async () => {
     const { DemoTransport } = await import('/src/transports.js');
@@ -91,7 +91,7 @@ try {
     await render.screenshot({ path: resolve(output, `${name}.png`) });
   }
   for (const filename of ['web-desktop.png', 'web-mobile.png']) await copyFile(resolve(shots, filename), resolve(output, filename));
-  await writeFile(resolve(output, 'preview.html'), `<!doctype html><meta charset="utf-8"><title>AI Passport OpenClaw v0.5.0 · 社区素材预览</title><style>body{margin:40px;background:#eceee9;font:18px -apple-system,sans-serif;color:#18332f}main{max-width:1100px;margin:auto}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:24px}img{width:100%;border-radius:12px}p{line-height:1.8}a{color:#ac4337}</style><main><h1>AI Passport OpenClaw · v0.5.0</h1><p>社区发布前预览，尚未提交审核。仅使用虚构数据；界面渲染不代表实机照片。</p><div class="gallery">${posters.map(([name]) => `<img src="${name}.png" alt="${name}">`).join('')}</div></main>`);
+  await writeFile(resolve(output, 'preview.html'), `<!doctype html><meta charset="utf-8"><title>AI Passport OpenClaw v0.5.1 · 社区素材预览</title><style>body{margin:40px;background:#eceee9;font:18px -apple-system,sans-serif;color:#18332f}main{max-width:1100px;margin:auto}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:24px}img{width:100%;border-radius:12px}p{line-height:1.8}a{color:#ac4337}</style><main><h1>AI Passport OpenClaw · v0.5.1</h1><p>社区发布前预览，尚未提交审核。仅使用虚构数据；界面渲染不代表实机照片。</p><div class="gallery">${posters.map(([name]) => `<img src="${name}.png" alt="${name}">`).join('')}</div></main>`);
   console.log('Community posters and sanitized browser screenshots rendered successfully.');
 } finally {
   await browser?.close();

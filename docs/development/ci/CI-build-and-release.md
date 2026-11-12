@@ -23,7 +23,7 @@ Passing CI is not on-device acceptance or a live-provider test.
 
 ## Tag release
 
-Tags use `v<semver>` (for example `v0.5.0`). Review bilingual changelogs and release
+Tags use `v<semver>` (for example `v0.5.1`). Review bilingual changelogs and release
 notes, privacy checks and hardware compatibility before tagging. Never upload
 private NVS, pairing material, configuration, local logs or old local firmware.
 
@@ -53,7 +53,7 @@ Optional `mac-resources`
 and `ios-source` helpers are local tools, not CI steps.
 
 Align plugin versions and bilingual notes/changelogs, then run
-`python3 tools/release.py check-version --tag v0.5.0` with the intended version.
+`python3 tools/release.py check-version --tag v0.5.1` with the intended version.
 Run the static gate and relevant firmware/plugin/web tests, merge reviewed source
 and push an immutable tag at that exact commit. Monitor Release to completion;
 a tag or successful build alone is not a release. Inspect a failed draft and
