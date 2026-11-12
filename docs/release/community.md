@@ -19,8 +19,9 @@ interruption and ending with the on-screen key labels.
 
 Configure in the browser: desktop Chrome/Edge handles USB installation and updates;
 compatible Bluetooth browsers edit Wi-Fi, hotspots and assistant connections.
-iPhone users can use Bluefy. Settings stay on Passport; the page has no application
-backend and does not relay conversations. After setup the device connects directly
+iPhone users can use Bluefy. Save home and office Wi-Fi networks and a phone hotspot
+on Passport, then select a saved network under Settings → Wi-Fi without re-entering
+its details. The page has no application backend and does not relay conversations. After setup the device connects directly
 over Wi-Fi. No companion application needs to stay open.
 
 Bring a running OpenClaw with a working model. Copy the web studio's setup prompt
