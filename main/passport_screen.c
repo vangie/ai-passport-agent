@@ -20,6 +20,11 @@ LV_IMAGE_DECLARE(passport_lobster_22);
 #define MINT        0x87DECC
 #define CORAL       0xFF9B85
 #define AMBER       0xF2C27D
+#define KEY_HEIGHT  40
+#define KEY_WIDTH   24
+#define KEY_PADDING 5
+#define KEY_WORD_WIDTH 18
+#define KEY_SOURCE_WIDTH 80
 
 typedef enum { IDLE, CAPTURE, WORK, FAILURE, CANCELLING, DETAILS, READER, CALL, TRANSCRIPT } layout_t;
 static lv_obj_t *s_status, *s_headline, *s_body, *s_hint, *s_card, *s_network_name;
@@ -29,9 +34,10 @@ static passport_chat_row_t s_chat_metadata[PASSPORT_REPLY_ROWS];
 static lv_obj_t *s_orbit, *s_symbol, *s_waveform[PASSPORT_WAVEFORM_BARS];
 static lv_obj_t *s_keys[3], *s_key_words[3], *s_markers[3];
 static lv_image_dsc_t s_key_word_dsc[3];
-static uint8_t s_key_word_px[3][56 * 18];
+static uint8_t s_key_word_px[3][KEY_HEIGHT * KEY_WORD_WIDTH];
 static char s_key_word_text[3][12];
-static lv_obj_t *s_title, *s_wifi, *s_bluetooth, *s_battery_segments[5], *s_battery_text;
+static lv_obj_t *s_title, *s_wifi, *s_bluetooth, *s_battery, *s_battery_fill, *s_battery_tip, *s_battery_text;
+static lv_obj_t *s_bluetooth_symbol;
 static lv_obj_t *s_page_count, *s_progress_track, *s_progress_fill;
 static char s_page_text[PASSPORT_PAGE_TEXT_MAX];
 static char s_network_name_text[PASSPORT_SSID_MAX];
@@ -39,7 +45,7 @@ static int s_layout = -1, s_key_language = -1, s_tone = -1;
 static int s_last_soc = -2, s_last_rotation = -1;
 static int s_last_wave[PASSPORT_WAVEFORM_BARS];
 static passport_key_binding_t s_last_binding[3];
-static bool s_bindings_valid, s_icons_valid, s_last_wifi, s_last_bt;
+static bool s_bindings_valid, s_icons_valid, s_last_wifi, s_last_bt, s_last_bt_connected;
 /* Mapped from frontal shell dimensions, not evenly spaced screen thirds. */
 static const int s_key_centres[] = { 47, 163, 280 };
 
@@ -118,24 +124,19 @@ static void add_status_icons(lv_obj_t *screen) {
     static const lv_point_precise_t wifi_outer[] = {{1,5},{4,3},{8,2},{12,3},{15,5}};
     static const lv_point_precise_t wifi_inner[] = {{4,8},{6,7},{8,7},{10,7},{12,8}};
     static const lv_point_precise_t bluetooth[] = {{3,3},{11,11},{7,15},{7,1},{11,5},{3,13}};
-    s_wifi = box(screen, 108, 9, 18, 18, INK, 0);
+    s_wifi = box(screen, 134, 7, 18, 18, INK, 0);
     line(s_wifi, 0, 0, wifi_outer, 5, MINT, 2);
     line(s_wifi, 0, 0, wifi_inner, 5, MINT, 2);
     box(s_wifi, 7, 11, 3, 3, MINT, LV_RADIUS_CIRCLE);
-    s_bluetooth = box(screen, 125, 9, 14, 18, INK, 0);
-    line(s_bluetooth, 0, 0, bluetooth, 6, 0x9BBFFF, 1);
+    s_bluetooth = box(screen, 151, 7, 14, 18, INK, 0);
+    s_bluetooth_symbol = line(s_bluetooth, 0, 0, bluetooth, 6, FAINT, 1);
 
-    /* The status row stops at x=204: the full-height column from x=206 to
-     * the edge belongs to the key captions, so the top key never covers
-     * the battery reading. */
-    lv_obj_t *battery = box(screen, 141, 11, 19, 11, INK, 3);
-    lv_obj_set_style_border_width(battery, 1, 0);
-    lv_obj_set_style_border_color(battery, lv_color_hex(MUTED), 0);
-    box(screen, 160, 14, 2, 5, MUTED, 1);
-    static const int segment_x[] = {3, 5, 8, 10, 13};
-    for (size_t i = 0; i < 5; i++)
-        s_battery_segments[i] = box(battery, segment_x[i], 3, 2, 5, MINT, 1);
-    s_battery_text = label(screen, &lv_font_montserrat_14, 166, 9, 38, 18, WHITE);
+    s_battery = box(screen, 168, 9, 20, 12, INK, 3);
+    lv_obj_set_style_border_width(s_battery, 1, 0);
+    lv_obj_set_style_border_color(s_battery, lv_color_hex(MUTED), 0);
+    s_battery_fill = box(s_battery, 0, 0, 18, 10, MINT, 2);
+    s_battery_tip = box(screen, 188, 13, 2, 4, MUTED, 1);
+    s_battery_text = label(screen, &lv_font_montserrat_14, 194, 7, 38, 18, WHITE);
 }
 
 static void set_tone(uint32_t color) {
@@ -155,10 +156,10 @@ static void layout(layout_t mode, bool zh) {
         for (size_t i = 0; i < 3; i++) {
             lv_obj_set_style_text_font(s_keys[i], &passport_font_16, 0);
             lv_obj_set_style_transform_rotation(s_keys[i], 0, 0);
-            lv_obj_set_style_text_line_space(s_keys[i], 0, 0);
-            lv_obj_set_pos(s_keys[i], 206, s_key_centres[i] - 28);
-            lv_obj_set_size(s_keys[i], 30, 56);
-            lv_obj_set_style_pad_top(s_keys[i], 6, 0);
+            lv_obj_set_style_text_line_space(s_keys[i], -4, 0);
+            lv_obj_set_pos(s_keys[i], 212, s_key_centres[i] - KEY_HEIGHT / 2);
+            lv_obj_set_size(s_keys[i], KEY_WIDTH, KEY_HEIGHT);
+            lv_obj_set_style_pad_top(s_keys[i], 2, 0);
             visible(s_keys[i], zh);
             visible(s_key_words[i], !zh);
         }
@@ -310,10 +311,13 @@ static int raw_alpha(const uint8_t *bitmap, int bpp, int x, int y, int box_w) {
  * quarter turn counter-clockwise. LVGL object rotation needs an off-screen
  * layer and stalls this display. */
 static void set_rotated_caption(int index, const char *caption, uint32_t color) {
-    const int width = 56, height = 18;
-    uint8_t *pixels = s_key_word_px[index];
-    memset(pixels, 0, (size_t)width * height);
     const lv_font_t *font = &lv_font_montserrat_14;
+    lv_point_t measured;
+    lv_text_get_size(&measured, caption, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    const int width = measured.x > KEY_SOURCE_WIDTH ? KEY_SOURCE_WIDTH : measured.x;
+    const int height = KEY_WORD_WIDTH;
+    uint8_t pixels[KEY_SOURCE_WIDTH * KEY_WORD_WIDTH];
+    memset(pixels, 0, sizeof(pixels));
     int pen = 0;
     int baseline = font->line_height - font->base_line;
     for (const char *p = caption; *p && pen < width; p++) {
@@ -340,32 +344,47 @@ static void set_rotated_caption(int index, const char *caption, uint32_t color) 
         }
         pen += glyph.adv_w > 0 ? glyph.adv_w : 4;
     }
-    if (pen > 0 && pen < width) {
-        int shift = (width - pen) / 2;
-        if (shift > 0) {
-            for (int y = height - 1; y >= 0; y--) {
-                memmove(pixels + y * width + shift, pixels + y * width, (size_t)pen);
-                memset(pixels + y * width, 0, (size_t)shift);
-            }
+    int ink_left = width, ink_right = -1, ink_top = height, ink_bottom = -1;
+    for (int row = 0; row < height; row++) for (int column = 0; column < width; column++) {
+        if (pixels[row * width + column] < 192) continue;
+        if (column < ink_left) ink_left = column;
+        if (column > ink_right) ink_right = column;
+        if (row < ink_top) ink_top = row;
+        if (row > ink_bottom) ink_bottom = row;
+    }
+    uint8_t *rotated = s_key_word_px[index];
+    memset(rotated, 0, sizeof(s_key_word_px[index]));
+    if (ink_right >= ink_left && ink_bottom >= ink_top) {
+        int ink_width = ink_right - ink_left + 1, ink_height = ink_bottom - ink_top + 1;
+        int scaled_width = ink_width < KEY_HEIGHT - 2 * KEY_PADDING ? ink_width : KEY_HEIGHT - 2 * KEY_PADDING;
+        int scaled_height = ink_height * scaled_width / ink_width;
+        if (scaled_height > KEY_WIDTH - 2 * KEY_PADDING) {
+            scaled_height = KEY_WIDTH - 2 * KEY_PADDING;
+            scaled_width = ink_width * scaled_height / ink_height;
+        }
+        if (scaled_height < 1) scaled_height = 1;
+        if (scaled_width < 1) scaled_width = 1;
+        int offset_x = (KEY_WORD_WIDTH - scaled_height) / 2;
+        int offset_y = (KEY_HEIGHT - scaled_width) / 2;
+        for (int row = 0; row < scaled_height; row++) for (int column = 0; column < scaled_width; column++) {
+            uint8_t alpha = 0;
+            for (int source_y = row * ink_height / scaled_height; source_y < (row + 1) * ink_height / scaled_height; source_y++)
+                for (int source_x = column * ink_width / scaled_width; source_x < (column + 1) * ink_width / scaled_width; source_x++) {
+                    uint8_t sample = pixels[(ink_top + source_y) * width + ink_left + source_x];
+                    if (sample > alpha) alpha = sample;
+                }
+            rotated[(offset_y + scaled_width - 1 - column) * KEY_WORD_WIDTH + offset_x + row] = alpha;
         }
     }
-    uint8_t rotated[56 * 18];
-    memset(rotated, 0, sizeof(rotated));
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            rotated[(width - 1 - x) * height + y] = pixels[y * width + x];
-        }
-    }
-    memcpy(pixels, rotated, sizeof(rotated));
     lv_image_dsc_t *dsc = &s_key_word_dsc[index];
     memset(dsc, 0, sizeof(*dsc));
     dsc->header.magic = LV_IMAGE_HEADER_MAGIC;
     dsc->header.cf = LV_COLOR_FORMAT_A8;
     dsc->header.w = height;
-    dsc->header.h = width;
+    dsc->header.h = KEY_HEIGHT;
     dsc->header.stride = height;
-    dsc->data_size = width * height;
-    dsc->data = pixels;
+    dsc->data_size = sizeof(s_key_word_px[index]);
+    dsc->data = rotated;
     lv_image_set_src(s_key_words[index], dsc);
     lv_obj_set_style_image_recolor(s_key_words[index], lv_color_hex(color), 0);
     lv_obj_set_style_image_recolor_opa(s_key_words[index], LV_OPA_COVER, 0);
@@ -379,7 +398,6 @@ static void show_keys(const passport_view_t *v, const passport_store_t *s) {
         if (s_bindings_valid && binding.action == s_last_binding[i].action &&
             binding.enabled == s_last_binding[i].enabled) continue;
         const char *caption = passport_action_label(binding.action, zh);
-        if (!zh && (binding.action == PASSPORT_ACT_DISCARD || binding.action == PASSPORT_ACT_CANCEL_SEND)) caption = "Stop";
         char vertical[12];
         if (zh && strlen(caption) == 6) {
             memcpy(vertical, caption, 3); vertical[3] = '\n';
@@ -404,22 +422,27 @@ static void show_keys(const passport_view_t *v, const passport_store_t *s) {
 static void update_icons(const passport_view_t *v) {
     /* Keep the active radio indicators grouped against the battery. When BLE
      * is off, Wi-Fi takes its slot instead of leaving a visual hole. */
-    lv_obj_set_x(s_wifi, v->bluetooth_ready ? 108 : 122);
+    lv_obj_set_x(s_wifi, v->bluetooth_ready ? 134 : 148);
     if (!s_icons_valid || s_last_wifi != v->wifi_online) { visible(s_wifi, v->wifi_online); s_last_wifi = v->wifi_online; }
     if (!s_icons_valid || s_last_bt != v->bluetooth_ready) { visible(s_bluetooth, v->bluetooth_ready); s_last_bt = v->bluetooth_ready; }
+    bool bluetooth_connected = v->bluetooth_ready && v->bluetooth_connected;
+    if (!s_icons_valid || s_last_bt_connected != bluetooth_connected) {
+        lv_obj_set_style_line_color(s_bluetooth_symbol, lv_color_hex(bluetooth_connected ? 0x9BBFFF : FAINT), 0);
+        lv_obj_set_style_line_width(s_bluetooth_symbol, bluetooth_connected ? 2 : 1, 0);
+        s_last_bt_connected = bluetooth_connected;
+    }
     if (!s_icons_valid || s_last_soc != v->battery_soc) {
         int soc = v->battery_soc;
-        int level = soc < 0 ? 0 : soc <= 0 ? 0 : (soc + 19) / 20;
-        if (level > 5) level = 5;
+        if (soc > 100) soc = 100;
+        int fill_width = soc <= 0 ? 0 : (soc * 18 + 99) / 100;
         uint32_t color = soc < 0 ? FAINT : soc <= 20 ? AMBER : MINT;
-        for (size_t i = 0; i < 5; i++) {
-            lv_obj_set_style_bg_color(s_battery_segments[i], lv_color_hex(color), 0);
-            visible(s_battery_segments[i], (int)i < level);
-        }
+        lv_obj_set_style_bg_color(s_battery_fill, lv_color_hex(color), 0);
+        lv_obj_set_width(s_battery_fill, fill_width ? fill_width : 1);
+        visible(s_battery_fill, fill_width > 0);
         char value[8];
         if (soc < 0) snprintf(value, sizeof(value), "--");
-        else snprintf(value, sizeof(value), "%d%%", soc > 100 ? 100 : soc);
-        text(s_battery_text, value); s_last_soc = soc;
+        else snprintf(value, sizeof(value), "%d%%", soc);
+        text(s_battery_text, value); s_last_soc = v->battery_soc;
     }
     s_icons_valid = true;
 }
@@ -430,8 +453,8 @@ void passport_screen_open(void) {
     s_network_name_text[0]=0;
     lv_obj_t *screen = box(NULL, 0, 0, PASSPORT_LCD_W, PASSPORT_LCD_H, INK, 0);
     lv_obj_t *lobster = lv_image_create(screen);
-    lv_image_set_src(lobster, &passport_lobster_22); lv_obj_set_pos(lobster, 6, 5);
-    s_title = label(screen, &lv_font_montserrat_14, 31, 9, 76, 18, WHITE);
+    lv_image_set_src(lobster, &passport_lobster_22); lv_obj_set_pos(lobster, 6, 3);
+    s_title = label(screen, &lv_font_montserrat_14, 31, 7, 102, 18, WHITE);
     lv_obj_t *title = s_title;
     text(title, "OpenClaw"); add_status_icons(screen);
     box(screen, 16, 69, 180, 1, EDGE, 0);
@@ -469,18 +492,18 @@ void passport_screen_open(void) {
     s_progress_track = box(screen, 13, 302, PASSPORT_REPLY_BODY_WIDTH, 2, EDGE, 1);
     s_progress_fill = box(s_progress_track, 0, 0, 1, 2, MINT, 1);
     for (size_t i = 0; i < 3; i++) {
-        s_keys[i] = label(screen, &passport_font_16, 206, s_key_centres[i] - 28, 30, 56, MUTED);
+        s_keys[i] = label(screen, &passport_font_16, 212, s_key_centres[i] - KEY_HEIGHT / 2, KEY_WIDTH, KEY_HEIGHT, MUTED);
         lv_obj_set_style_text_align(s_keys[i], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_radius(s_keys[i], 8, 0);
         lv_obj_add_event_cb(s_keys[i], draw_key_edge, LV_EVENT_DRAW_MAIN_BEGIN, NULL);
         s_key_words[i] = lv_image_create(screen);
-        lv_obj_set_pos(s_key_words[i], 217, s_key_centres[i] - 28);
-        lv_obj_set_size(s_key_words[i], 18, 56);
+        lv_obj_set_pos(s_key_words[i], 215, s_key_centres[i] - KEY_HEIGHT / 2);
+        lv_obj_set_size(s_key_words[i], KEY_WORD_WIDTH, KEY_HEIGHT);
         lv_obj_remove_flag(s_key_words[i], LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
         visible(s_key_words[i], false);
         /* The accent rail is the full height of the caption pill, so the
          * software control reads as one object beside the physical key. */
-        s_markers[i] = box(screen, 237, s_key_centres[i] - 28, 2, 56, MUTED, 1);
+        s_markers[i] = box(screen, 237, s_key_centres[i] - KEY_HEIGHT / 2, 2, KEY_HEIGHT, MUTED, 1);
     }
     passport_reply_set_glyph_width(reply_glyph_width);
     lv_screen_load(screen);
@@ -620,6 +643,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
             if (v->screen == PASSPORT_SCREEN_PREFERENCES) {
                 text(s_status, tr(s, "设备设置", "SETTINGS")); text(s_headline, tr(s, "设置", "Settings"));
                 const char *bluetooth = v->bluetooth_busy ? tr(s, "处理中", "Busy")
+                    : v->bluetooth_ready && v->bluetooth_connected ? tr(s, "已连接", "Connected")
                     : v->bluetooth_ready ? tr(s, "已开启", "On") : tr(s, "已关闭", "Off");
                 snprintf(value, sizeof(value), tr(s, "%s 网络与代理\n%s OpenClaw 助手\n%s 蓝牙  %s\n%s 音量  %u%%", "%s Wi-Fi & routing\n%s OpenClaw agents\n%s Bluetooth  %s\n%s Volume  %u%%"),
                     v->preference_cursor == 0 ? ">" : " ", v->preference_cursor == 1 ? ">" : " ",
@@ -677,7 +701,8 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
             } else {
                 text(s_page_count, "");
                 text(s_status, tr(s, "连接设置", "CONNECTION")); text(s_headline, tr(s, "蓝牙配置", "Bluetooth"));
-                text(s_body, v->bluetooth_ready ? tr(s, "蓝牙已开启\n\n打开手机或 Mac 应用\n连接 AI Passport", "Bluetooth is on.\n\nOpen the app and connect AI Passport.")
+                text(s_body, v->bluetooth_ready && v->bluetooth_connected ? tr(s, "蓝牙已连接\n\n配置完成后可断开连接", "Bluetooth connected.\n\nYou can disconnect after setup.")
+                    : v->bluetooth_ready ? tr(s, "蓝牙已开启\n\n打开手机或 Mac 应用\n连接 AI Passport", "Bluetooth is on.\n\nOpen the app and connect AI Passport.")
                     : tr(s, "蓝牙已关闭\n\n点右侧开启进行配置", "Bluetooth is off.\n\nChoose On to configure."));
             }
             text(s_hint, network && v->cursor == v->network_target && v->network_state != PASSPORT_NETWORK_IDLE

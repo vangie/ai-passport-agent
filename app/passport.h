@@ -167,6 +167,7 @@ typedef struct {
     int battery_soc;
     bool wifi_online;
     bool bluetooth_ready;
+    bool bluetooth_connected;
     bool bluetooth_busy;
     passport_network_state_t network_state;
     int network_target;

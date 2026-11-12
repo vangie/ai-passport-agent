@@ -2,6 +2,7 @@
  * frames and changing capture levels all matter on a small wearable screen. */
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "../managed_components/lvgl__lvgl/src/misc/lv_text_private.h"
 #include "../main/passport_screen.c"
@@ -84,7 +85,14 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
     }
     for (int i=0;i<3;i++) {
         assert(lv_obj_get_y(s_keys[i])+lv_obj_get_height(s_keys[i])/2==s_key_centres[i]);
+        assert(lv_obj_get_height(s_keys[i])==40);
+        assert(lv_obj_get_height(s_keys[i])==lv_obj_get_height(s_keys[0]));
+        assert(lv_obj_get_width(s_keys[i])==24 && lv_obj_get_x(s_keys[i])==212);
         assert(lv_obj_get_x(s_keys[i])+lv_obj_get_width(s_keys[i])<=238);
+        assert(lv_obj_get_y(s_key_words[i])+lv_obj_get_height(s_key_words[i])/2==s_key_centres[i]);
+        assert(lv_obj_get_height(s_key_words[i])==lv_obj_get_height(s_keys[i]));
+        assert(lv_obj_get_x(s_key_words[i])+lv_obj_get_width(s_key_words[i])/2==
+               lv_obj_get_x(s_keys[i])+lv_obj_get_width(s_keys[i])/2);
         assert(lv_obj_get_y(s_markers[i])==lv_obj_get_y(s_keys[i]) &&
                lv_obj_get_height(s_markers[i])==lv_obj_get_height(s_keys[i]));
         if (!lv_obj_has_flag(s_keys[i],LV_OBJ_FLAG_HIDDEN) &&
@@ -93,7 +101,7 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
             int key_right=key_left+lv_obj_get_width(s_keys[i])-1;
             int key_top=lv_obj_get_y(s_keys[i]);
             int key_bottom=key_top+lv_obj_get_height(s_keys[i])-1;
-            const unsigned char *background=&s_pixels[(key_top*PASSPORT_LCD_W+key_left+15)*3];
+            const unsigned char *background=&s_pixels[(key_top*PASSPORT_LCD_W+key_left+KEY_WIDTH/2)*3];
             assert(memcmp(background,&s_pixels[(key_top*PASSPORT_LCD_W+key_left)*3],3)!=0);
             assert(memcmp(background,&s_pixels[(key_bottom*PASSPORT_LCD_W+key_left)*3],3)!=0);
             for (int edge_x=key_right-7;edge_x<=key_right;edge_x++) {
@@ -101,15 +109,76 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
                 assert(memcmp(background,&s_pixels[(key_bottom*PASSPORT_LCD_W+edge_x)*3],3)==0);
             }
         }
+        if (!lv_obj_has_flag(s_keys[i],LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(s_key_words[i],LV_OBJ_FLAG_HIDDEN)) {
+            int key_left=lv_obj_get_x(s_keys[i]), key_top=lv_obj_get_y(s_keys[i]);
+            int ink_left=KEY_WIDTH, ink_right=-1, ink_top=KEY_HEIGHT, ink_bottom=-1;
+            for (int row=0;row<KEY_HEIGHT;row++) for (int column=0;column<KEY_WIDTH;column++) {
+                const unsigned char *pixel=&s_pixels[((key_top+row)*PASSPORT_LCD_W+key_left+column)*3];
+                if (pixel[0]<=100 && pixel[1]<=100 && pixel[2]<=100) continue;
+                if (column<ink_left) ink_left=column;
+                if (column>ink_right) ink_right=column;
+                if (row<ink_top) ink_top=row;
+                if (row>ink_bottom) ink_bottom=row;
+            }
+            int padding_right = (KEY_WIDTH - 1) - ink_right;
+            int padding_bottom = (KEY_HEIGHT - 1) - ink_bottom;
+            if (ink_right<ink_left || ink_left<4 || padding_right<4 || ink_top<4 || padding_bottom<4 ||
+                abs(ink_left-padding_right)>2 || abs(ink_top-padding_bottom)>2)
+                fprintf(stderr,"Uneven key padding on %s key %d: left=%d right=%d top=%d bottom=%d\n",name,i,ink_left,padding_right,ink_top,padding_bottom);
+            assert(ink_right>=ink_left && ink_left>=4 && padding_right>=4 && ink_top>=4 && padding_bottom>=4);
+            assert(abs(ink_left-padding_right)<=2 && abs(ink_top-padding_bottom)<=2);
+            if (v->screen==PASSPORT_SCREEN_HOME && passport_lang_zh(store))
+                assert(ink_left==5 && padding_right==5 && ink_top==5 && padding_bottom==5);
+        }
     }
-    assert(lv_obj_get_x(s_wifi) == (v->bluetooth_ready ? 108 : 122));
+    assert(lv_obj_get_x(s_wifi) == (v->bluetooth_ready ? 134 : 148));
+    bool bluetooth_connected = v->bluetooth_ready && v->bluetooth_connected;
+    assert(lv_obj_has_flag(s_bluetooth, LV_OBJ_FLAG_HIDDEN) == !v->bluetooth_ready);
+    assert(lv_obj_get_child_count(s_bluetooth) == 1);
+    assert(lv_color_eq(lv_obj_get_style_line_color(s_bluetooth_symbol, 0),
+        lv_color_hex(bluetooth_connected ? 0x9BBFFF : FAINT)));
+    assert(lv_obj_get_style_line_width(s_bluetooth_symbol, 0) == (bluetooth_connected ? 2 : 1));
+    assert(lv_obj_get_x(s_bluetooth) + lv_obj_get_width(s_bluetooth) + 3 == lv_obj_get_x(s_battery));
+    assert(lv_obj_get_x(s_wifi) + lv_obj_get_width(s_wifi) == (v->bluetooth_ready ? 152 : 166));
     /* The title must end before the first status icon, even with BLE on. */
     assert(lv_obj_get_x(s_title)+lv_obj_get_width(s_title) <= lv_obj_get_x(s_wifi));
-    /* Nothing in the status row may reach the key-caption column. */
-    assert(lv_obj_get_x(s_battery_text)+lv_obj_get_width(s_battery_text) <= lv_obj_get_x(s_keys[0]));
-    int battery_level = v->battery_soc < 0 ? 0 : v->battery_soc <= 0 ? 0 : (v->battery_soc + 19) / 20;
-    if (battery_level > 5) battery_level = 5;
-    for (int i=0;i<5;i++) assert(lv_obj_has_flag(s_battery_segments[i],LV_OBJ_FLAG_HIDDEN) == (i >= battery_level));
+    assert(lv_obj_get_x(s_battery)==168 && lv_obj_get_x(s_battery_text)==194);
+    assert(lv_obj_get_x(s_battery_text)+lv_obj_get_width(s_battery_text)==PASSPORT_LCD_W-8);
+    lv_point_t battery_text_size;
+    lv_text_get_size(&battery_text_size,lv_label_get_text(s_battery_text),&lv_font_montserrat_14,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+    assert(lv_obj_get_width(s_battery_text)>=battery_text_size.x);
+    assert(lv_obj_get_x(s_battery_tip)==lv_obj_get_x(s_battery)+lv_obj_get_width(s_battery));
+    assert(lv_obj_get_x(s_battery_text)-lv_obj_get_x(s_battery_tip)-lv_obj_get_width(s_battery_tip)==4);
+    assert(lv_obj_get_y(s_battery_tip)+lv_obj_get_height(s_battery_tip)/2==lv_obj_get_y(s_battery)+lv_obj_get_height(s_battery)/2);
+    assert(lv_obj_get_y(s_title)+lv_obj_get_height(s_title)+2<=lv_obj_get_y(s_keys[0]));
+    assert(lv_obj_get_y(s_wifi)+lv_obj_get_height(s_wifi)+2<=lv_obj_get_y(s_keys[0]));
+    assert(lv_obj_get_y(s_bluetooth)+lv_obj_get_height(s_bluetooth)+2<=lv_obj_get_y(s_keys[0]));
+    assert(lv_obj_get_y(s_battery_text)+lv_obj_get_height(s_battery_text)+2<=lv_obj_get_y(s_keys[0]));
+    int battery_soc=v->battery_soc>100 ? 100 : v->battery_soc;
+    int battery_fill_width=battery_soc<=0 ? 0 : (battery_soc*18+99)/100;
+    assert(lv_obj_has_flag(s_battery_fill,LV_OBJ_FLAG_HIDDEN)==(battery_fill_width==0));
+    assert(lv_obj_get_width(s_battery_fill)==(battery_fill_width ? battery_fill_width : 1));
+    assert(lv_obj_get_x(s_battery_fill)==0 && lv_obj_get_y(s_battery_fill)==0);
+    assert(lv_obj_get_width(s_battery_fill)<=lv_obj_get_content_width(s_battery));
+    assert(lv_obj_get_height(s_battery_fill)==lv_obj_get_content_height(s_battery));
+    assert(lv_obj_get_style_shadow_width(s_battery,0)==0);
+    assert(lv_obj_get_style_shadow_width(s_battery_fill,0)==0);
+    assert(lv_obj_get_style_shadow_width(s_battery_tip,0)==0);
+    assert(lv_color_eq(lv_obj_get_style_bg_color(s_battery_fill,0),lv_color_hex(battery_soc<0 ? FAINT : battery_soc<=20 ? AMBER : MINT)));
+    lv_area_t battery_content;
+    lv_obj_get_content_coords(s_battery,&battery_content);
+    int battery_center_y=(battery_content.y1+battery_content.y2)/2;
+    for (int column=0;column<lv_obj_get_content_width(s_battery);column++) {
+        uint32_t expected_color=column<battery_fill_width ? (battery_soc<=20 ? AMBER : MINT) : INK;
+        uint16_t expected_rgb=lv_color_to_u16(lv_color_hex(expected_color));
+        unsigned char expected_pixel[]={((expected_rgb>>11)&31)*255/31,((expected_rgb>>5)&63)*255/63,(expected_rgb&31)*255/31};
+        const unsigned char *actual_pixel=&s_pixels[(battery_center_y*PASSPORT_LCD_W+battery_content.x1+column)*3];
+        assert(!memcmp(actual_pixel,expected_pixel,sizeof(expected_pixel)));
+    }
+    char battery_value[8];
+    if (battery_soc<0) snprintf(battery_value,sizeof(battery_value),"--");
+    else snprintf(battery_value,sizeof(battery_value),"%d%%",battery_soc);
+    assert(!strcmp(lv_label_get_text(s_battery_text),battery_value));
     unsigned before=s_flushes;
     for (int i=0;i<12;i++) { passport_screen_show(v,store);lv_obj_update_layout(lv_screen_active());lv_refr_now(NULL); }
     if (before!=s_flushes) fprintf(stderr,"Unexpected redraw on %s: %u -> %u\n",name,before,s_flushes);
@@ -133,6 +202,26 @@ int main(int argc, char **argv) {
     passport_agent_upsert(&store,"助手·Cloudflare","openclaw","wss://gateway.example","",NULL,NULL,NULL);
     passport_view_t v;passport_view_init(&v);v.wifi_online=true;v.battery_soc=98;
     passport_screen_open();
+    for (passport_action_t action=PASSPORT_ACT_NETWORKS;action<=PASSPORT_ACT_LIVE_INTERRUPT;action++) {
+        const char *caption=passport_action_label(action,false);
+        if (!caption[0]) continue;
+        assert(strlen(caption)<=4 || !strcmp(caption,"Wi-Fi"));
+        lv_point_t measured;
+        lv_text_get_size(&measured,caption,&lv_font_montserrat_14,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+        assert(measured.x<=42);
+        set_rotated_caption(0,caption,MUTED);
+        assert(s_key_word_dsc[0].header.w==18 && s_key_word_dsc[0].header.h==40);
+        assert(s_key_word_dsc[0].data_size==40*18);
+        bool has_ink=false;
+        for (size_t pixel=0;pixel<sizeof(s_key_word_px[0]);pixel++) has_ink|=s_key_word_px[0][pixel]!=0;
+        assert(has_ink && !strcmp(s_key_word_text[0],caption));
+    }
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_PREFERENCES,false),"Set"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_AGENTS,false),"Agt"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_LIVE_UNMUTE,false),"Mic"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_LIVE_INTERRUPT,false),"Stop"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_VOLUME_UP,false),"Vol+"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_VOLUME_DOWN,false),"Vol-"));
     const char *settings_previews[][4]={
         {"settings-menu","settings-agents-selected","settings-bluetooth-selected","settings-volume-selected"},
         {"english-settings-menu","english-settings-agents-selected","english-settings-bluetooth-selected","english-settings-volume-selected"}
@@ -157,13 +246,43 @@ int main(int argc, char **argv) {
         render(language ? "english-settings-bluetooth-on" : "settings-bluetooth-on",&v,&store);
         assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  On" : "蓝牙  已开启"));
         assert(!strcmp(passport_action_label(s_last_binding[1].action,!language),language ? "Off" : "关闭"));
+        v.bluetooth_connected=true;
+        render(language ? "english-settings-bluetooth-connected" : "settings-bluetooth-connected",&v,&store);
+        assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  Connected" : "蓝牙  已连接"));
+        assert(s_last_binding[1].action==PASSPORT_ACT_CLOSE_CONFIG && s_last_binding[1].enabled);
         v.bluetooth_busy=true;
         render(language ? "english-settings-bluetooth-busy" : "settings-bluetooth-busy",&v,&store);
         assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  Busy" : "蓝牙  处理中"));
         assert(!s_last_binding[1].enabled && s_last_binding[0].enabled && s_last_binding[2].enabled);
-        v.bluetooth_ready=false;v.bluetooth_busy=false;
+        v.bluetooth_ready=false;v.bluetooth_busy=false;v.bluetooth_connected=false;
+        v.screen=PASSPORT_SCREEN_HOME;
+        render(language ? "english-bluetooth-disabled" : "bluetooth-disabled",&v,&store);
+        v.bluetooth_ready=true;
+        render(language ? "english-bluetooth-waiting" : "bluetooth-waiting",&v,&store);
+        v.bluetooth_connected=true;
+        render(language ? "english-bluetooth-linked" : "bluetooth-linked",&v,&store);
+        v.wifi_online=false;
+        render(language ? "english-bluetooth-linked-no-wifi" : "bluetooth-linked-no-wifi",&v,&store);
+        v.wifi_online=true;v.bluetooth_connected=false;
+        render(language ? "english-bluetooth-disconnected" : "bluetooth-disconnected",&v,&store);
+        v.bluetooth_ready=false;
+        v.screen=PASSPORT_SCREEN_PREFERENCES;
     }
     strcpy(store.lang,"zh");
+    const int battery_previews[]={100,0,-1,1,20,21,101,-2,9,10,99};
+    const char *battery_preview_names[]={"full-width-status-battery-full","full-width-status-battery-empty","full-width-status-battery-unknown","battery-one-percent","battery-low","battery-normal","battery-over-full","battery-unavailable","battery-single-digit","battery-double-digit","battery-nearly-full"};
+    for (size_t index=0;index<sizeof(battery_previews)/sizeof(battery_previews[0]);index++) {
+        v.battery_soc=battery_previews[index];
+        render(battery_preview_names[index],&v,&store);
+    }
+    v.bluetooth_ready=true;v.bluetooth_connected=true;v.battery_soc=100;
+    render("bluetooth-linked-full-battery",&v,&store);
+    v.battery_soc=1;
+    render("bluetooth-linked-one-percent",&v,&store);
+    v.bluetooth_ready=false;v.bluetooth_connected=false;v.wifi_online=false;
+    render("status-radios-disabled",&v,&store);
+    v.wifi_online=true;
+    v.battery_soc=98;
     v.screen=PASSPORT_SCREEN_VOLUME;render("speaker-volume",&v,&store);
     v.speaker_volume=0;render("speaker-silent",&v,&store);
     v.speaker_volume=75;
@@ -278,6 +397,11 @@ int main(int argc, char **argv) {
     lv_text_get_size(&name_size,lv_label_get_text(s_status),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
     assert(name_size.x<=lv_obj_get_content_width(s_status));
     v.screen=PASSPORT_SCREEN_ADD;v.bluetooth_ready=true;render("bluetooth",&v,&store);
+    v.bluetooth_connected=true;render("bluetooth-config-connected",&v,&store);
+    assert(strstr(lv_label_get_text(s_body),"蓝牙已连接"));
+    strcpy(store.lang,"en");render("english-bluetooth-config-connected",&v,&store);
+    assert(strstr(lv_label_get_text(s_body),"Bluetooth connected."));
+    strcpy(store.lang,"zh");v.bluetooth_connected=false;
     v.screen=PASSPORT_SCREEN_NETS;memset(store.nets[0].ssid,'W',32);store.nets[0].ssid[32]=0;
     render("long-network-name",&v,&store);
     passport_set_reply(&v,"助手说：“你好！”\n‘单引号’「」『』\n，。！？；：、\n（）［］｛｝〔〕\n【】〖〗《》〈〉\n—— …… · • ※\n～ ／ ＼ ｜ ＿\n现在 23℃，体感 23°C。");

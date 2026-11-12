@@ -25,10 +25,6 @@ def check_version(tag=None):
         versions = re.findall(r"pluginVersion: '([^']+)'", (ROOT / 'tools/openclaw' / name).read_text())
         if versions != [version]:
             raise ValueError(f'Plugin runtime version mismatch: {name}')
-    for name in ['mac/project.yml', 'ios/project.yml']:
-        versions = re.findall(r'MARKETING_VERSION: "([^"]+)"', (ROOT / name).read_text())
-        if versions != [version]:
-            raise ValueError(f'App version mismatch: {name}')
     for name in ['notes.md', 'notes.zh_CN.md']:
         if f'# AI Passport OpenClaw v{version}' not in (ROOT / 'docs/release' / name).read_text().splitlines():
             raise ValueError(f'Release notes version mismatch: {name}')
@@ -41,8 +37,7 @@ def check_version(tag=None):
 
 def asset_names(version):
     return {f'ai-passport-openclaw-{version}.tgz', 'ai-passport-openclaw-firmware.tar.gz',
-            'ai-passport-openclaw-ios-source.zip', 'ai-passport-openclaw-ios-simulator.zip',
-            'ai-passport-openclaw-macos-universal-adhoc.zip', 'FoloToy-AI-Passport-full.bin',
+            'FoloToy-AI-Passport-full.bin',
             'FoloToy-AI-Passport.bin', 'LICENSE.txt'}
 
 
@@ -53,9 +48,6 @@ def prepare_assets(source, destination, tag, commit):
     inputs = {
         f'ai-passport-openclaw-{version}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{version}.tgz',
         'ai-passport-openclaw-firmware.tar.gz': source / 'release-firmware/ai-passport-openclaw-firmware.tar.gz',
-        'ai-passport-openclaw-ios-source.zip': source / 'release-ios/ai-passport-openclaw-ios-source.zip',
-        'ai-passport-openclaw-ios-simulator.zip': source / 'release-ios/ai-passport-openclaw-ios-simulator.zip',
-        'ai-passport-openclaw-macos-universal-adhoc.zip': source / 'release-mac/ai-passport-openclaw-macos-universal-adhoc.zip',
         'FoloToy-AI-Passport-full.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport-full.bin',
         'FoloToy-AI-Passport.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport.bin',
         'LICENSE.txt': ROOT / 'LICENSE',

@@ -300,7 +300,7 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
 
     private func readSnapshot(after: (() -> Void)? = nil) {
         candidate = PassportSnapshot()
-        request("HELLO", ending: "HELLO ", timeout: 60) { [weak self] in
+        request("HELLO", ending: "HELLO ", timeout: 90) { [weak self] in
             guard let self else { return }
             guard self.candidate.secureBLE else {
                 self.fail(L10n.string("此固件不支持加密蓝牙配网，请先用 Mac 更新固件。未发送 Wi-Fi 密码。"))
@@ -340,6 +340,10 @@ final class PassportLink: NSObject, ObservableObject, CBCentralManagerDelegate, 
     }
 
     private func receive(_ line: String) throws {
+        if line == "SESSION TAKEN" {
+            fail(L10n.string("设备已被其他配置端接管，输入内容仍保留。需要时请手动重新连接。"))
+            return
+        }
         guard writer != nil, !responseComplete else { return }
         if line.hasPrefix("ERR ") {
             rejection = ProvisioningRejection.message(for: line)

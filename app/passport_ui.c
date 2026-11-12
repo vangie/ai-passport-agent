@@ -406,20 +406,20 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
 
 const char *passport_action_label(passport_action_t action, bool zh) {
     static const char *const labels[][2] = {
-        { "", "" }, { "网络", "Wi-Fi" }, { "助手", "Agent" }, { "提问", "Ask" },
-        { "发送", "Send" }, { "重试", "Retry" }, { "重录", "New" }, { "取消", "Stop" },
+        { "", "" }, { "网络", "Wi-Fi" }, { "助手", "Agt" }, { "提问", "Ask" },
+        { "发送", "Send" }, { "重试", "Try" }, { "重录", "New" }, { "取消", "Stop" },
         { "切换", "Next" }, { "打开", "Open" }, { "添加", "Add" }, { "连接", "Join" },
         { "切换", "Next" }, { "使用", "Use" }, { "配置", "Set" }, { "关闭", "Off" },
         { "返回", "Back" }, { "上页", "Prev" }, { "下页", "Next" }, { "进度", "View" },
         { "查看", "Read" }, { "开启", "On" },
-        { "取消", "Cancel" }, { "取消", "Cancel" }, { "重录", "New" },
+        { "取消", "Stop" }, { "取消", "Stop" }, { "重录", "New" },
         { "继续", "Talk" },
-        { "设置", "Setup" }, { "", "" }, { "", "" },
+        { "设置", "Set" }, { "", "" }, { "", "" },
         { "通话", "Call" }, { "结束", "End" },
-        { "静音", "Mute" }, { "收音", "Unmute" }, { "重连", "Retry" },
-        { "切换", "Next" }, { "打开", "Open" }, { "调高", "Louder" }, { "调低", "Softer" },
+        { "静音", "Mute" }, { "收音", "Mic" }, { "重连", "Try" },
+        { "切换", "Next" }, { "打开", "Open" }, { "调高", "Vol+" }, { "调低", "Vol-" },
         { "打开", "Open" },
-        { "打断", "Interrupt" },
+        { "打断", "Stop" },
     };
     if ((unsigned)action >= sizeof(labels)/sizeof(labels[0])) return "";
     return labels[action][zh ? 0 : 1];

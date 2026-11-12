@@ -2,9 +2,9 @@
 
 # AI Passport for iPhone
 
-This release provides an **iOS App source kit**, not an installable unsigned IPA.
-The separate Simulator ZIP runs on a Mac only and cannot access real Bluetooth.
-Neither artifact is an App Store or TestFlight distribution.
+The iOS App is retained as **source only**. New Releases no longer build or
+package it, including source kits and Simulator ZIPs. Use the repository for local
+development; there is no App Store or TestFlight distribution.
 
 A Simulator app cannot be re-signed for a physical iPhone. Re-signing without
 rebuilding requires a compatible device binary, valid certificate and provisioning
@@ -13,12 +13,12 @@ distribute a device re-signing kit; use the source workflow below.
 
 ## Install on your iPhone
 
-1. Unzip `ai-passport-openclaw-ios-source.zip`. It contains `ios/`, `shared/`,
-   the license and these instructions, without private signing data or endpoints.
+1. Clone or download the [repository](https://github.com/vangie/ai-passport-openclaw).
+   Keep `ios/` and `shared/` together; no private signing data is included.
 2. Install full Xcode with an iOS SDK and XcodeGen (`brew install xcodegen`).
    The app's minimum deployment target is iOS 17.0; your Xcode must support your
    phone's installed iOS version.
-3. From the extracted folder, run:
+3. From the repository root, run:
 
    ```sh
    cd ios
@@ -40,7 +40,7 @@ does not install anything on a phone.
 
 ## Configure a Passport
 
-Update the device with matching firmware using the macOS App first. In Passport
+Update the device with matching firmware using the web configuration studio first. In Passport
 Settings, enable Bluetooth and select `AI Passport XXXX` in the iOS App.
 Scan nearby 2.4 GHz networks from the device, enter a password and save. For a
 saved network, an empty password reuses the device's saved password. Pair an
@@ -58,17 +58,15 @@ does not authenticate ownership or protect against active man-in-the-middle.
 
 ## Preview on a Mac
 
-Unzip `ai-passport-openclaw-ios-simulator.zip`, boot an iPhone simulator with a
-compatible runtime in Xcode, then run:
+From the repository root, build and launch locally with full Xcode and a compatible
+iPhone Simulator runtime:
 
 ```sh
-xcrun simctl install booted /path/to/Passport.app
-xcrun simctl launch booted ai.mirasim.passport
+make sim-iphone
 ```
 
-The simulator cannot configure a real Passport via BLE. The app is built for
-the CI runner's simulator architecture/SDK, not a universal or backwards-compatible
-simulator binary. Build from the source kit if your architecture/runtime differs.
+The simulator cannot configure a real Passport via BLE. There is no prebuilt
+Simulator download or complete-app CI build; use a physical iPhone for Bluetooth tests.
 
 Full setup, NFC tips, plugin and networking instructions are in the
 [project repository](https://github.com/vangie/ai-passport-openclaw).

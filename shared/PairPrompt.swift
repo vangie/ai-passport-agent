@@ -14,7 +14,7 @@ enum PairPrompt {
     }
 
     static let chineseText = """
-    请帮我完成 AI Passport 接入 OpenClaw 的准备与配对，不要只给操作教程，请检查当前状态并实际执行缺少的步骤。AI Passport 是独立连接 Wi-Fi 的随身语音设备，通过网关提问或连续通话；macOS App / iOS App 只负责配置，不中转语音。你应在运行 OpenClaw 网关的主机上操作，不能把插件装到仅用于配置设备的电脑上；无法操作网关主机时，先说明这一项阻碍。
+    请帮我完成 AI Passport 接入 OpenClaw 的准备与配对，不要只给操作教程，请检查当前状态并实际执行缺少的步骤。AI Passport 是独立连接 Wi-Fi 的随身语音设备，通过网关提问或连续通话；配置网页只负责配置，不中转语音。你应在运行 OpenClaw 网关的主机上操作，不能把插件装到仅用于配置设备的电脑上；无法操作网关主机时，先说明这一项阻碍。
 
     我授权你按需安装本项目插件、补齐专属助手与模型配置、建立安全公网入口，并生成受限配对码。先检查，已有且正常的部分直接复用；重复执行不要重复安装插件、创建隧道或无故重启。修改前备份受影响配置并保留回退方法；仅在安装或配置确实需要时，通过现有服务管理方式重载或重启网关，并提前说明连接会短暂中断。不要自动升级 OpenClaw、修改核心安装文件、删除现有隧道或影响其他助手。购买服务、产生新费用、改动现有公网路由或删除资源前需另行确认。
 
@@ -49,7 +49,7 @@ enum PairPrompt {
     static let englishText = """
     Prepare and pair my AI Passport with my OpenClaw gateway. You can operate the gateway host. This is an independent community project, not a built-in OpenClaw feature. Repository: https://github.com/vangie/ai-passport-openclaw. Read the project's README, tools/openclaw/README.md and docs/networking.md first, and follow the installed version's supported configuration format and commands. Do not invent plugin configuration fields or gateway commands.
 
-    The goal is for Passport to connect directly to my OpenClaw over Wi-Fi. The macOS App and optional iOS App only configure it; neither relays audio. Do not assume that the plugin, a dedicated assistant or public access is already configured. Check what exists and prepare anything missing within your existing authorization and resources, then return pairing details. Keep normal question-and-answer mode (Ask) and realtime voice calls (Call) separate when reporting readiness.
+    The goal is for Passport to connect directly to my OpenClaw over Wi-Fi. The web studio only configures it and does not relay audio. Do not assume that the plugin, a dedicated assistant or public access is already configured. Check what exists and prepare anything missing within your existing authorization and resources, then return pairing details. Keep normal question-and-answer mode (Ask) and realtime voice calls (Call) separate when reporting readiness.
 
     Before changing anything, back up affected configuration and record the current state. Reload or restart the gateway through its existing service manager only when installation or configuration requires it, and explain the brief interruption beforehand. Do not automatically upgrade OpenClaw, modify its core installation, delete existing tunnels or disrupt other assistants. Ask separately before purchasing services, incurring new charges, changing existing public routes or deleting resources.
 

@@ -28,7 +28,7 @@ jobs:
 
       - name: Install host dependencies
         run: |
-          brew install mbedtls@3 pkg-config xcodegen
+          brew install mbedtls@3 pkg-config
           echo "PKG_CONFIG_PATH=$(brew --prefix mbedtls@3)/lib/pkgconfig" >> "$GITHUB_ENV"
           git clone https://github.com/DaveGamble/cJSON.git "$RUNNER_TEMP/cJSON"
           git -C "$RUNNER_TEMP/cJSON" checkout c859b25da02955fef659d658b8f324b5cde87be3
@@ -44,10 +44,3 @@ jobs:
           python3 tools/check_public.py
           bash tools/check-secrets.sh
           ./tools/validate.sh --static
-
-      - name: Build Mac configuration app
-        run: |
-          cd mac
-          xcodegen generate
-          xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -configuration Release \
-            -destination 'generic/platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build

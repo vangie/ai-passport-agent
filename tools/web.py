@@ -28,8 +28,6 @@ def prepare():
         if not match:
             raise ValueError('Setup prompt source is missing')
         prompt = '\n'.join(line[4:] if line.startswith('    ') else line for line in match[1].splitlines())
-        prompt = prompt.replace('macOS App / iOS App 只负责配置', '配置网页与 macOS App / iOS App 只负责配置')
-        prompt = prompt.replace('The macOS App and optional iOS App only configure it; neither relays audio.', 'The website, macOS App and optional iOS App only configure it; none relays audio.')
         (public / f'setup-{language}.txt').write_text(prompt + '\n')
 
 
@@ -87,7 +85,14 @@ def stage_firmware(source, history=None):
                 raise ValueError('Unexpected Passport partition layout')
         images.append(filename)
         manifest[kind] = {'file': filename, 'offset': offset, 'size': len(data), 'sha256': digest}
-    manifest['knownBuilds'] = {}
+    catalog = ROOT / 'web/release-builds.json'
+    manifest['knownBuilds'] = json.loads(catalog.read_text()) if catalog.is_file() else {}
+    for build_id, identity in manifest['knownBuilds'].items():
+        if (not re.fullmatch(r'[a-f0-9]{16}', build_id)
+                or set(identity) != {'version', 'channel'}
+                or not re.fullmatch(r'v\d+\.\d+\.\d+', identity['version'])
+                or identity['channel'] != 'release'):
+            raise ValueError('Invalid retained release identity')
     if history:
         for directory in sorted(history.iterdir()):
             if not directory.is_dir():

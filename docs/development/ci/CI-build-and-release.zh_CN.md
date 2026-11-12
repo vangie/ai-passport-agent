@@ -1,75 +1,64 @@
-<p align="right"><strong>简体中文</strong> · <a href="CI-build-and-release.md">English</a></p>
+<p align="right"><a href="CI-build-and-release.md">English</a> · <strong>简体中文</strong></p>
 
-# CI 与 Release
+# CI 与发布
 
-本仓库只发布 AI Passport OpenClaw 一个产品，标签采用 `v<semver>`，如 `v0.4.2`；Release 标题包含产品名。
-当前 macOS App、iOS App 与插件的营销版本对齐；请检查包清单及 App 版本，不要把它等同于固件协议版本变化。
+默认交付路径是固件、OpenClaw 插件和网页配置工具。原生 App 仅保留 `mac/`、`ios/`
+和 `shared/` 中的源码作为可选方案。CI 不再构建、签名、运行模拟器 UI 测试或打包 App，
+其营销版本也不再阻塞发布。本地开发脚本及原生源码单元测试保留。
 
-## PR 与 main
+## PR 与主分支
 
-- `static-checks.yml`：仓库规范、私人地址检查、固定版本 Gitleaks、actionlint、C／Python／Swift 主机测试，以及 macOS 未签名构建。
-- `ios.yml`：iOS App 未签名真机／模拟器构建、使用虚构数据的布局／配网 UI 测试、白名单源码包与模拟器 ZIP。
-  自动选择已安装的 iPhone 运行时，不写死机型。显式使用 `macos-15-intel` 运行器，
-  避开共享 ARM 运行器的容量排队。相关 PR／main 变更触发，Release 复用。
-- `firmware-checks.yml`：ESP-IDF 5.5.3 构建并校验合并固件。
-- `openclaw-plugin.yml`：Node 22／24／26，锁定依赖安装、插件测试和实际 npm 压缩包检查。
+- `static-checks.yml`：仓库规则、私人地址检查、固定版本 Gitleaks、actionlint
+  和 C／Python／Swift 主机测试；不构建 App，不安装 XcodeGen。
+- `firmware-checks.yml`：ESP-IDF 5.5.3 构建和合并固件验证。
+- `openclaw-plugin.yml`：Node 22／24／26，锁定依赖、插件测试和实际 npm 包检查。
+- `web.yml`：协议／UI 测试、静态网站构建和 GitHub Pages 部署，校验已发布固件后同源提供。
 
-任务不访问私人电脑，不需要网关、模型、Wi-Fi、隧道或 Apple 凭据。CI 成功不代表真机或在线模型验收成功。
+任务无需私人网关、模型、Wi-Fi、隧道或 Apple 凭据。CI 成功不代表真机或在线模型验收成功。
 
 ## 标签发布
 
-打标签前检查双语变更记录、发布说明、源码／隐私检查与硬件兼容性。不要上传私人 NVS、配置、配对材料、本机日志或以前本地构建的固件。
+标签使用 `v<semver>`（如 `v0.5.0`）。打标签前检查双语日志、发布说明、隐私和硬件兼容性。
+不得上传私人 NVS、配对材料、配置、本机日志或旧的本机构建固件。
 
 `.github/workflows/release.yml` 从推送的标签构建：
 
-1. 仓库、私人地址、秘密和工作流检查。
-2. 通过可复用工作流运行完整主机检查。
-3. 全新 ESP-IDF 构建、布局和哈希校验；从内容寻址的已验证归档打包固件，公开产物不包含 ELF／MAP。
+1. 仓库、私人地址、密钥和工作流检查。标签、插件包／运行时及锁文件版本、双语说明和
+   带日期日志必须一致；原生 App 版本独立。
+2. 通过可复用工作流运行主机检查，不构建 App。
+3. 全新构建固件并校验布局和哈希，从内容寻址的已验证归档打包；公开产物不含 ELF／MAP。
 4. 按锁定依赖构建插件包。
-5. 构建 Intel／Apple Silicon 通用 macOS App，内置同一次发布校验过的固件和刷写工具，再对完整 App 做 ad-hoc 签名并验证。
-6. 复用 iOS App 工作流：无需签名凭据构建真机／模拟器，使用虚构状态运行 Debug UI 测试，
-   打包 Release 模拟器 App 与 iOS App 源码包，不发布未签名 IPA。
-7. 所有前置任务成功后收集指定产物，生成源码版本／哈希清单与校验和。
-8. 创建或复用同标签草稿，上传后下载核验，全部通过才公开为最新版。
+5. 检查、主机测试、固件和插件全部通过后，只收集五个文件：插件 TGZ、固件 TAR.GZ、
+   应用和合并 BIN、`LICENSE.txt`。缺失、空文件或不安全路径会中止。
+   再生成记录源码提交、版本、大小和 SHA-256 的 `release-manifest.json` 与
+   `SHA256SUMS.txt`，合计七个文件。
+6. 创建或复用同标签草稿，上传后重新下载，核对文件全集、来源和哈希，全部通过才公开并设为最新版。
+   失败保留草稿，重跑不会覆盖已公开版本。
 
-`tools/release.py ios-source` 只打包已跟踪的 iOS App 源码／素材、UI 测试、
-共享 Swift 代码、双语语言表、权限说明、XcodeGen 配置、MIT 许可证和双语安装说明。
-不含生成的 Xcode 工程、签名文件、本地设置、构建目录或仓库其他文件。
-提交前仍需检查暂存源码，白名单不能替代密钥扫描。
+不再要求或发布 macOS ZIP、iOS 源码包、模拟器 ZIP 或 IPA；原生代码可从仓库和 GitHub
+自动生成的源码归档取得。历史标签工作流不改写。替代版本验证通过后可删除旧 Release，
+保留其标签与 `web/release-builds.json` 中的已验证身份，确保旧设备仍可识别版本。
+可选的 `mac-resources`、`ios-source` 只是本地工具，不再由 CI 调用。
 
-所有 Action 固定到完整提交 SHA。默认只读，仅最后发布任务获得 `contents: write`。手动触发执行相同构建，但不会发布 Release。不包含远程部署，也不会自动修改任何人的 OpenClaw 安装。
+对齐插件版本和双语说明／日志，以目标版本执行
+`python3 tools/release.py check-version --tag v0.5.0`。完成静态门禁及相关固件／插件／网页测试，
+合并检查过的源码，再在准确提交上推送不可变标签。必须观察 Release 完成，不能把标签或构建成功
+当成发布完成。草稿失败先检查同标签草稿并重跑失败任务，不移动标签或另建版本重试。
+回退应选旧版兼容产物，而非改写公开资产。
 
-发布身份与产物新增强制门禁：稳定版标签、App／插件运行时与锁文件版本、双语发布说明和带日期日志必须一致。
-全部构建通过后，只收集八个指定分发文件，缺失、空文件或不安全路径会中止；
-再生成记录源码提交、版本、大小和 SHA-256 的 `release-manifest.json`，
-以及覆盖前九个文件的 `SHA256SUMS.txt`，共十个文件。
-上传先创建或复用同标签草稿，上传后重新下载并核对文件全集、来源和哈希，全部通过才公开并设为最新版。
-中途失败保留草稿；重跑不会覆盖已公开版本。
+Action 固定到完整 SHA，默认只读，仅发布任务获得 `contents: write`。
+手动触发执行校验／构建但不发布；独立 Web 工作流部署 Pages，不会修改 OpenClaw 安装。
 
-准备版本时对齐所有版本字段和双语说明／日志，以目标版本执行
-`python3 tools/release.py check-version --tag v0.4.2`，完成静态与 App 测试，
-合并检查过的源码，再在准确提交上推送不可变版本标签。必须观察 Release 工作流完成，
-不能把推送标签或构建成功当成发布完成。草稿上传失败先检查同标签草稿，再重跑失败任务；
-不要为了重试移动已公开标签、另建版本或覆盖公开文件。回退选用旧版兼容产物，
-而非悄悄改写旧资产；历史标签仍使用它原来的工作流。
+## 本地原生开发
 
-## 签名与安装限制
+只有本地开发原生源码时才按需运行 `make sim-mac` 或 `make sim-iphone`。
+CI 无需 Apple 签名身份，也不会从开发者电脑导入凭据。iPhone 安装需要 Xcode 和自己的签名团队，
+见[iOS 安装说明](../../release/ios-install.zh_CN.md)。本地 App 构建不属于发行产物，
+CI 也不再验证完整 App。
 
-默认 macOS App 产物是 **ad-hoc 签名，未经 Apple 公证**。流水线不包含也不要求开发者证书。未来如增加公证渠道，应使用 GitHub 加密 Secrets 和临时钥匙串，不能把证书与签名密码放进源码。仅购买开发者账户不会自动公证已有产物。
+网页 USB 刷机无需本地 Python 或 esptool；命令行刷机仍需要这些工具。
+本地应用刷写工具检查镜像和 ESP32-C3 后写入 `0x10000`，仅在分区兼容时保留配置。
+合并镜像应写到 `0x0`，可能重置配置。
 
-macOS App 已预编译，下载后不需要重新构建或再做临时签名；本地重签不能代替 Apple 公证。
-
-iOS App 源码包需接收者在本地 Xcode 使用自己的团队签名，支持时可使用免费 Personal Team。
-此流程不发布 App Store、TestFlight 或可下载的已签名真机 App。
-未签名 `iphoneos` 构建只验证能编译，不上传产物。
-只有兼容的真机二进制具备有效证书、描述文件与匹配权限，并配合安装工具，才可能免构建重签安装。
-模拟器 App 不能重签成真机 App，本版不提供真机重签套件。
-模拟器 ZIP 针对构建机架构／SDK，无法连接真实蓝牙，其他环境可能需要从源码构建。
-见 [iOS App 安装说明](../../release/ios-install.zh_CN.md)。
-
-如果以后要签名分发 iOS，需要另行确定分发方式、Apple 团队、Bundle 注册、
-证书／描述文件和受保护的 CI secrets，不会自动把开发者本机签名身份导入 GitHub。
-
-刷机需要本机 Python 3 和 esptool，例如 `pipx install esptool==4.11.0`。内置工具先检查 SHA、ESP32-C3 身份及边界，再将应用写到 `0x10000`；只有分区布局兼容时保留数据。合并镜像应写到 `0x0`，可能重置配置，不是日常仅应用区更新的路径。
-
-另见[发布说明](../../release/notes.zh_CN.md)、[固件布局](../engineering/firmware-layout.zh_CN.md)和[项目 README](../../../README.zh_CN.md)。
+另见[发布说明](../../release/notes.zh_CN.md)、[固件布局](../engineering/firmware-layout.zh_CN.md)
+和[项目 README](../../../README.zh_CN.md)。

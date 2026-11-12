@@ -21,6 +21,7 @@ idf_component_register(
          "../app/passport_ui.c"
          "../app/passport_usb.c"
          "../app/passport_line.c"
+         "../app/passport_ble_session.c"
          "../app/passport_json.c"
          "../app/passport_radio.c"
          "../app/passport_reply.c"
@@ -32,6 +33,7 @@ idf_component_register(
 )
 
 set_source_files_properties(passport_gateway.c PROPERTIES COMPILE_OPTIONS "-Os")
+set_source_files_properties(passport_app.c passport_link.c "../app/passport_ble_session.c" PROPERTIES COMPILE_OPTIONS "-Os")
 set_source_files_properties("../app/passport_usb.c" PROPERTIES COMPILE_OPTIONS "-Os")
 
 target_link_options(${COMPONENT_LIB} INTERFACE

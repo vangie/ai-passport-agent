@@ -34,13 +34,21 @@ Store reusable source images and generated display assets in `images/`.
 | [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336, PNG RGBA | Transparent black wordmark extracted from the repository's original `images/logo.png`; used by the hardware overview for light backgrounds. |
 | [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336, PNG RGBA | White version of the wordmark, used by the hardware overview's dark-mode `<picture>` element. |
 | [`images/passport-lobster.svg`](images/passport-lobster.svg), [`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22, SVG source and LVGL ARGB8888 | Original project artwork, provided under the repository license. A compact lobster beside the firmware's OpenClaw title; no emoji font is required. Rebuild the C asset with `python3 tools/make_lobster.py` (ImageMagick 7). The 1,936-byte pixel data stays in Flash and uses one image widget. |
-| [`logo/logo.png`](logo/logo.png) | 1024 × 1024, PNG | Existing project/app icon adopted for the OpenClaw README heading. Retained project artwork, not a new hardware photograph. |
+| [`logo/logo.png`](logo/logo.png) | 1024 × 1024, PNG | Existing project/app icon used by the OpenClaw README heading, website header and browser tab. The website imports the source asset through Vite without a duplicate copy. Retained project artwork, not a new hardware photograph. |
 | [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804, PNG RGBA, 8-bit | Home / Ask / Call overview, composed from the three actual firmware renders below, enlarged 2× with nearest-neighbor sampling. Project UI/artwork under the repository license; Noto font notice above applies. |
 | [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png), [`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png), [`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | Each 240 × 320, PNG indexed RGB, 8-bit | Actual `main/passport_screen.c` rendered with the host LVGL setup from `sim/ui_preview/`, using synthetic device state. Original-resolution screenshots, not generated UI mockups. |
 | [`images/screenshots/macos.png`](images/screenshots/macos.png) | 1408 × 1024, PNG RGB, 8-bit | Native SwiftUI macOS App in light appearance, rendered from an isolated demo build using AppKit view capture. Cropped 64 pixels of top window padding from the 1760 × 1344 capture, then resized to 80%. Project UI under the repository license; system controls retain their platform appearance. |
 | [`images/screenshots/ios.png`](images/screenshots/ios.png) | 804 × 1748, PNG RGBA, 8-bit | Native iOS App in the iPhone 17 simulator, captured at 1206 × 2622 and resized to two-thirds. Project UI under the repository license; system controls retain their platform appearance. |
 
 ### Product screenshot provenance and privacy
+
+The web screenshots and three firmware product captures were refreshed on
+2026-11-12 using the current screen implementation and synthetic device/browser
+transports. `web-desktop.png` and `web-mobile.png` show the website, not native apps;
+the mobile capture is a browser-layout demonstration, not an iPhone photograph.
+`tools/community_materials.mjs` composes inspected 3:4 community posters from these
+captures. All project artwork uses the repository license. Older native-client
+images remain archival assets and are no longer linked from the product README.
 
 The screenshots were refreshed on 2026-11-11. Native app previews used temporary
 isolated builds with synthetic transport/network state and separate example

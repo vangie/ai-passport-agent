@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def function_source(source, name):
-    match = re.search(rf"(?:static\s+)?(?:const\s+char\s*\*|bool|void|int|size_t|passport_network_state_t)\s*{name}\([^;]*?\)\s*\{{", source)
+    match = re.search(rf"(?:static\s+)?(?:const\s+char\s*\*|bool|void|int|size_t|uint16_t|passport_network_state_t)\s*{name}\([^;]*?\)\s*\{{", source)
     if not match:
         raise AssertionError(f"Missing function: {name}")
     depth, end = 1, match.end()
@@ -59,6 +59,8 @@ QUEUE = r"""
 static void *s_lines=(void *)1, *s_lock=(void *)2;
 static passport_store_t fixture_store, *s_store=&fixture_store;
 static atomic_uint s_configuration_pending, s_configuration_activity;
+static atomic_uint s_async_configuration;
+typedef struct { char *line; uint32_t session; } passport_link_command_t;
 static atomic_bool s_configuration_connected;
 static atomic_int s_network_state;
 static _Atomic(char *) s_network_command;
@@ -72,10 +74,10 @@ static void *fixture_malloc(size_t length) { return allocation_fails?NULL:malloc
 #define malloc fixture_malloc
 static void passport_power_command_begin(void) { power_commands++; }
 static void passport_power_command_end(void) { assert(power_commands); power_commands--; }
-static int xQueueSend(void *queue, char **line, int timeout) {
+static int xQueueSend(void *queue, const passport_link_command_t *command, int timeout) {
     (void)queue; (void)timeout;
     if (queue_full) return 0;
-    assert(!queued); queued=*line; return pdTRUE;
+    assert(!queued && !command->session); queued=command->line; return pdTRUE;
 }
 static int xSemaphoreTake(void *lock, int timeout) { (void)lock; (void)timeout; return !lock_fails; }
 static void xSemaphoreGive(void *lock) { (void)lock; }
@@ -529,7 +531,7 @@ class NetworkRuntimeTests(unittest.TestCase):
 
     def test_worker(self):
         self.run_harness(QUEUE, (ROOT / "main/passport_link.c").read_text(),
-                         ["join_wifi", "configuration_line", "passport_link_configuration_busy", "passport_link_configuration_pending", "queue_line",
+                         ["join_wifi", "configuration_line", "passport_link_configuration_busy", "passport_link_configuration_pending", "queue_command", "queue_line",
                           "passport_link_connect_network", "passport_link_network_result", "save_network", "process_line"],
                          QUEUE_TEST, [ROOT / "app" / name for name in
                                       ("passport_network.c", "passport_store.c", "passport_proxy.c")])

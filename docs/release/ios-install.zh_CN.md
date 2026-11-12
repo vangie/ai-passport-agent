@@ -2,9 +2,8 @@
 
 # AI Passport iOS App
 
-本版本提供 **iOS App 源码安装包**，不是可直接安装的未签名 IPA。
-单独的模拟器 ZIP 只能在 Mac 上使用，无法访问真实蓝牙。
-两者都不是 App Store 或 TestFlight 分发。
+iOS App **仅保留源码**。新 Release 不再构建或打包，包括源码安装包和模拟器 ZIP。
+需要时从仓库本地开发，不通过 App Store 或 TestFlight 分发。
 
 模拟器 App 不能通过重签装到真实 iPhone。免构建重签需要兼容的真机二进制、
 有效证书与描述文件、匹配的权限和安装工具。本版不提供真机重签套件，
@@ -12,11 +11,11 @@
 
 ## 安装到自己的 iPhone
 
-1. 解压 `ai-passport-openclaw-ios-source.zip`，包含 `ios/`、`shared/`、
-   许可证和本说明，不含私人签名资料或 endpoint。
+1. 克隆或下载[仓库](https://github.com/vangie/ai-passport-openclaw)，
+   保持 `ios/` 与 `shared/` 同在仓库中；不包含私人签名资料。
 2. 安装带 iOS SDK 的完整 Xcode 和 XcodeGen（`brew install xcodegen`）。
    App 最低支持 iOS 17.0；Xcode 也需要支持手机实际安装的 iOS 版本。
-3. 在解压后的目录运行：
+3. 在仓库根目录运行：
 
    ```sh
    cd ios
@@ -35,7 +34,7 @@
 
 ## 配置 Passport
 
-先使用 macOS App 给设备更新匹配固件，在 Passport 设置中打开蓝牙，
+先使用网页配置工具给设备更新匹配固件，在 Passport 设置中打开蓝牙，
 在 iOS App 选择 `AI Passport XXXX`。由设备扫描附近 2.4 GHz 网络，填写密码并保存。
 已存网络留空密码可以沿用设备的密码。
 助手使用 OpenClaw 受限配对码授权，不要填管理员 token。
@@ -50,15 +49,14 @@ Just Works 配对加密传输，但不验证所有权，也不防主动中间人
 
 ## 在 Mac 预览
 
-解压 `ai-passport-openclaw-ios-simulator.zip`，在 Xcode 中启动兼容运行时的 iPhone 模拟器：
+安装完整 Xcode 和兼容的 iPhone 模拟器运行时，在仓库根目录本地构建并启动：
 
 ```sh
-xcrun simctl install booted /path/to/Passport.app
-xcrun simctl launch booted ai.mirasim.passport
+make sim-iphone
 ```
 
-模拟器无法通过蓝牙配置真实 Passport。此包针对 CI 构建机的模拟器架构／SDK，
-不是通用架构或向后兼容的模拟器二进制。架构／运行时不匹配时请从源码构建。
+模拟器无法通过蓝牙配置真实 Passport，不再提供预构建模拟器下载或完整 App CI 构建；
+测试蓝牙请使用真实 iPhone。
 
 完整配置、NFC 技巧、插件和网络接入说明见
 [项目仓库](https://github.com/vangie/ai-passport-openclaw)。

@@ -32,13 +32,18 @@
 | [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336，PNG RGBA | 从仓库原始 `images/logo.png` 中精确裁切并去除背景的黑色字标，用于硬件概览浅色主题。 |
 | [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336，PNG RGBA | 字标的白色版本，由硬件概览的 `<picture>` 元素在深色主题使用。 |
 | [`images/passport-lobster.svg`](images/passport-lobster.svg)、[`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22，SVG 源图和 LVGL ARGB8888 | 项目原创图案，按仓库许可证提供。用于固件 OpenClaw 标题旁的小龙虾，不依赖 emoji 字体。运行 `python3 tools/make_lobster.py`（ImageMagick 7）可重新生成 C 资源。1,936 字节像素数据保存在 Flash 中，只使用一个图片控件。 |
-| [`logo/logo.png`](logo/logo.png) | 1024 × 1024，PNG | 既有项目／App 图标，用于 OpenClaw README 标题。沿用项目素材，并非新增硬件实拍。 |
+| [`logo/logo.png`](logo/logo.png) | 1024 × 1024，PNG | 既有项目／App 图标，用于 OpenClaw README 标题、网页页头和浏览器标签页。网页通过 Vite 直接引用源素材，不维护重复副本。沿用项目素材，并非新增硬件实拍。 |
 | [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804，PNG RGBA，8 位 | 首页／提问／通话总览，由下述真实渲染图以最近邻放大 2 倍后排版。项目 UI／图案按仓库许可证提供，Noto 字体声明见上文。 |
 | [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png)、[`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png)、[`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | 各 240 × 320，PNG 索引 RGB，8 位 | 使用 `sim/ui_preview/` 的主机 LVGL 环境，以虚构设备状态渲染实际 `main/passport_screen.c`。原始分辨率截图，不是生成的 UI 概念图。 |
 | [`images/screenshots/macos.png`](images/screenshots/macos.png) | 1408 × 1024，PNG RGB，8 位 | 隔离演示构建中的原生 SwiftUI macOS App，使用浅色外观，通过 AppKit 视图捕获。1760 × 1344 原图去掉顶部 64 像素窗口留白，再缩至 80%。项目 UI 按仓库许可证提供，系统控件保留平台外观。 |
 | [`images/screenshots/ios.png`](images/screenshots/ios.png) | 804 × 1748，PNG RGBA，8 位 | iPhone 17 模拟器中的原生 App，1206 × 2622 截图缩至三分之二。项目 UI 按仓库许可证提供，系统控件保留平台外观。 |
 
 ### 产品截图来源与隐私
+
+网页截图及三张固件产品图于 2026-11-12 使用当前界面实现、虚构设备／浏览器传输状态刷新。
+`web-desktop.png` 与 `web-mobile.png` 展示网站，不是原生 App；移动图是浏览器布局演示，非 iPhone 实拍。
+`tools/community_materials.mjs` 用这些图生成经检查的 3:4 社区海报，项目画面使用仓库许可。
+旧原生客户端截图仅存档，产品 README 不再引用。
 
 截图更新于 2026-11-11。原生 App 使用临时隔离构建、虚构的传输／网络状态和独立示例
 Bundle ID，不连接维护者的设备，也不读取其 Wi-Fi 缓存。

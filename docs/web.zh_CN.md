@@ -2,6 +2,10 @@
 
 # 浏览器配置台
 
+正式地址：<https://ai-passport-openclaw.codelife.me/>。
+
+已验证的历史固件身份保留在 `web/release-builds.json`，不依赖旧 Release 下载是否仍然存在。
+
 静态网站作为新的主推配置入口，macOS App / iOS App 仅保留源码，CI 不再构建，
 新 Release 也不再提供原生 App 包。
 不需要账户、数据库或配置后台，设备仍是配置的唯一数据源。

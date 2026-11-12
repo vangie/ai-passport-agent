@@ -1,76 +1,45 @@
 [Simplified Chinese](notes.zh_CN.md) · **English**
 
-# AI Passport OpenClaw v0.4.2
+# AI Passport OpenClaw v0.5.0
 
 ## Highlights
 
-- macOS App / iOS App automatically follow English or Simplified Chinese system
-  preferences, including status messages, errors, permissions and setup prompts.
-  The device's screen language remains independent. English Wi-Fi actions use
-  Scan; the language option reads Simplified Chinese without truncation.
-- The copied setup prompt checks plugin compatibility, a dedicated assistant,
-  voice readiness and a secure persistent gateway entrance before limited pairing.
-- Refined bilingual setup/networking guides and the distinction between optional
-  iOS App hotspot configuration and direct device-to-gateway voice traffic.
-- Release tags, app/plugin versions, bilingual notes and changelogs must agree.
-  All ten assets are checked before publication, with source-commit provenance,
-  SHA-256 verification and a verified draft upload before making a release public.
-- Progressive-scan UI fixtures no longer race an elapsed-time deadline on slow
-  hosted simulators. The v0.4.1 candidate was blocked by this CI check and was
-  not published; its tag is retained rather than rewritten.
+- **Browser-first setup:** install/update firmware and configure Passport at
+  <https://ai-passport-openclaw.codelife.me/>. Desktop Chrome/Edge uses USB;
+  compatible Web Bluetooth browsers configure wirelessly. iPhone users can use
+  Bluefy for Bluetooth settings, not firmware flashing.
+- **One coherent configuration page:** saved Wi-Fi, assistant profiles and their
+  routes, language and volume; global Save/Discard, retained drafts after errors,
+  progressive Wi-Fi scanning and an agent-assisted OpenClaw setup prompt.
+- **Clear firmware updates:** Keep settings is on by default for compatible
+  updates; first installation/full replacement is an explicit destructive choice.
+  Firmware and dependencies are served from the website, not runtime GitHub
+  download redirects. Retired release identities remain recognizable.
+- **Bluetooth handover and screen refinements:** encrypted client takeover after
+  current commands finish, session-scoped replies, advertising recovery, distinct
+  connection icons, a full-width status row and compact aligned key labels.
+- **Lean releases:** firmware and the upgradeable OpenClaw plugin only. Native
+  client source is retained but is no longer built, packaged or promoted.
 
-## Downloads
+## Install
 
-- `ai-passport-openclaw-macos-universal-adhoc.zip`: macOS 14+ configuration app
-  for Apple Silicon and Intel, with matching verified firmware bundled. It uses
-  an ad-hoc signature, **not** Developer ID signing or Apple notarization. macOS
-  may require explicit approval in Privacy & Security; do not disable Gatekeeper.
-  Configuration works without ESP-IDF. USB flashing requires Python 3 and
-  esptool (`pipx install esptool==4.11.0`).
-- `ai-passport-openclaw-firmware.tar.gz`: bootloader, partition table, merged
-  image, application-only image and checksum manifest for ESP32-C3 / 8 MB.
-- `FoloToy-AI-Passport-full.bin`: complete image at `0x0` for initial installation
-  or intentional full refresh. It can reset settings; do not use it for a
-  configuration-preserving update.
-- `FoloToy-AI-Passport.bin`: application-only update at `0x10000`, only with the
-  matching partition layout. The macOS App uses this route and preserves NVS,
-  Card ID and audio partitions.
-- `ai-passport-openclaw-*.tgz`: independent OpenClaw plugin source package.
-- `ai-passport-openclaw-ios-source.zip`: iOS App source kit with `ios/`, shared
-  Swift code and bilingual Xcode signing/install instructions. **Requires your
-  own local signing team**, including Personal Team where supported; iOS 17+.
-- `ai-passport-openclaw-ios-simulator.zip`: Simulator-only app for a compatible
-  Mac architecture/runtime. **Cannot install on an iPhone or use real BLE.**
-- `SHA256SUMS.txt`: release-asset checksums.
-- `release-manifest.json`: exact source commit, version, asset sizes and hashes.
+Start with the [web studio](https://ai-passport-openclaw.codelife.me/) and the
+[quick start](../../README.md#get-started). Fresh installations/full replacement
+may reset settings; compatible application updates preserve them. Configuration
+saves never reflash firmware. A new network must be reachable during first save.
 
-There is **no signed iOS IPA or TestFlight release**. Download the source kit
-for a physical iPhone; the Simulator ZIP is only a preview. The macOS App, iOS App
-and plugin versions are 0.4.2; the existing wire protocol and OpenClaw baseline are unchanged.
+Manual downloads: `FoloToy-AI-Passport.bin` is application-only at `0x10000`;
+`FoloToy-AI-Passport-full.bin` is merged firmware at `0x0`. Do not interchange
+these offsets. The firmware tarball includes installation parameters. Install
+`ai-passport-openclaw-0.5.0.tgz` on the gateway host, not the configuration computer.
 
-## Upgrade notes
+## Integrity and compatibility
 
-App localization does not require re-pairing, changing the device language or
-flashing firmware. The macOS App is prebuilt and does not need rebuilding or
-another ad-hoc signature; local signing does not replace Apple notarization.
-An iOS Simulator binary cannot be re-signed into a physical-device app. A prebuilt
-device app could be re-signed only with valid signing/provisioning and compatible
-entitlements; this release does not distribute such a device binary.
+Seven release assets are checked before publication with a source-commit receipt,
+SHA-256 checksums and draft-upload/download verification. See `SHA256SUMS.txt`.
+No personal endpoints, Wi-Fi passwords, provider keys or device credentials are
+distributed. The website has no application backend; settings go to the device.
 
-Back up settings you need to preserve. Prefer the macOS App's compatible
-application-only update; do not write the merged image for a routine update.
-Unreleased prototype device/app identities are not migrated and may require
-new Wi-Fi configuration and pairing. Never use a shared administrator gateway
-token in place of device pairing.
-
-Bluetooth is enabled in standby and temporarily released during audio/gateway
-operations. A first key press after display standby wakes the screen only.
-Firmware, gateway/plugin and configuration apps must be compatible; a successful
-connection check is not proof of full speech quality.
-
-## Validation boundary
-
-CI builds are not hardware/audio acceptance. The OpenClaw plugin baseline is
-2026.10.5; check compatibility before upgrading. Read the repository's setup,
-networking and plugin instructions. No endpoints, account keys, Wi-Fi passwords
-or device authorizations are distributed with this release.
+OpenClaw 2026.10.5 remains the tested plugin baseline. Call requires a configured
+realtime voice provider; Ask can be used independently. Build, host and browser
+tests are not physical audio, battery, radio-coexistence or every-browser acceptance.

@@ -12,6 +12,21 @@
 
 ## Unreleased
 
+## v0.5.0 - 2026-11-12
+
+- Made the web studio the recommended setup path: desktop USB flashing and
+  configuration, experimental Web Bluetooth and iPhone Bluefy configuration.
+- Added unified draft/save/discard, progressive Wi-Fi discovery, assistant routes,
+  same-origin firmware and agent-assisted gateway preparation.
+- Improved encrypted Bluetooth client handover, session-scoped replies and
+  advertising recovery; refined status icons, battery spacing and side-key layout.
+- Removed native-client CI builds and downloads while retaining source. Release
+  artifacts now contain firmware, the OpenClaw plugin and integrity data.
+- Added privacy-gated Pages deployment and retained verified build identities
+  so retired releases remain recognizable during updates.
+- Reworked bilingual documentation and community materials around voice Q&A,
+  realtime calls and browser configuration, with fictional demo data.
+
 ## v0.4.2 - 2026-11-11
 
 - Localized macOS App / iOS App interfaces, messages, permission descriptions and

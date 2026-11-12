@@ -347,7 +347,7 @@ static void test_live_navigation(void) {
     passport_store_init(&store); passport_view_init(&view);
     expect(!view.reply[0],"home starts without a synthetic reply or a removed mode prompt");
     const char *home_labels[]={"设置","通话","提问"};
-    const char *home_labels_en[]={"Setup","Call","Ask"};
+    const char *home_labels_en[]={"Set","Call","Ask"};
     for (int button=PASSPORT_BTN_UP;button<=PASSPORT_BTN_OK;button++) {
         passport_key_binding_t binding=passport_key_binding(&view,&store,(passport_btn_t)button);
         expect(!strcmp(passport_action_label(binding.action,true),home_labels[button]),"home captions match the three product entries");

@@ -2,323 +2,143 @@
 
 # Configuration and everyday use
 
-Start with the [product overview](../README.md). This guide covers configuration
-behavior, phone hotspots, NFC, local app setup and compatibility details.
-For gateway installation, use the [plugin guide](../tools/openclaw/README.md);
-for LAN/public ingress and proxies, use [Gateway connectivity](networking.md).
-
-## Choose an app for your situation
-
-For a no-install browser path, try the [web configuration preview](web.md):
-desktop USB configuration/flashing and experimental browser Bluetooth.
-The native apps remain supported alternatives.
-
-The macOS App provides USB configuration, checks and firmware maintenance. The
-iOS App is an optional Bluetooth configuration tool for when you are away
-from a computer, not a prerequisite for using Passport. Both edit settings on
-the same device; neither relays conversations. Close the apps and disconnect
-USB/Bluetooth after setup. When using a phone hotspot, keep the phone nearby
-and its hotspot on; the iOS App does not need to keep running.
+Use the [web studio](https://ai-passport-openclaw.codelife.me/). Desktop Chrome/Edge
+supports USB configuration and firmware installation; compatible Web Bluetooth
+browsers support wireless settings. On iPhone use Bluefy, not Safari/Chrome.
+Firmware flashing still needs a computer and USB. See [browser compatibility](web.md).
 
 ## Let OpenClaw prepare the gateway
 
-Both apps follow the system's preferred language (English or Simplified Chinese), including
-the copied setup prompt. Other languages fall back to English. There is no in-app language
-switch. The device's screen-language preference is separate and is saved only when requested.
+Choose **Copy Prompt** in the OpenClaw section and send it to an agent able to
+operate on the gateway host. That host need not be your setup computer. The page
+does not install server software itself. You need:
 
-Both apps offer **Copy Prompt** in the OpenClaw pairing form. Send the copied
-text to an agent that can operate on your **OpenClaw gateway host**, which need
-not be the Mac running the configuration app. This is a setup request for that
-agent, not an installer or a tunnel service running inside either app.
+- A running OpenClaw with a working model and host access for the setup agent.
+- Passport, a computer/data cable for initial flashing, and reachable 2.4 GHz
+  Wi-Fi or a compatible phone hotspot.
+- Authorized tunnel resources and usable DNS/TLS for remote access. The prompt
+  reuses existing ingress or asks for missing login, permissions or resources;
+  it does not provide accounts, free services or permission for new charges.
+- A realtime voice provider for Call. Ask can be configured independently.
 
-### What you need
+The agent checks/installs the compatible project plugin, prepares the dedicated
+`passport` agent, transcription/model settings and persistent public WSS ingress.
+It backs up affected configuration, retains device authentication and loopback
+binding, and restarts only when necessary. DNS/TLS/WebSocket checks precede the
+limited pairing code; these are readiness checks, not microphone acceptance.
+Paste the returned address/code into the page and save alongside Wi-Fi settings.
+Expired or consumed codes need regeneration. Never paste administrator tokens
+or model keys into device configuration.
 
-- A running OpenClaw with a working model, and an agent able to install and
-  configure software on the gateway host. The app can run on another computer;
-  a chat-only agent without host access cannot deploy the integration for you.
-- Passport, a computer and data cable for initial firmware installation, and
-  reachable 2.4 GHz Wi-Fi or a compatible hotspot. The macOS App requires macOS
-  14+; the optional iOS App requires local signing.
-- Authorized tunnel resources, a usable domain/certificate and quota for public
-  access. Existing ingress is reused; follow the agent's instructions if access
-  is missing. Manual ingress setup is not required in advance, but the prompt
-  cannot provide accounts or free resources.
-- A realtime voice service for Call; an ordinary text model alone does not make
-  Call available. You can start with voice Q&A and securely configure realtime
-  credentials on the gateway later.
+For manual or LAN-only setup, see the [plugin guide](../tools/openclaw/README.md)
+and [network/security guide](networking.md). Restrict tools on the dedicated agent;
+assistant profiles select connections, not arbitrary Ask agent IDs.
 
-The prompt checks and prepares the plugin, dedicated `passport` agent and public
-ingress; **these do not need to be completed manually first**.
+## Connect, save and discard
 
-### After copying the prompt
+1. Connect over USB or Bluetooth and let the page read the device. Bluetooth
+   devices appear as **AI Passport XXXX**; enable Bluetooth in device Settings.
+   If a browser cannot discover a device that appears on USB, restart Passport
+   and rescan before assuming the hardware lacks Bluetooth.
+2. Scan Wi-Fi or enter its exact name/password. The **Passport**, not the browser,
+   scans nearby networks. Results arrive progressively on current firmware.
+3. Edit Wi-Fi, assistant profiles/routes, screen language or volume, then choose
+   **Save configuration**. Fields with no changes need no repeated pairing.
+4. Wait for acknowledgements/readback. Failed saves and reconnects keep editable
+   drafts. **Discard** restores the last read/acknowledged state, not a completed
+   write or a consumed one-time pairing code.
 
-1. The agent checks the existing setup, installs the project's compatible
-   official plugin if missing, and checks the dedicated `passport` agent,
-   transcription, models and realtime voice configuration. Working settings
-   are reused, not recreated on every pairing.
-2. It reuses a verified public WSS ingress, or sets up a persistent one using
-   available, authorized tunnel accounts and resources. If login, a domain,
-   certificates, quota or model credentials are missing, it requests only the
-   necessary action. New charges and disruptive resource changes need separate
-   approval; the prompt does not make those resources available automatically.
-3. It backs up affected settings, preserves device authentication and loopback
-   binding, and reloads/restarts only when installation or configuration requires
-   it. It checks plugin status, DNS, TLS and WebSocket authentication before
-   generating a limited pairing code. Readiness checks are not a real-device
-   voice test; missing realtime credentials are reported separately from Ask.
-4. Import the returned address and code, or scan the QR code in the iOS App,
-   configure Wi-Fi and choose **Save Configuration**. Keep pairing codes private;
-   administrator tokens, model keys and tunnel credentials stay on the gateway.
-
-For manual installation and network setup, use the [plugin guide](../tools/openclaw/README.md)
-and [connectivity and security guide](networking.md). If the device will only use
-a private LAN, follow that manual route instead of requesting a public ingress.
+Saving multiple settings is **not atomic**: earlier successful changes remain if
+a later change fails. Wi-Fi is tested before a new network is saved, so the target
+must be reachable. A scan with no results still allows manual entry. Saving and
+testing run on Passport and do not switch the computer/phone to another Wi-Fi.
+The device connection check validates authentication/session access and realtime
+configuration, not model answers, audio quality or long-call reliability.
 
 ## Where settings live
 
-The Passport is the source of truth for up to eight Wi-Fi networks, four
-assistant connection profiles, language and speaker volume. Apps read that
-state and edit drafts. The macOS App also remembers useful form values and Wi-Fi
-passwords locally; it is not a second authoritative device configuration.
+Passport is authoritative for up to **eight networks**, **four assistant profiles**,
+language and volume. Credentials are stored on the device; model/provider keys
+stay on OpenClaw. The web studio has no application backend: configuration goes
+straight over USB/Bluetooth. Secret drafts stay in page memory, not persistent
+browser storage; refreshing/closing discards them. Static hosting may retain
+ordinary IP/time access logs, not configuration the page never uploads.
 
-**The macOS App password cache is not Keychain storage.** It is a JSON file at
-`~/Library/Application Support/AI Passport OpenClaw/wifi.json`, written with
-owner-only permissions. It is not encrypted by the app. Treat it and system
-backups as sensitive. Use a network row's Forget action to remove a local
-remembered password; forgetting a device-saved network is a separate operation.
-Do not attach this file, configuration exports or NVS dumps to issues.
+Clean firmware contains no personal gateway, proxy or provider key. Examples use
+fictional networks and reserved `.example` addresses. Do not publish configuration
+exports, device memory dumps, pairing codes or unsanitized logs.
 
-Gateway URLs, device credentials and Wi-Fi settings are stored in device NVS.
-Model API keys and provider configuration stay on OpenClaw. Ask uses the fixed
-`passport` agent and a per-device session; assistant profiles select connections,
-not arbitrary Ask agent IDs. Set tool/model permissions on that dedicated agent.
-Possession of a paired device grants its authority; revoke lost devices.
+Legacy native-client source remains for developers only. Its historical desktop
+Wi-Fi cache is an unencrypted, owner-readable `wifi.json` under
+`~/Library/Application Support/AI Passport OpenClaw/`; treat that file/backups as
+sensitive. It is not part of the web workflow or browser storage.
 
-Clean firmware has no personal tunnel endpoint, proxy node or provider key.
-Public NTP servers, local loopback addresses and the setup portal `192.168.4.1`
-are infrastructure defaults, not private assistant endpoints. Documentation and
-screenshots use reserved `.example`/`.invalid` names and fictional networks.
+## Firmware installation and updates
 
-## Save, discard and update
+Saving configuration never flashes firmware. **Keep settings** is checked by
+default for a compatible application update over USB, preserving device data.
+For a first install/full replacement, uncheck it and confirm **Install firmware**;
+this may overwrite configuration. Neither path performs a full-chip erase.
+The website serves verified release images on its own origin; no local file
+chooser or runtime GitHub download redirect is needed.
 
-- Edits remain drafts until **Save Configuration**, including macOS App language and
-  volume changes. Switching assistant profiles preserves their individual edits.
-- Save applies edited settings sequentially, with acknowledgement and device
-  readback; Wi-Fi goes last. **This is not atomic**: if a later step fails,
-  earlier steps remain saved, and unsaved edits remain available for retry.
-- Success, failure and reconnection do not clear the form. **Discard Changes**
-  restores the latest read or acknowledged state; it does not undo a completed
-  write or reinstate a consumed one-time pairing code.
-- Wi-Fi and assistant settings can be changed independently. Only configure
-  what needs changing; do not repeat pairing just to change networks.
-- **Device Maintenance** is a separate, explicit USB firmware action. Saving
-  configuration never flashes. Matching bundled firmware is not written again.
-- Compatible macOS App firmware updates write at `0x10000`, below `0x350000`.
-  Initial merged installation at `0x0` can reset NVS. This application reserves
-  `cardid` and `audio`; inspect the partition table when migrating. There is no
-  automatic stock-firmware rollback. See [firmware layout and data policy](development/engineering/firmware-layout.md).
-
-### What a connection check means
-
-The macOS App's **Test Address** runs from the Mac. **Check Current Agent** runs over
-the Passport's Wi-Fi, route and paired credentials: it checks gateway
-authentication, Ask-session access and realtime-provider configuration without
-recording or sending a prompt. It is cancellable, but does not prove model
-responses, microphone quality or reliable long calls. A Wi-Fi check is performed
-on the Passport and does not move the computer to another network.
-
-Connection-changing controls are disabled during a call, recording or device
-check. Older firmware keeps basic configuration available but needs an update
-for device checks and volume synchronization. These are advertised by the
-`device-control` capability; stale volume writes and busy-device changes are
-rejected, and writes are acknowledged only after persistence.
+Application-only firmware belongs at `0x10000`, within its compatible partition;
+merged firmware belongs at `0x0`. Do not interchange them. There is no automatic
+stock-firmware rollback. See the [firmware layout/data policy](development/engineering/firmware-layout.md).
 
 ## iPhone Wi-Fi and hotspots
 
-The iOS App workflow below is optional. The macOS App can prepare a phone hotspot
-before you leave, without installing the iOS App.
-
-1. Turn on Bluetooth in Passport **Settings → Bluetooth** using the middle key.
-   Open the iOS App and select `AI Passport XXXX`; the four hexadecimal
-   characters identify the device and remain stable across restarts.
-2. Tap **Scan**. The **Passport**, not the iPhone, scans nearby 2.4 GHz networks.
-   Select a result or type its exact SSID. The app does not request location
-   access, read the phone's current SSID or retrieve saved iOS Wi-Fi passwords.
-3. Enter a password and save. Selecting a saved network with an empty password
-   reuses the device's stored password. Selecting the same network retains a
-   typed password; choosing a different name clears it to avoid credential mixups.
-4. Save sends the draft over Bluetooth without changing the phone's Wi-Fi.
-   Scan cancellation, save errors and reconnects retain editable inputs.
-
-Firmware advertising `scan-live` returns discoveries channel by channel, up to
-32 network names. Existing result rows stay in place while scanning; selection
-is possible before the scan ends, but saving waits for completion. Older
-firmware returns results only after its full scan. Scan failure or an empty
-list does not prevent manual entry.
-
-An observed Apple vendor information element marks recognized iPhone hotspots
-with a chain-link icon. It is a best-effort hint, not identification of the
-owner or a security guarantee. Unrecognized hotspots remain normal Wi-Fi rows;
-older firmware without `NET_KIND` metadata cannot supply this hint.
-
-### Connect to this iPhone's hotspot
-
-- Enable **Settings → Personal Hotspot → Allow Others to Join** and
-  **Maximize Compatibility** for 2.4 GHz operation.
-- The hotspot SSID is the **iPhone's name**, not a separate editable hotspot
-  name. Scan for it, or copy it from **Settings → General → About → Name**.
-  Renaming the phone also changes the SSID. This app does not hold Apple's
-  restricted entitlement for reading the user-assigned device name.
-- **If your own hotspot is missing, keep the Personal Hotspot settings page
-  open and the screen awake while scanning/connecting.** Some iPhones stop
-  advertising to non-Apple devices after leaving that page. Background Bluetooth
-  responses remain supported by the app.
-- Enter the hotspot password manually once. iOS does not allow this app to
-  read that password or silently enable the hotspot. A configured network can
-  reuse its device-saved password later.
-- There is no supported direct Personal Hotspot settings link in this app.
-  Tested private settings URLs did not reliably open the required page.
-
-Saved networks can also be switched on the Passport: Settings → Wi-Fi, choose
-a network and connect. Add networks or correct passwords using either app.
-Device errors distinguish network not found, authentication failure, incompatible
-security and IP-address timeout. A rejected setting does not intentionally drop
-Bluetooth or discard your draft.
+Open the site in Bluefy, connect by Bluetooth, then scan from the Wi-Fi card.
+No iOS Wi-Fi password database is read: enter a new password yourself. Reusing a
+saved network can use its device-stored password. A chain-link icon marks a
+best-effort detected Apple hotspot, not ownership or a guarantee of identification.
 
 ### Use a phone hotspot without the iOS App
 
-1. On iPhone, open **Settings → Personal Hotspot** and enable **Allow Others to
-   Join** and **Maximize Compatibility**. Check the phone name and hotspot
-   password, and keep this page open.
-2. Connect Passport to the computer over USB. In the macOS App's Wi-Fi section, select
-   or enter the hotspot name and password, then choose **Save configuration**
-   and wait for a successful device connection. **Current firmware tests a new
-   network before saving it**, so the hotspot must be nearby and reachable
-   during initial setup. An unavailable new network cannot be saved offline.
-3. While away, enable the same hotspot with the same name and password, then
-   select it in Passport **Settings → Wi-Fi**. Use the same menu to switch
-   back to home or office Wi-Fi; the assistant does not need pairing again.
+1. Open iPhone **Settings → Personal Hotspot**, enable **Allow Others to Join**
+   and **Maximize Compatibility**, and check its name/password. Keep this page
+   open if Passport's scan cannot find the hotspot.
+2. Use desktop USB or Bluefy Bluetooth to select/enter that hotspot in the web
+   studio and save. It must be nearby and enabled for the first connection test.
+   There is no reliable supported link from the webpage directly to this Settings page.
+3. Later, enable the same hotspot and select it in Passport **Settings → Wi-Fi**.
+   Use the same menu to return to home/office Wi-Fi. No assistant re-pairing is needed.
 
-Hotspot access does not make the gateway reachable. A gateway on your home LAN
-needs an existing authenticated public ingress, or a private route actually
-available to the device. See [Gateway connectivity](networking.md).
+The browser can close after configuration. Keep the hotspot on while it provides
+internet. A hotspot alone does not expose a home gateway; see [connectivity](networking.md).
 
 ## Bluetooth behavior and security
 
-Bluetooth is on by default in standby. After boot, saved Wi-Fi gets up to ten
-seconds to connect before Bluetooth starts; explicitly enabling it skips this
-wait. There is no two-minute discovery timeout, and leaving the setup screen
-does not turn it off. The Settings row shows its state and toggles it in place.
+Bluetooth is enabled by default in standby. At boot Wi-Fi gets up to ten seconds
+before BLE starts; manually enabling it skips that wait. Settings toggles it in
+place. The dim status icon means enabled; brighter/thicker blue strokes mean a
+client is connected; disabling Bluetooth hides it. This is not proof of a saved
+configuration or authenticated gateway connection.
 
-Recording, Call and gateway operations temporarily release BLE memory and
-disconnect the configuration app. BLE returns after audio/gateway cleanup.
-Idle gateway connections may give memory back to Bluetooth, requiring a new
-gateway connection for the next Ask. Configuration saves and network switching
-do not deliberately turn off an existing configuration connection. Manually
-disabling BLE keeps it off until enabled again or the device restarts.
+The firmware retains encrypted client bonds. A new client may take over after
+an encrypted configuration handshake; current work finishes first and replies
+stay with their originating session. The previous page keeps its draft and does
+not automatically take the device back. Just Works encryption does not authenticate
+ownership or defeat an active man-in-the-middle. Configure in a trusted environment.
 
-The phone requires firmware advertising `ble-secure`; update older firmware over
-USB before sending passwords. Writes require an encrypted link and replies use
-MTU-sized acknowledged indications. NVS retains up to three configuration-client
-bonds, so ordinary reconnects/reboots do not require another system pairing.
-Forgetting the device or clearing bonds does.
-
-**Just Works encryption does not authenticate device ownership and does not
-protect against an active man-in-the-middle.** Configure in a trusted environment
-and disable configuration Bluetooth when unnecessary in an untrusted location.
+Recording, Call and gateway work temporarily release BLE memory/disconnect setup
+clients. It returns after cleanup. Wi-Fi saves and scans do not intentionally
+disable configuration Bluetooth. Older firmware may need a USB update before
+secure configuration works. Browser/OS pairing prompts can still vary.
 
 ## NFC and personal hotspot
 
-The passive NFC tag can run an iPhone automation independently of the Passport's
-power and firmware. It does not wake the ESP32, configure Wi-Fi or authenticate
-a device. The tested hardware uses an NTAG213 with 144 bytes of user storage.
+The passive tag can trigger an iPhone automation independently of firmware and
+device power. It does not authenticate the owner, configure Wi-Fi or wake the
+device processor. The tested tag is NTAG213 with 144 bytes of user storage.
 
-### Set up the automation
+1. First save/test the hotspot using the web studio.
+2. Open **Shortcuts → Automation → NFC**, scan the tag and choose **Run Immediately**
+   where available. Add **Set Personal Hotspot → On**, rather than Toggle.
+3. Test with the phone awake. Check automation permissions/confirmation if needed.
 
-1. Configure the hotspot SSID/password using the macOS App over USB or the iOS
-   App over Bluetooth first.
-2. Open **Shortcuts → Automation → NFC**, scan the Passport and name the trigger.
-3. Select **Run Immediately**, where available. Add **Set Personal Hotspot → On**,
-   optionally followed by **Open App → AI Passport**. Use the system Open App
-   action; the app does not currently register custom App Shortcuts.
-4. Try the tag with the phone awake. If it does nothing, check automation
-   enablement, confirmation/notification settings and action permissions. Some
-   iOS combinations still require tapping a notification or unlocking the phone.
-
-Apple's [NFC trigger guide](https://support.apple.com/guide/shortcuts/apde31e9638b/ios)
-describes tag identification, and the [automation guide](https://support.apple.com/guide/shortcuts/enable-or-disable-a-personal-automation-apd602971e63/ios)
-explains automatic execution. Behavior remains subject to iOS and carrier rules.
-
-### Remove the stock website prompt
-
-A URL NDEF record can trigger iOS's website banner even when an NFC automation
-also exists. On the maintainer's device, **replacing the URL with a single
-Text record containing `AI Passport`** removed the banner; the hotspot
-automation then worked in the tested setup.
-
-- Use a compatible NFC writer, such as an iPhone NFC-writing app or a Proxmark
-  command-line tool. No NFC-writing function is included in the macOS App.
-- Read and privately back up the existing NDEF first: factory URLs may contain
-  device-specific secrets. Do not share the backup, UID or original full URL.
-- Replace the URL record, rather than appending another record. Write only the
-  NDEF user content; preserve the UID, capability container, lock-control data,
-  lock bits and configuration. Do not permanently lock the tag.
-- Read the result back and verify there is no URL record. Because the UID is
-  unchanged, an existing NFC automation should keep recognizing the tag.
-- If the tag is locked or unsupported, stop rather than forcing a write.
-  USB firmware updates cannot rewrite this passive tag.
-
-This is an optional, tested tip, not a promise across every iOS/tag combination.
-Opening AI Passport does not automatically pair BLE, select a network or save a
-configuration. NFC content is publicly readable and cloneable: never store
-Wi-Fi passwords, setup codes, gateway tokens or API keys on it.
-
-## Run the iOS App
-
-The app is not distributed through TestFlight or the App Store. Download the
-[Release](https://github.com/vangie/ai-passport-openclaw/releases) iOS App source kit
-or use this checkout; both include `ios/` and `shared/`. With full Xcode and
-XcodeGen installed:
-
-```sh
-cd ios
-xcodegen generate
-open Passport.xcodeproj
-```
-
-Choose your signing team and a connected physical iPhone, then run the `Passport`
-scheme. Follow Xcode's trust/Developer Mode instructions on the phone as needed.
-Personal Team signing is for local development and can expire; never commit
-certificates or signing-account configuration. Simulator UI previews cannot
-connect to real BLE devices or PassportSim's virtual radio.
-
-```sh
-xcodebuild -project ios/Passport.xcodeproj -scheme Passport \
-  -destination 'platform=iOS Simulator,name=iPhone 17' test CODE_SIGNING_ALLOWED=NO
-```
-
-Run that test command from the repository root after generating the project.
-Build the macOS App with `make sim-mac`, optionally setting `DEVELOPMENT_TEAM` in
-your local environment. Host checks require the tools listed in the
-[build guide](development/engineering/build-and-test.md), including mbedTLS and
-cJSON source; firmware uses ESP-IDF 5.5.3.
-
-## Standby and compatibility
-
-- After 60 seconds of eligible idle time, the display sleeps; the device does
-  **not** shut down. A first key press only wakes it. The next press performs
-  the displayed action. Calls, recording, settings, configuration work and an
-  enumerated computer USB connection keep it awake.
-- A USB host is not a reliable charging detector. Wall charging can still let
-  the screen sleep without stopping charging. Battery percentage is not proof
-  of charger state; battery-only runtime needs physical measurement.
-- Product names use `Passport`; iOS Bundle ID is `ai.mirasim.passport`.
-  Device settings use NVS `passport`, identity uses `passport_id`, and serialized
-  settings start with `PSP1`. Unreleased prototype identities are not migrated.
-- The setup AP is `Passport-Setup` / `passport-setup`. BLE service identifiers
-  remain unchanged; old prototype apps may coexist until removed manually.
-- Ask sessions use `agent:passport:passport-<device-id>`. Recent on-screen chat
-  history is in RAM, not a durable transcript or the gateway's context store.
-
-For microphone, network, speech quality and long-call acceptance, test real
-hardware. A successful build or simulator screenshot does not establish them.
+If the stock URL still produces a website notification, back it up using an NFC
+writer and **replace** the URL record with a plain-text record (`AI Passport`).
+Do not append text behind the URL; do not touch UID, lock bits or configuration.
+This worked on the maintainer's iPhone. USB flashing cannot rewrite the tag.
+Never write passwords or pairing credentials to it. Behavior may vary by iOS version.

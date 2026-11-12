@@ -33,6 +33,15 @@ HARNESS = r"""
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "passport_ble_session.h"
+#include "passport_line.h"
+#define portENTER_CRITICAL(lock) ((void)(lock))
+#define portEXIT_CRITICAL(lock) ((void)(lock))
+static int s_ble_state_lock;
+static passport_ble_session_t s_ble_sessions;
+static passport_line_t s_ble_lines[PASSPORT_BLE_PEERS];
+static bool s_configuration_connected;
+#define atomic_store(target, value) (*(target) = (value))
 
 typedef int esp_err_t;
 typedef void *TaskHandle_t;
@@ -61,7 +70,7 @@ typedef void *SemaphoreHandle_t;
 #define ESP_LOGE(...) ((void)0)
 
 static bool s_ble_initialized, s_ble_stopping, s_ble_paused, s_ble_ready;
-static uint16_t s_tx_handle, s_conn = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t s_tx_handle;
 static uint8_t s_addr_type;
 static char s_ble_name[17];
 typedef int ble_uuid128_t;
@@ -80,7 +89,6 @@ static int gap_event(struct ble_gap_event *event, void *argument) {
 }
 static TaskHandle_t s_host_task;
 static SemaphoreHandle_t s_host_stopped;
-static int s_ble_line;
 static const int k_svcs[] = {1, 0};
 static struct {
     void (*sync_cb)(void);
@@ -162,11 +170,9 @@ static int ble_gap_adv_start(uint8_t address_type, const void *peer, int duratio
     return 0;
 }
 static int ble_gap_adv_stop(void) { return 0; }
-static int ble_gap_terminate(uint16_t connection, int reason) {
-    (void)connection; (void)reason; return 0;
-}
+static int ble_gap_adv_active(void) { return 0; }
+static void terminate_session(uint32_t serial) { (void)serial; }
 static void passport_memory_report(const char *label) { (void)label; }
-static void passport_line_reset(int *line) { *line = 0; }
 static void vTaskSuspend(TaskHandle_t task) { (void)task; }
 static void vTaskDelete(TaskHandle_t task) { (void)task; }
 static int xTaskCreate(void (*entry)(void *), const char *name, int stack,
@@ -195,6 +201,13 @@ int main(void) {
         assert(ble_hs_cfg.sm_our_key_dist == (BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID));
         assert(ble_hs_cfg.sm_their_key_dist == ble_hs_cfg.sm_our_key_dist);
         assert(ble_hs_cfg.store_status_cb == ble_store_util_status_rr);
+        unsigned connected_adverts = fixture_adverts;
+        assert(passport_ble_connected(&s_ble_sessions, 1, 0));
+        assert(advertise() == 0 && fixture_adverts == connected_adverts + 1);
+        assert(passport_ble_connected(&s_ble_sessions, 2, 0));
+        assert(advertise() == 0 && fixture_adverts == connected_adverts + 1);
+        passport_ble_disconnected(&s_ble_sessions, 1);
+        passport_ble_disconnected(&s_ble_sessions, 2);
         on_sync();
         unsigned creates = fixture_creates;
         assert(passport_link_resume_bluetooth() == ESP_OK && fixture_creates == creates);
@@ -269,6 +282,8 @@ class BLEStartupTests(unittest.TestCase):
         configuration = (ROOT / "sdkconfig.defaults").read_text()
         self.assertIn("CONFIG_BT_NIMBLE_NVS_PERSIST=y", configuration)
         self.assertIn("CONFIG_BT_NIMBLE_MAX_BONDS=3", configuration)
+        self.assertIn("CONFIG_BT_NIMBLE_MAX_CONNECTIONS=2", configuration)
+        self.assertIn("CONFIG_BT_CTRL_BLE_MAX_ACT=3", configuration)
 
     def test_real_startup_functions(self):
         source = (ROOT / "main/passport_link.c").read_text()
@@ -278,8 +293,8 @@ class BLEStartupTests(unittest.TestCase):
             program = Path(directory) / "startup.c"
             executable = Path(directory) / "startup"
             program.write_text(HARNESS + functions + ACCEPTANCE)
-            subprocess.run([os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra", "-Werror",
-                            str(program), "-o", str(executable)], check=True)
+            subprocess.run([os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra", "-Werror", "-I", str(ROOT / "app"),
+                            str(program), str(ROOT / "app/passport_ble_session.c"), str(ROOT / "app/passport_line.c"), "-o", str(executable)], check=True)
             subprocess.run([str(executable)], check=True)
 
 

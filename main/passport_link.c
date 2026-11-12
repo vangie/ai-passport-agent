@@ -1,6 +1,7 @@
 #include "passport.h"
 #include "esp_wifi.h"
 #include "passport_line.h"
+#include "passport_ble_session.h"
 #include "passport_memory.h"
 #include "passport_power.h"
 #include "passport_network.h"
@@ -13,6 +14,7 @@
 #include "esp_app_desc.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
@@ -70,11 +72,17 @@ static const char *join_wifi(void *ctx, const char *ssid, const char *pass, bool
     return passport_wifi_join(ssid, pass, keep);
 }
 static uint16_t s_tx_handle;
-static atomic_uint_least16_t s_conn = BLE_HS_CONN_HANDLE_NONE;
 static uint8_t s_addr_type;
 static char s_ble_name[17];
 #define CMD_LINE_MAX PASSPORT_CONFIG_LINE_MAX
-static passport_line_t s_ble_line;
+static passport_ble_session_t s_ble_sessions;
+static passport_line_t s_ble_lines[PASSPORT_BLE_PEERS];
+static portMUX_TYPE s_ble_state_lock = portMUX_INITIALIZER_UNLOCKED;
+static uint32_t s_command_session;
+typedef struct {
+    char *line;
+    uint32_t session;
+} passport_link_command_t;
 static SemaphoreHandle_t s_lock;
 /* 试连 Wi-Fi 要十几秒，命令交给工作任务，不堵蓝牙协议栈。 */
 static QueueHandle_t s_lines;
@@ -96,6 +104,8 @@ static uint32_t s_network_generation;
 static SemaphoreHandle_t s_ble_transmit_lock;
 static SemaphoreHandle_t s_ble_transmitted;
 static atomic_int s_ble_transmit_status;
+static atomic_uint_least16_t s_ble_transmitting = BLE_HS_CONN_HANDLE_NONE;
+static atomic_uint s_async_configuration;
 
 static bool configuration_line(const char *line) {
     return strcmp(line, "HELLO") && strcmp(line, "DIAG") && strcmp(line, "MEM") &&
@@ -104,26 +114,28 @@ static bool configuration_line(const char *line) {
 }
 
 bool passport_link_configuration_busy(void) {
-    return atomic_load(&s_configuration_pending) || atomic_load(&s_configuration_connected) ||
+    return atomic_load(&s_configuration_pending) || atomic_load(&s_async_configuration) || atomic_load(&s_configuration_connected) ||
         atomic_load(&s_network_state) == PASSPORT_NETWORK_CONNECTING;
 }
 
 bool passport_link_configuration_pending(void) {
-    return atomic_load(&s_configuration_pending) || atomic_load(&s_network_state) == PASSPORT_NETWORK_CONNECTING;
+    return atomic_load(&s_configuration_pending) || atomic_load(&s_async_configuration) ||
+        atomic_load(&s_network_state) == PASSPORT_NETWORK_CONNECTING;
 }
 
 unsigned passport_link_configuration_activity(void) {
     return atomic_load(&s_configuration_activity);
 }
 
-static bool queue_line(char *line) {
+static bool queue_command(char *line, uint32_t session) {
     passport_power_command_begin();
     bool configuring = configuration_line(line);
     if (configuring) {
         atomic_fetch_add(&s_configuration_pending, 1);
         atomic_fetch_add(&s_configuration_activity, 1);
     }
-    if (xQueueSend(s_lines, &line, 0) != pdTRUE) {
+    passport_link_command_t command = { .line = line, .session = session };
+    if (xQueueSend(s_lines, &command, 0) != pdTRUE) {
         if (configuring) atomic_fetch_sub(&s_configuration_pending, 1);
         passport_power_command_end();
         char *expected = line;
@@ -132,6 +144,51 @@ static bool queue_line(char *line) {
         return false;
     }
     return true;
+}
+
+static bool queue_line(char *line) { return queue_command(line, 0); }
+
+static uint16_t session_handle(uint32_t serial) {
+    portENTER_CRITICAL(&s_ble_state_lock);
+    passport_ble_peer_t *peer = passport_ble_serial(&s_ble_sessions, serial);
+    uint16_t handle = peer ? peer->handle : BLE_HS_CONN_HANDLE_NONE;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+    return handle;
+}
+
+static int bluetooth_reply(uint32_t serial, const char *out, size_t length, unsigned timeout_ms) {
+    if (!serial || !s_ble_transmit_lock ||
+        xSemaphoreTake(s_ble_transmit_lock, pdMS_TO_TICKS(2000)) != pdTRUE) return 0;
+    uint16_t connection = session_handle(serial);
+    struct ble_gap_conn_desc description;
+    int result = connection == BLE_HS_CONN_HANDLE_NONE ? BLE_HS_ENOTCONN : ble_gap_conn_find(connection, &description);
+    if (result == 0 && !description.sec_state.encrypted) result = BLE_ATT_ERR_INSUFFICIENT_AUTHEN;
+    if (result == 0) {
+        atomic_store(&s_ble_transmitting, connection);
+        uint16_t mtu = ble_att_mtu(connection);
+        size_t payload = mtu > 3 ? mtu - 3 : 20;
+        for (size_t offset = 0; offset < length;) {
+            size_t count = length - offset < payload ? length - offset : payload;
+            struct os_mbuf *packet = ble_hs_mbuf_from_flat(out + offset, count);
+            if (!packet) { result = BLE_ATT_ERR_INSUFFICIENT_RES; break; }
+            (void)xSemaphoreTake(s_ble_transmitted, 0);
+            atomic_store(&s_ble_transmit_status, BLE_HS_ETIMEOUT);
+            result = ble_gatts_indicate_custom(connection, s_tx_handle, packet);
+            if (result != 0) break;
+            if (xSemaphoreTake(s_ble_transmitted, pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
+                result = BLE_HS_ETIMEOUT;
+                break;
+            }
+            result = atomic_load(&s_ble_transmit_status);
+            if (result != 0 || session_handle(serial) != connection) break;
+            offset += count;
+        }
+        atomic_store(&s_ble_transmitting, BLE_HS_CONN_HANDLE_NONE);
+    }
+    xSemaphoreGive(s_ble_transmit_lock);
+    if (result != 0 && connection != BLE_HS_CONN_HANDLE_NONE)
+        (void)ble_gap_terminate(connection, BLE_ERR_REM_USER_CONN_TERM);
+    return result;
 }
 
 static int reply(void *ctx, const char *line) {
@@ -151,38 +208,11 @@ static int reply(void *ctx, const char *line) {
         at+=(size_t)n;
     }
     if (length>192) (void)usb_serial_jtag_wait_tx_done(pdMS_TO_TICKS(50));
-    if (s_conn == BLE_HS_CONN_HANDLE_NONE || !s_ble_transmit_lock ||
-        xSemaphoreTake(s_ble_transmit_lock, pdMS_TO_TICKS(2000)) != pdTRUE) {
-        return 0;
-    }
-    uint16_t connection = s_conn;
-    struct ble_gap_conn_desc description;
-    int result = ble_gap_conn_find(connection, &description);
-    if (result != 0 || !description.sec_state.encrypted) {
-        xSemaphoreGive(s_ble_transmit_lock);
-        return BLE_ATT_ERR_INSUFFICIENT_AUTHEN;
-    }
-    uint16_t mtu = ble_att_mtu(connection);
-    size_t payload = mtu > 3 ? mtu - 3 : 20;
-    for (size_t offset = 0; offset < length;) {
-        size_t count = length - offset < payload ? length - offset : payload;
-        struct os_mbuf *packet = ble_hs_mbuf_from_flat(out + offset, count);
-        if (!packet) { result = BLE_ATT_ERR_INSUFFICIENT_RES; break; }
-        (void)xSemaphoreTake(s_ble_transmitted, 0);
-        atomic_store(&s_ble_transmit_status, BLE_HS_ETIMEOUT);
-        result = ble_gatts_indicate_custom(connection, s_tx_handle, packet);
-        if (result != 0) break;
-        if (xSemaphoreTake(s_ble_transmitted, pdMS_TO_TICKS(3000)) != pdTRUE) {
-            result = BLE_HS_ETIMEOUT;
-            break;
-        }
-        result = atomic_load(&s_ble_transmit_status);
-        if (result != 0 || s_conn != connection) break;
-        offset += count;
-    }
-    xSemaphoreGive(s_ble_transmit_lock);
-    if (result != 0) (void)ble_gap_terminate(connection, BLE_ERR_REM_USER_CONN_TERM);
-    return result;
+    portENTER_CRITICAL(&s_ble_state_lock);
+    uint32_t serial = s_ble_sessions.owner;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+    if (xTaskGetCurrentTaskHandle() == s_command_task && s_command_session) serial = s_command_session;
+    return bluetooth_reply(serial, out, length, 3000);
 }
 
 bool passport_app_diagnostic_request(bool audio_test);
@@ -267,10 +297,19 @@ void passport_link_diagnostic_reply(const char *line) {
     reply(NULL, line);
 }
 
+void passport_link_control_complete(void) {
+    if (atomic_load(&s_async_configuration)) atomic_fetch_sub(&s_async_configuration, 1);
+}
+
 static void handle_line(const char *line) {
     if (!strcmp(line, "DEVICE") || !strcmp(line, "CHECK") || !strcmp(line, "CHECK_CANCEL") ||
         !strncmp(line, "VOLUME ", 7)) {
-        if (!passport_app_control_request(line)) reply(NULL, "ERR control");
+        bool deferred = !strcmp(line, "DEVICE") || !strncmp(line, "VOLUME ", 7);
+        if (deferred) atomic_fetch_add(&s_async_configuration, 1);
+        if (!passport_app_control_request(line)) {
+            if (deferred) atomic_fetch_sub(&s_async_configuration, 1);
+            reply(NULL, "ERR control");
+        }
         return;
     }
     if (!strcmp(line, "POWER")) {
@@ -323,6 +362,15 @@ static void handle_line(const char *line) {
         return;
     }
     if (strcmp(line, "DIAG") == 0 || strcmp(line, "AUDIO_TEST") == 0) {
+        portENTER_CRITICAL(&s_ble_state_lock);
+        unsigned peers = passport_ble_count(&s_ble_sessions);
+        bool owned = s_ble_sessions.owner != 0;
+        portEXIT_CRITICAL(&s_ble_state_lock);
+        char state[160];
+        snprintf(state, sizeof(state), "BLE ready=%d advertising=%d peers=%u owner=%d capacity=%d name=%s",
+                 s_ble_ready, s_ble_ready && ble_gap_adv_active(), peers, owned,
+                 CONFIG_BT_NIMBLE_MAX_CONNECTIONS, s_ble_name);
+        reply(NULL, state);
         if (!passport_app_diagnostic_request(strcmp(line, "AUDIO_TEST") == 0)) {
             reply(NULL, "ERR busy");
         }
@@ -340,7 +388,7 @@ static void handle_line(const char *line) {
     memset(&usb, 0, sizeof(usb));
     usb.store = s_store;
     usb.build = s_firmware_id;
-    usb.capabilities = "device-control ble-secure scan-live";
+    usb.capabilities = "device-control ble-secure ble-takeover scan-live";
     usb.scan = s_scan;
     usb.scan_count = s_scan_count;
     usb.reply = reply;
@@ -418,11 +466,59 @@ static void process_line(char *line) {
     }
 }
 
+static void terminate_session(uint32_t serial) {
+    uint16_t handle = session_handle(serial);
+    if (handle != BLE_HS_CONN_HANDLE_NONE) (void)ble_gap_terminate(handle, BLE_ERR_REM_USER_CONN_TERM);
+}
+
+static void process_command(passport_link_command_t command) {
+    s_command_session = command.session;
+    if (command.session) {
+        uint32_t previous = 0;
+        bool handshake = !strcmp(command.line, "HELLO");
+        bool allowed = false;
+        struct ble_gap_conn_desc description;
+        uint16_t handle = session_handle(command.session);
+        bool encrypted = handle != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_find(handle, &description) == 0 &&
+            description.sec_state.encrypted;
+        if (handshake) {
+            for (unsigned attempt = 0; atomic_load(&s_async_configuration) && attempt < 600; attempt++)
+                vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        portENTER_CRITICAL(&s_ble_state_lock);
+        if (passport_ble_owned(&s_ble_sessions, command.session)) allowed = true;
+        else if (handshake) {
+            allowed = passport_ble_claim(&s_ble_sessions, command.session, encrypted,
+                atomic_load(&s_async_configuration) ||
+                atomic_load(&s_network_state) == PASSPORT_NETWORK_CONNECTING, &previous);
+        }
+        portEXIT_CRITICAL(&s_ble_state_lock);
+        if (!allowed) {
+            (void)bluetooth_reply(command.session, "ERR busy\n", 9, 500);
+            if (configuration_line(command.line)) atomic_fetch_sub(&s_configuration_pending, 1);
+            passport_power_command_end();
+            free(command.line);
+        } else {
+            if (previous && previous != command.session) {
+                const char notification[] = "SESSION TAKEN\n";
+                (void)bluetooth_reply(previous, notification, sizeof(notification) - 1, 500);
+                terminate_session(previous);
+            }
+            process_line(command.line);
+        }
+    } else process_line(command.line);
+    s_command_session = 0;
+}
+
 static void line_task(void *arg) {
     (void)arg;
-    char *line;
+    passport_link_command_t command;
     while (1) {
-        if (xQueueReceive(s_lines, &line, portMAX_DELAY) == pdTRUE) process_line(line);
+        if (xQueueReceive(s_lines, &command, pdMS_TO_TICKS(250)) == pdTRUE) process_command(command);
+        portENTER_CRITICAL(&s_ble_state_lock);
+        uint32_t expired = passport_ble_expired(&s_ble_sessions, (uint32_t)(esp_timer_get_time() / 1000));
+        portEXIT_CRITICAL(&s_ble_state_lock);
+        if (expired) terminate_session(expired);
     }
 }
 
@@ -430,6 +526,10 @@ static int gap_event(struct ble_gap_event *event, void *arg);
 
 static int advertise(void) {
     if (s_ble_paused) return 0;
+    portENTER_CRITICAL(&s_ble_state_lock);
+    bool full = passport_ble_count(&s_ble_sessions) >= PASSPORT_BLE_PEERS;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+    if (full || ble_gap_adv_active()) return 0;
     struct ble_hs_adv_fields fields = {0};
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     fields.uuids128 = (ble_uuid128_t *)&k_service;
@@ -455,25 +555,41 @@ static int gap_event(struct ble_gap_event *event, void *arg) {
     (void)arg;
     if (event->type == BLE_GAP_EVENT_CONNECT) {
         if (event->connect.status == 0) {
+            portENTER_CRITICAL(&s_ble_state_lock);
+            uint32_t serial = passport_ble_connected(&s_ble_sessions, event->connect.conn_handle,
+                (uint32_t)(esp_timer_get_time() / 1000));
+            portEXIT_CRITICAL(&s_ble_state_lock);
+            if (!serial) { (void)ble_gap_terminate(event->connect.conn_handle, BLE_ERR_REM_USER_CONN_TERM); return 0; }
             atomic_store(&s_configuration_connected, true);
             atomic_fetch_add(&s_configuration_activity, 1);
-            s_conn = event->connect.conn_handle;
-            passport_line_reset(&s_ble_line);
+            advertise();
         } else {
             advertise();
         }
     } else if (event->type == BLE_GAP_EVENT_DISCONNECT) {
         ESP_LOGI(TAG, "BLE disconnected: reason=%d pending=%u", event->disconnect.reason,
                  atomic_load(&s_configuration_pending));
-        atomic_store(&s_configuration_connected, false);
-        s_conn = BLE_HS_CONN_HANDLE_NONE;
-        atomic_store(&s_ble_transmit_status, BLE_HS_ENOTCONN);
-        if (s_ble_transmitted) xSemaphoreGive(s_ble_transmitted);
-        passport_line_reset(&s_ble_line);
+        portENTER_CRITICAL(&s_ble_state_lock);
+        passport_ble_peer_t *peer = passport_ble_peer(&s_ble_sessions, event->disconnect.conn.conn_handle);
+        int index = peer ? (int)(peer - s_ble_sessions.peers) : -1;
+        passport_ble_disconnected(&s_ble_sessions, event->disconnect.conn.conn_handle);
+        bool connected = passport_ble_count(&s_ble_sessions) != 0;
+        portEXIT_CRITICAL(&s_ble_state_lock);
+        atomic_store(&s_configuration_connected, connected);
+        if (atomic_load(&s_ble_transmitting) == event->disconnect.conn.conn_handle) {
+            atomic_store(&s_ble_transmit_status, BLE_HS_ENOTCONN);
+            if (s_ble_transmitted) xSemaphoreGive(s_ble_transmitted);
+        }
+        if (index >= 0) passport_line_reset(&s_ble_lines[index]);
         advertise();
+    } else if (event->type == BLE_GAP_EVENT_SUBSCRIBE && event->subscribe.attr_handle == s_tx_handle) {
+        portENTER_CRITICAL(&s_ble_state_lock);
+        passport_ble_peer_t *peer = passport_ble_peer(&s_ble_sessions, event->subscribe.conn_handle);
+        if (peer) peer->subscribed = event->subscribe.cur_indicate;
+        portEXIT_CRITICAL(&s_ble_state_lock);
     } else if (event->type == BLE_GAP_EVENT_NOTIFY_TX &&
                event->notify_tx.indication && event->notify_tx.attr_handle == s_tx_handle &&
-               event->notify_tx.conn_handle == s_conn &&
+               event->notify_tx.conn_handle == atomic_load(&s_ble_transmitting) &&
                event->notify_tx.status != 0) {
         atomic_store(&s_ble_transmit_status,
                      event->notify_tx.status == BLE_HS_EDONE ? 0 : event->notify_tx.status);
@@ -486,9 +602,14 @@ static int gap_event(struct ble_gap_event *event, void *arg) {
 
 static int on_rx(uint16_t conn_handle, uint16_t attr_handle,
                  struct ble_gatt_access_ctxt *ctxt, void *arg) {
-    (void)conn_handle;
     (void)attr_handle;
     (void)arg;
+    portENTER_CRITICAL(&s_ble_state_lock);
+    passport_ble_peer_t *peer = passport_ble_peer(&s_ble_sessions, conn_handle);
+    int index = peer ? (int)(peer - s_ble_sessions.peers) : -1;
+    uint32_t serial = peer ? peer->serial : 0;
+    portEXIT_CRITICAL(&s_ble_state_lock);
+    if (index < 0) return BLE_ATT_ERR_INSUFFICIENT_AUTHEN;
     uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
     uint8_t buf[256];
     if (len > sizeof(buf)) {
@@ -497,10 +618,9 @@ static int on_rx(uint16_t conn_handle, uint16_t attr_handle,
     ble_hs_mbuf_to_flat(ctxt->om, buf, len, NULL);
     for (uint16_t i = 0; i < len; i++) {
         char *line = NULL;
-        passport_line_result_t result = passport_line_push(&s_ble_line, buf[i], CMD_LINE_MAX, &line);
+        passport_line_result_t result = passport_line_push(&s_ble_lines[index], buf[i], CMD_LINE_MAX, &line);
         if (result == PASSPORT_LINE_READY) {
-            passport_memory_report("usb_line");
-            if (!queue_line(line)) return BLE_ATT_ERR_INSUFFICIENT_RES;
+            if (!queue_command(line, serial)) return BLE_ATT_ERR_INSUFFICIENT_RES;
         }
         else if (result == PASSPORT_LINE_TOO_LONG) { return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN; }
         else if (result == PASSPORT_LINE_NO_MEMORY) { return BLE_ATT_ERR_INSUFFICIENT_RES; }
@@ -619,7 +739,12 @@ esp_err_t passport_link_pause_bluetooth(void) {
     s_ble_ready = false;
     if (!s_ble_stopping) {
         (void)ble_gap_adv_stop();
-        if (s_conn != BLE_HS_CONN_HANDLE_NONE) (void)ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM);
+        for (size_t index = 0; index < PASSPORT_BLE_PEERS; index++) {
+            portENTER_CRITICAL(&s_ble_state_lock);
+            uint32_t serial = s_ble_sessions.peers[index].serial;
+            portEXIT_CRITICAL(&s_ble_state_lock);
+            if (serial) terminate_session(serial);
+        }
         if (nimble_port_stop() != 0) return ESP_FAIL;
         s_ble_stopping = true;
     }
@@ -631,8 +756,13 @@ esp_err_t passport_link_pause_bluetooth(void) {
     esp_err_t err = nimble_port_deinit();
     if (err == ESP_OK) {
         s_ble_initialized = false; s_ble_stopping = false;
-        s_conn = BLE_HS_CONN_HANDLE_NONE;
-        passport_line_reset(&s_ble_line);
+        for (size_t index = 0; index < PASSPORT_BLE_PEERS; index++) passport_line_reset(&s_ble_lines[index]);
+        portENTER_CRITICAL(&s_ble_state_lock);
+        for (size_t index = 0; index < PASSPORT_BLE_PEERS; index++)
+            memset(&s_ble_sessions.peers[index], 0, sizeof(s_ble_sessions.peers[index]));
+        s_ble_sessions.owner = 0;
+        portEXIT_CRITICAL(&s_ble_state_lock);
+        atomic_store(&s_configuration_connected, false);
     }
     passport_memory_report("ble_off");
     return err;
@@ -645,7 +775,7 @@ void passport_link_start(passport_store_t *store) {
         snprintf(s_firmware_id + i * 2, 3, "%02x", description->app_elf_sha256[i]);
     }
     s_lock = xSemaphoreCreateMutex();
-    s_lines = xQueueCreate(4, sizeof(char *));
+    s_lines = xQueueCreate(4, sizeof(passport_link_command_t));
     s_ble_transmit_lock = xSemaphoreCreateMutex();
     s_ble_transmitted = xSemaphoreCreateBinary();
     if (s_lock == NULL || s_lines == NULL || !s_ble_transmit_lock || !s_ble_transmitted ||
@@ -654,8 +784,6 @@ void passport_link_start(passport_store_t *store) {
         ESP_LOGE(TAG, "command task failed");
         return;
     }
-    /* Wi-Fi is the runtime transport. Start BLE only when there is no saved
-     * network; the app opens it on demand for phone configuration. */
     if (store == NULL || store->count == 0) {
         esp_err_t err = passport_link_resume_bluetooth();
         if (err != ESP_OK) ESP_LOGE(TAG, "nimble init failed: %s", esp_err_to_name(err));
@@ -664,6 +792,10 @@ void passport_link_start(passport_store_t *store) {
 
 bool passport_link_is_bluetooth_ready(void) {
     return s_ble_ready;
+}
+
+bool passport_link_is_bluetooth_connected(void) {
+    return atomic_load(&s_configuration_connected);
 }
 
 /* True also during startup or a failed stop: policy must finish cleanup. */

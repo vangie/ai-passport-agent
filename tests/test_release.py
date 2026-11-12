@@ -130,16 +130,14 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(lock['packages']['']['version'], version)
         for name in ['index.mjs', 'doctor.mjs']:
             self.assertIn(f"pluginVersion: '{version}'", (ROOT / 'tools/openclaw' / name).read_text())
-        for name in ['mac/project.yml', 'ios/project.yml']:
-            self.assertIn(f'MARKETING_VERSION: "{version}"', (ROOT / name).read_text())
         self.assertEqual(release.check_version(f'v{version}'), version)
         with self.assertRaises(ValueError):
             release.check_version('v99.0.0')
 
     def release_identity(self):
         for name in ['tools/openclaw/package.json', 'tools/openclaw/package-lock.json',
-                     'tools/openclaw/index.mjs', 'tools/openclaw/doctor.mjs', 'mac/project.yml',
-                     'ios/project.yml', 'docs/release/notes.md', 'docs/release/notes.zh_CN.md',
+                     'tools/openclaw/index.mjs', 'tools/openclaw/doctor.mjs',
+                     'docs/release/notes.md', 'docs/release/notes.zh_CN.md',
                      'docs/CHANGELOG.md', 'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -156,10 +154,8 @@ class ReleaseTests(unittest.TestCase):
                 relative = f'release-firmware/{name}'
             elif name.endswith('.bin'):
                 relative = f'release-firmware/firmware/{name}'
-            elif '-macos-' in name:
-                relative = f'release-mac/{name}'
             else:
-                relative = f'release-ios/{name}'
+                self.fail(f'Unexpected release asset: {name}')
             path = downloads / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(f'fixture: {name}')
@@ -169,7 +165,7 @@ class ReleaseTests(unittest.TestCase):
     def test_release_identity_rejects_mismatch(self):
         version = self.release_identity()
         for name in ['tools/openclaw/package-lock.json', 'tools/openclaw/index.mjs',
-                     'mac/project.yml', 'ios/project.yml', 'docs/release/notes.md',
+                     'docs/release/notes.md',
                      'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
             original = path.read_text()
@@ -185,7 +181,7 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, 'ROOT', self.root):
             release.prepare_assets(source, destination, tag, commit)
             release.verify_assets(destination, tag, commit)
-            self.assertEqual(len(list(destination.iterdir())), 10)
+            self.assertEqual(len(list(destination.iterdir())), 7)
             with self.assertRaises(ValueError):
                 release.prepare_assets(source, destination, tag, commit)
             with self.assertRaises(ValueError):
@@ -196,7 +192,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_assets_reject_missing_empty_and_symlink(self):
         source, tag, commit = self.release_downloads()
-        path = source / 'release-ios/ai-passport-openclaw-ios-source.zip'
+        path = source / 'release-firmware/ai-passport-openclaw-firmware.tar.gz'
         for invalid in ['missing', 'empty', 'symlink']:
             if path.exists():
                 path.unlink()
@@ -208,6 +204,35 @@ class ReleaseTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     release.prepare_assets(source, self.root / 'dist', tag, commit)
                 self.assertFalse((self.root / 'dist').exists())
+
+    def test_native_apps_do_not_gate_release_identity(self):
+        version = self.release_identity()
+        for name in ['mac/project.yml', 'ios/project.yml']:
+            path = self.root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('MARKETING_VERSION: "0.0.0"\n')
+        with patch.object(release, 'ROOT', self.root):
+            self.assertEqual(release.check_version(f'v{version}'), version)
+            for name in ['mac/project.yml', 'ios/project.yml']:
+                (self.root / name).unlink()
+            self.assertEqual(release.check_version(f'v{version}'), version)
+
+    def test_release_assets_exclude_native_apps(self):
+        version = self.release_identity()
+        self.assertEqual(release.asset_names(version), {
+            f'ai-passport-openclaw-{version}.tgz', 'ai-passport-openclaw-firmware.tar.gz',
+            'FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'LICENSE.txt',
+        })
+
+    def test_ci_does_not_build_or_package_native_apps(self):
+        self.assertFalse((ROOT / '.github/workflows/ios.yml').exists())
+        for path in (ROOT / '.github/workflows').glob('*.yml'):
+            workflow = path.read_text()
+            for command in ['xcodebuild', 'xcodegen', 'release.py ios-source',
+                            'release.py mac-resources', 'workflows/ios.yml',
+                            'release-ios', 'release-mac']:
+                with self.subTest(workflow=path.name, command=command):
+                    self.assertNotIn(command, workflow)
 
     def test_release_verification_rejects_incomplete_or_extra_assets(self):
         source, tag, commit = self.release_downloads()

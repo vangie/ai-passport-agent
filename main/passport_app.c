@@ -73,6 +73,7 @@ void passport_screen_open(void);
 void passport_screen_show(const passport_view_t *view, const passport_store_t *store);
 void passport_link_start(passport_store_t *store);
 bool passport_link_is_bluetooth_ready(void);
+bool passport_link_is_bluetooth_connected(void);
 bool passport_link_configuration_pending(void);
 bool passport_link_is_bluetooth_active(void);
 esp_err_t passport_link_pause_bluetooth(void);
@@ -86,6 +87,7 @@ esp_err_t passport_wifi_gateway_performance(bool enabled);
 esp_err_t passport_wifi_prepare(void);
 void passport_wifi_autoconnect(passport_store_t *store);
 void passport_link_diagnostic_reply(const char *line);
+void passport_link_control_complete(void);
 bool passport_link_apply_selection(passport_action_t action, int index, uint32_t expected_generation);
 bool passport_link_connect_network(int index, uint32_t generation);
 passport_network_state_t passport_link_network_result(void);
@@ -486,7 +488,7 @@ void app_main(void) {
                 passport_link_diagnostic_reply(line);
                 continue;
             }
-            if (event.kind == INPUT_DEVICE) { device_status(); continue; }
+            if (event.kind == INPUT_DEVICE) { device_status(); passport_link_control_complete(); continue; }
             if (event.kind == INPUT_CHECK_CANCEL) {
                 if (s_device_check) (void)passport_gateway_cancel();
                 continue;
@@ -503,6 +505,7 @@ void app_main(void) {
                 } else s_view.speaker_volume = s_saved_volume = event.desired_volume;
                 passport_link_diagnostic_reply(result);
                 device_status();
+                passport_link_control_complete();
                 continue;
             }
             if (event.kind == INPUT_CHECK) {
@@ -833,6 +836,7 @@ void app_main(void) {
         battery_refresh();
         s_view.wifi_online = passport_wifi_is_online();
         s_view.bluetooth_ready = passport_link_is_bluetooth_ready();
+        s_view.bluetooth_connected = passport_link_is_bluetooth_connected();
         s_view.bluetooth_busy = passport_link_configuration_pending() ||
             (s_ble_config_requested && !s_view.bluetooth_ready) ||
             (s_ble_config_suppressed && passport_link_is_bluetooth_active());

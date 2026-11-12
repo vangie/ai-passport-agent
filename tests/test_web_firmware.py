@@ -123,6 +123,26 @@ class WebFirmwareTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid release identity image'):
             web.release_identity(directory)
 
+    def test_retired_releases_keep_version_recognition(self):
+        directory = self.release(self.root / 'release')
+        retained = {'56' * 8: {'version': 'v1.2.1', 'channel': 'release'}}
+        (self.root / 'web/release-builds.json').write_text(json.dumps(retained))
+        with contextlib.redirect_stdout(io.StringIO()):
+            web.stage_firmware(directory)
+        self.assertEqual(json.loads(self.manifest.read_text())['knownBuilds'], retained)
+
+    def test_retained_catalog_rejects_nonrelease_metadata(self):
+        directory = self.release(self.root / 'release')
+        catalog = self.root / 'web/release-builds.json'
+        for build_id, identity in [('bad', {'version': 'v1.2.1', 'channel': 'release'}),
+                                   ('56' * 8, {'version': 'private-address', 'channel': 'release'}),
+                                   ('56' * 8, {'version': 'v1.2.1', 'channel': 'development'}),
+                                   ('56' * 8, {'version': 'v1.2.1', 'channel': 'release', 'extra': 'data'})]:
+            with self.subTest(build_id=build_id, identity=identity):
+                catalog.write_text(json.dumps({build_id: identity}))
+                with self.assertRaisesRegex(ValueError, 'Invalid retained release identity'):
+                    web.stage_firmware(directory)
+
     def test_legacy_release_uses_checksum_and_tag_without_manifest(self):
         directory = self.root / 'history/v1.2.1'
         directory.mkdir(parents=True)

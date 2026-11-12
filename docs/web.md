@@ -2,6 +2,8 @@
 
 # Browser configuration studio
 
+Open the published studio at <https://ai-passport-openclaw.codelife.me/>.
+
 The static website is the new browser-first configuration path. Existing
 macOS App and iOS App remain as source-only alternatives, without CI builds or
 new Release packages. No account, database or configuration
@@ -228,7 +230,9 @@ an additional confirmation is required before stored configuration is overwritte
 
 The website resolves the device's build identifier internally. CI verifies
 application images and receipts (or legacy SHA-256 checksum lists) from up to 12 recent official releases and
-bundles their version identities; no runtime history lookup is required. Known
+bundles their version identities; no runtime history lookup is required. The
+retired builds retain verified identities in `web/release-builds.json`, independent
+of whether their old GitHub Release downloads remain available. Known
 older releases show **Update available**; the bundled release shows **Up to date**
 with **Update firmware** still available for reinstallation. A newer known release is not called an
 update to an older image. Unrecognized builds show **Not identified**, not

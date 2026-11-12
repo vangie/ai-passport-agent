@@ -16,6 +16,9 @@ run_static_checks() {
     python3 tools/check_public.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_public_audit.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_release.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_preview.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_firmware.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_public.py
 
     actionlint_bin="${ACTIONLINT_BIN:-}"
     if [[ -z "${actionlint_bin}" ]]; then
@@ -119,6 +122,9 @@ run_static_checks() {
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
         tests/test_passport_radio_policy.c app/passport_radio.c -o "${test_dir}/test_passport_radio_policy"
     "${test_dir}/test_passport_radio_policy"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
+        tests/test_passport_ble_session.c app/passport_ble_session.c -o "${test_dir}/test_passport_ble_session"
+    "${test_dir}/test_passport_ble_session"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
         -Itests/transport_stubs -Icomponents/passport_transport \
         tests/test_passport_transport.c "${gc_sections}" -o "${test_dir}/test_passport_transport"
@@ -177,6 +183,8 @@ run_static_checks() {
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_deep_sleep_contract.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_key_wake_contract.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_startup.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_takeover.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_gap.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_network_runtime.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_naming.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_check_repo.py

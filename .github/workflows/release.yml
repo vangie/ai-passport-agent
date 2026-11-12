@@ -17,9 +17,6 @@ jobs:
   host-tests:
     uses: ./.github/workflows/static-checks.yml
 
-  ios:
-    uses: ./.github/workflows/ios.yml
-
   audit:
     runs-on: ubuntu-latest
     steps:
@@ -88,40 +85,9 @@ jobs:
           path: build/openclaw/*.tgz
           if-no-files-found: error
 
-  mac:
-    needs: firmware
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: release-firmware
-          path: build/release-input
-      - run: brew install xcodegen
-      - name: Build universal configuration app
-        run: |
-          cd mac
-          xcodegen generate
-          xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -configuration Release \
-            -destination 'generic/platform=macOS' -derivedDataPath build \
-            ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO build
-      - name: Bundle firmware, seal and package app
-        run: |
-          app='mac/build/Build/Products/Release/AI Passport OpenClaw.app'
-          python3 tools/release.py mac-resources "$app" build/release-input/firmware
-          codesign --force --deep --sign - "$app"
-          codesign --verify --deep --strict "$app"
-          mkdir -p build/release-mac
-          ditto -c -k --sequesterRsrc --keepParent "$app" build/release-mac/ai-passport-openclaw-macos-universal-adhoc.zip
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: release-mac
-          path: build/release-mac/*.zip
-          if-no-files-found: error
-
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [audit, host-tests, firmware, plugin, mac, ios]
+    needs: [audit, host-tests, firmware, plugin]
     runs-on: ubuntu-latest
     permissions:
       contents: write

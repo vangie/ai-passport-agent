@@ -223,6 +223,7 @@
 "网络选项" = "Network options";
 "蓝牙写入未完成。请确认系统蓝牙配对提示后重连。" = "Bluetooth write incomplete. Accept the system pairing prompt, then reconnect.";
 "蓝牙已连接" = "Bluetooth connected";
+"设备已被其他配置端接管，输入内容仍保留。需要时请手动重新连接。" = "Another setup client took over Passport. Your inputs are kept. Reconnect manually when needed.";
 "蓝牙连接已断开。输入内容仍保留；重新连接后可继续。" = "Bluetooth disconnected. Your input is preserved. Reconnect to continue.";
 "让 AI Passport 忘掉「%@」？" = "Forget “%@” on AI Passport?";
 "让 OpenClaw 准备接入并生成配对码" = "Ask OpenClaw to prepare access and generate a pairing code";

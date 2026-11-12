@@ -89,6 +89,13 @@ final class LinkHarness {
             }
         }
         let setup = LinkHarness()
+        for pending in [false, true] {
+            let taken = LinkHarness()
+            if !pending { taken.writer = nil }
+            try taken.receive("SESSION TAKEN")
+            precondition(taken.disconnects == 1 && !taken.ready)
+            precondition(taken.error == L10n.string("设备已被其他配置端接管，输入内容仍保留。需要时请手动重新连接。"))
+        }
         setup.ready = false
         precondition(setup.writer?.next(maximum: 512) != nil)
         setup.writer?.acknowledge()
