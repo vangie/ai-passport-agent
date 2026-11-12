@@ -15,7 +15,7 @@ PATTERNS = {
     'Apple team identifier': re.compile(r'DEVELOPMENT_TEAM\s*[:=]\s*["\']?[A-Z0-9]{10}\b'),
     'deployment hostname': re.compile(r'\b[A-Za-z0-9-]+\.(?:online|local|trycloudflare\.com)\b', re.I),
 }
-SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com', 'www.w3.org'}
+SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com', 'apps.apple.com', 'www.w3.org'}
 
 
 def findings(name, data):

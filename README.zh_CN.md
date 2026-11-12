@@ -42,7 +42,7 @@
 | --- | --- | --- |
 | 电脑 · Chrome 或 Edge | USB | 安装／更新固件，配置 Wi-Fi 和助手，调整语言与音量 |
 | 电脑 · 支持 Web Bluetooth 的浏览器 | 蓝牙 | 读取与保存配置；更新固件仍需 USB |
-| iPhone · Bluefy | 蓝牙 | 添加 Wi-Fi／个人热点、修改助手配置；不支持 USB 刷机 |
+| iPhone · [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) | 蓝牙 | 添加 Wi-Fi／个人热点、修改助手配置；不支持 USB 刷机 |
 
 蓝牙能力受浏览器和系统限制。iPhone 的 Safari 与 Chrome 不提供所需蓝牙接口。
 维护者已使用 Bluefy 完成配置，其他浏览器／系统组合仍需实机验证。

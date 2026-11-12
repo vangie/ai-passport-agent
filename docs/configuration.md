@@ -4,7 +4,8 @@
 
 Use the [web studio](https://ai-passport-openclaw.codelife.me/). Desktop Chrome/Edge
 supports USB configuration and firmware installation; compatible Web Bluetooth
-browsers support wireless settings. On iPhone use Bluefy, not Safari/Chrome.
+browsers support wireless settings. On iPhone, [get Bluefy from the App Store](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055)
+and open the configuration site inside it, not Safari/Chrome. The site's Bluetooth compatibility hint links directly to this listing.
 Firmware flashing still needs a computer and USB. See [browser compatibility](web.md).
 
 ## Let OpenClaw prepare the gateway

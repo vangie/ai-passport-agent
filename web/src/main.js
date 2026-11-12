@@ -29,6 +29,8 @@ const icons = {
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.agent}</svg>`;
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const root = document.querySelector('#app');
+const desktopLayout = window.matchMedia('(min-width: 801px)');
+const bluefyStoreURL = 'https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055';
 let session = null;
 let transportKind = '';
 let snapshot = null;
@@ -150,6 +152,22 @@ function connectionButton(kind, supported) {
   return `<button id="connect-${kind}" ${usb ? 'class="primary"' : ''} ${hint ? `aria-describedby="${hint}"` : ''} ${busy || !supported ? 'disabled' : ''}>${icon(usb ? 'usb' : 'bluetooth')}${text(usb ? 'usb' : 'bluetooth')}</button>`;
 }
 
+function layoutCards() {
+  const grid = root.querySelector('.grid');
+  const focused = document.activeElement;
+  const cards = ['wifi', 'agent', 'preferences', 'firmware'].map(name => root.querySelector(`#${name}-card`));
+  if (desktopLayout.matches) {
+    const columns = [[cards[0], cards[2]], [cards[1], cards[3]]].map(items => {
+      const column = document.createElement('div');
+      column.className = 'card-column';
+      column.append(...items);
+      return column;
+    });
+    grid.replaceChildren(...columns);
+  } else grid.replaceChildren(...cards);
+  if (grid.contains(focused)) focused.focus({ preventScroll: true });
+}
+
 function render() {
   const linked = connected();
   const preferencesDisabled = busy || !linked || !snapshot;
@@ -166,7 +184,7 @@ function render() {
   const firmwareConnectionHint = !window.isSecureContext ? '' : !supportedSerial() ? 'unsupportedUSB' : linked && transportKind !== 'usb' ? 'usbOnly' : '';
   const firmwareNote = keepFirmwareSettings ? !usbReady && !firmwareConnectionHint ? 'updateNeedsDevice' : 'flashNote' : 'fullNote';
   const flashLabel = text(keepFirmwareSettings ? 'application' : 'full');
-  const connectionSupport = !linked && window.isSecureContext ? `${!supportedSerial() && !supportedBLE() ? `<p id="usb-support">${text('unsupportedUSB')}</p>` : ''}${!supportedBLE() ? `<p id="ble-support">${text('unsupportedBLE')}</p>` : ''}` : '';
+  const connectionSupport = !linked && window.isSecureContext ? `${!supportedSerial() && !supportedBLE() ? `<p id="usb-support">${text('unsupportedUSB')}</p>` : ''}${!supportedBLE() ? `<div id="ble-support"><p>${text('unsupportedBLE')}</p><a class="bluefy-install" href="${bluefyStoreURL}" target="_blank" rel="noopener noreferrer">${text('installBluefy')}${icon('external')}</a><p>${text('bluefyNext')}</p></div>` : ''}` : '';
   root.innerHTML = `<div class="shell">
     <header><div class="header-identity"><a class="brand" href="./" aria-label="AI Passport OpenClaw"><img src="${brandLogo}" alt="" width="44" height="44"><span class="brand-name">AI Passport OpenClaw</span></a><span class="header-divider" aria-hidden="true"></span><h1>${text('title')}</h1></div><nav><a class="source-link" href="https://github.com/vangie/ai-passport-openclaw" target="_blank" rel="noreferrer" aria-label="${text('github')}"><span>${text('github')} ↗</span>${icon('external')}</a><fieldset class="language-switch" aria-label="${text('interfaceLanguage')}">${icon('language')}<div class="language-options" data-selected="${language}"><span class="language-thumb" aria-hidden="true"></span><label for="language-zh"><input id="language-zh" type="radio" name="interface-language" value="zh" aria-label="${text('chinese')}" ${language === 'zh' ? 'checked' : ''}><span lang="zh-CN">中</span></label><label for="language-en"><input id="language-en" type="radio" name="interface-language" value="en" aria-label="English" ${language === 'en' ? 'checked' : ''}><span lang="en">EN</span></label></div></fieldset></nav></header>
     <section class="connection ${linked ? 'is-connected' : ''}"><div class="connection-info"><div class="connection-title"><span class="dot ${linked ? 'on' : ''}"></span><h2>${linked ? escape(connectionLabel) : text('connectTitle')}</h2></div>${linked ? `<p class="subtle">${text('firmware')}: ${escape(deviceVersion)} · ${text('battery')}: ${snapshot?.device.battery >= 0 ? snapshot.device.battery + '%' : '—'}${currentAgent ? ` · ${escape(currentAgent.name)}` : ''}</p>` : ''}${feedback('connection')}</div><div class="actions connection-actions">${linked ? `<button id="refresh" ${busy ? 'disabled' : ''}>${text('refresh')}</button><button id="disconnect" ${busy ? 'disabled' : ''}>${text('disconnect')}</button>` : connectionButton('usb', supportedSerial()) + connectionButton('ble', supportedBLE())}</div>${connectionSupport ? `<div class="connection-support">${connectionSupport}</div>` : ''}</section>
@@ -200,6 +218,7 @@ function render() {
     <dialog id="privacy-dialog" aria-labelledby="privacy-title" aria-describedby="privacy-intro"><h2 id="privacy-title">${text('privacyTitle')}</h2><p id="privacy-intro">${text('privacyIntro')}</p><dl class="privacy-facts"><div><dt>${text('privacyTransferTitle')}</dt><dd>${text('privacyTransfer')}</dd></div><div><dt>${text('privacyStorageTitle')}</dt><dd>${text('privacyStorage')}</dd></div><div><dt>${text('privacyServicesTitle')}</dt><dd>${text('privacyServices')}</dd></div></dl><p class="hint privacy-hosting">${text('privacyHosting')}</p><div class="actions"><button id="privacy-close" autofocus>${text('privacyClose')}</button></div></dialog>
     <dialog id="confirm-dialog"><p></p><div class="actions"><button id="dialog-cancel">${text('dialogCancel')}</button><button id="dialog-confirm" class="primary">${text('dialogConfirm')}</button></div></dialog>
   </div>`;
+  layoutCards();
   renderNearby();
   updateSave();
   updatePromptFeedback();
@@ -427,6 +446,7 @@ function bind() {
 }
 
 window.addEventListener('beforeunload', event => { if (dirty.size || busy) { event.preventDefault(); event.returnValue = ''; } });
+desktopLayout.addEventListener('change', layoutCards);
 setLanguage(language);
 render();
 getManifest().then(value => { manifest = value; }).catch(() => {}).finally(() => {

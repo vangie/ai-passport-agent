@@ -34,6 +34,8 @@ class PublicAuditTests(unittest.TestCase):
         self.assertTrue(audit.findings('web/public/settings.json', '10.23.45.67'))
         self.assertEqual(audit.findings('web/src/main.js', 'wss://gateway.example'), [])
         self.assertEqual(audit.findings('web/dist/index.html', 'http://www.w3.org'), [])
+        self.assertEqual(audit.findings('web/src/main.js', 'https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055'), [])
+        self.assertTrue(audit.findings('web/src/main.js', 'https://apps.apple.com.customer.net/pair'))
 
 
 if __name__ == '__main__':

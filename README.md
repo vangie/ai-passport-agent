@@ -46,7 +46,7 @@ local Python or command-line flasher required.
 | --- | --- | --- |
 | Computer · Chrome or Edge | USB | Install/update firmware, configure Wi-Fi and assistants, adjust language and volume |
 | Computer · a Web Bluetooth browser | Bluetooth | Read and save settings; firmware updates still need USB |
-| iPhone · Bluefy | Bluetooth | Add Wi-Fi or a personal hotspot and edit assistant settings; no USB flashing |
+| iPhone · [Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055) | Bluetooth | Add Wi-Fi or a personal hotspot and edit assistant settings; no USB flashing |
 
 Bluetooth support varies by browser and OS. Safari and Chrome on iPhone do not
 provide the required Bluetooth API. Bluefy was tested by the maintainer; other

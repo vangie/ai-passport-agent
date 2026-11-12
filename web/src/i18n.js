@@ -1,5 +1,6 @@
 const messages = {
   zh: {
+    installBluefy: '在 App Store 获取 Bluefy', bluefyNext: '安装后，在 Bluefy 中打开本页，再连接蓝牙。',
     firmwareDesktop: '固件更新请在电脑上通过 USB 完成。',
     connectionSettings: '连接设置', proxyPasswordHint: '留空沿用设备中已保存的代理密码', routeSaveHint: '仅修改此助手，点击「保存配置」后生效。', confirmRouteSwitch: '放弃当前助手连接方式的未保存修改，转去编辑另一助手？其他配置不受影响。',
     addNetwork: '添加网络', editNetwork: '编辑网络', emptyNetworks: '尚未保存网络',
@@ -41,6 +42,7 @@ const messages = {
     dialogCancel: '取消', dialogConfirm: '确认', battery: '电量', firmware: '固件', reconnect: '连接后可读取和保存', scanDone: '扫描完成', deviceError: '设备未完成此操作，输入内容仍保留。',
   },
   en: {
+    installBluefy: 'Get Bluefy on the App Store', bluefyNext: 'After installing, open this page in Bluefy to connect via Bluetooth.',
     firmwareDesktop: 'Update firmware via USB on a computer.',
     hotspotHelp: 'Can’t find your iPhone hotspot?',
     connectionSettings: 'Connection settings', proxyPasswordHint: 'Leave blank to keep the saved proxy password', routeSaveHint: 'Applies only to this agent after you choose Save settings.', confirmRouteSwitch: 'Discard unsaved connection changes for this agent and edit another? Other settings are kept.',

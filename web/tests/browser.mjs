@@ -124,24 +124,25 @@ async function checkFirmwareAlignment(page) {
 }
 
 async function checkCardOrder(page) {
-  const expected = ['wifi-card', 'agent-card', 'preferences-card', 'firmware-card'];
-  assert.deepEqual(await page.locator('main.grid > section').evaluateAll(cards => cards.map(card => card.id)), expected);
-  const cards = await page.locator('main.grid > section').evaluateAll(elements => elements.map(element => {
+  const narrow = await page.evaluate(() => matchMedia('(max-width: 800px)').matches);
+  await page.waitForFunction(isNarrow => document.querySelectorAll('main.grid > section').length === (isNarrow ? 4 : 0), narrow);
+  const expected = narrow ? ['wifi-card', 'agent-card', 'preferences-card', 'firmware-card'] : ['wifi-card', 'preferences-card', 'agent-card', 'firmware-card'];
+  assert.deepEqual(await page.locator('main.grid section[id$="-card"]').evaluateAll(cards => cards.map(card => card.id)), expected);
+  const cards = await page.locator('main.grid section[id$="-card"]').evaluateAll(elements => elements.map(element => {
     const { x, y, width, height } = element.getBoundingClientRect();
     return { x, y, width, height };
   }));
-  const narrow = await page.evaluate(() => matchMedia('(max-width: 800px)').matches);
   for (let index = 1; index < cards.length; index++) {
     const current = cards[index];
     const previous = cards[index - 1];
     if (narrow) {
       assert.ok(Math.abs(current.x - previous.x) < 1, 'narrow-screen cards share one column');
       assert.ok(current.y >= previous.y + previous.height + 15, 'configuration precedes preferences and firmware');
-    } else if (index % 2 === 1) {
-      assert.ok(Math.abs(current.y - previous.y) < 1, 'desktop cards align in pairs');
-      assert.ok(current.x >= previous.x + previous.width + 19, 'desktop keeps two columns');
+    } else if (index === 2) {
+      assert.ok(Math.abs(current.y - cards[0].y) < 1, 'desktop columns start at the same height');
+      assert.ok(current.x >= cards[0].x + cards[0].width + 19, 'desktop keeps two columns');
     } else {
-      assert.ok(current.y >= Math.max(...cards.slice(0, index).map(card => card.y + card.height)) + 19, 'secondary cards follow configuration');
+      assert.ok(Math.abs(current.y - previous.y - previous.height - 20) < 1, 'desktop cards stack without row-induced whitespace');
     }
   }
   await page.locator('#copy-prompt').focus();
@@ -149,7 +150,8 @@ async function checkCardOrder(page) {
   assert.equal(await page.evaluate(() => document.activeElement.closest('section.card')?.id), 'agent-card');
   await page.locator('#code').focus();
   await page.keyboard.press('Tab');
-  assert.equal(await page.evaluate(() => document.activeElement.id), await page.locator('#device-language').isEnabled() ? 'device-language' : 'keep-firmware-settings');
+  if (narrow && await page.locator('#device-language').isEnabled()) assert.equal(await page.evaluate(() => document.activeElement.id), 'device-language');
+  else assert.equal(await page.evaluate(() => document.activeElement.closest('section')?.id), 'firmware-card');
 }
 
 async function checkConnectionChoices(page, locale) {
@@ -1223,6 +1225,13 @@ try {
         assert.equal(await button.getAttribute('aria-describedby'), !capability.secure ? 'browser-security' : supported ? null : `${method}-support`);
       }
       assert.equal(await capabilityPage.locator('.environment').count(), capability.secure ? 0 : 1);
+      const bluefyLink = capabilityPage.getByRole('link', { name: '在 App Store 获取 Bluefy', exact: true });
+      assert.equal(await bluefyLink.count(), capability.secure && capability.ble !== 'available' ? 1 : 0);
+      if (await bluefyLink.count()) {
+        assert.equal(await bluefyLink.getAttribute('href'), 'https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055');
+        assert.equal(await bluefyLink.getAttribute('target'), '_blank');
+        assert.match(await capabilityPage.locator('#ble-support').textContent(), /安装后，在 Bluefy 中打开本页/);
+      }
       assert.equal(await capabilityPage.locator('#browser-security').count(), capability.secure ? 0 : 1);
       assert.equal(await capabilityPage.locator('#bluetooth-panel').count(), 0);
       assert.equal(await capabilityPage.locator('#demo, #demo-hint, .demo-entry').count(), 0);
@@ -1260,6 +1269,8 @@ try {
       await capabilityPage.locator('#ssid').fill('Unsaved example network');
       await capabilityPage.locator('label[for="language-en"]').click();
       await capabilityPage.getByRole('heading', { name: 'Device studio', exact: true }).waitFor();
+      if (await bluefyLink.count()) assert.fail('Chinese install label must change with the interface language');
+      assert.equal(await capabilityPage.getByRole('link', { name: 'Get Bluefy on the App Store', exact: true }).count(), capability.secure && capability.ble !== 'available' ? 1 : 0);
       if (capability.name === 'supported') {
         await checkPrivacyDialog(capabilityPage, 'en', 'privacy-en-mobile');
         assert.equal(await capabilityPage.locator('#ssid').inputValue(), 'Unsaved example network');
