@@ -195,7 +195,7 @@ async function checkCompactConnection(context, release) {
       for (const width of [1360, 800, 768, 560, 390, 320]) {
         await connectionPage.setViewportSize({ width, height: 900 });
         await checkConnectionChoices(connectionPage, locale);
-        assert.ok((await connectionPage.locator('.connection').boundingBox()).height <= 66, 'disconnected toolbar stays compact');
+        assert.ok((await connectionPage.locator('.connection').boundingBox()).height <= 66, `disconnected toolbar stays compact at ${locale}/${width}`);
         if ([1360, 390, 320].includes(width)) await connectionPage.locator('.connection').screenshot({ path: `../build/web-shots/connection-choices-${locale}-${width}.png` });
         if ([1360, 390].includes(width)) {
           for (const section of ['preferences', 'firmware']) await connectionPage.locator(`#${section}-card`).screenshot({ path: `../build/web-shots/${section}-disabled-${locale}-${width}.png` });
@@ -373,6 +373,14 @@ try {
   });
   browser = await chromium.launch(process.env.CI ? {} : { channel: 'chrome', args: ['--disable-gpu'] });
   const context = await browser.newContext({ locale: 'zh-CN', viewport: { width: 1360, height: 1150 }, permissions: ['clipboard-read', 'clipboard-write'] });
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'serial', { configurable: true, value: {
+      async requestPort() { throw new DOMException('No port selected', 'NotFoundError'); },
+    } });
+    Object.defineProperty(navigator, 'bluetooth', { configurable: true, value: {
+      async requestDevice() { throw new DOMException('No device selected', 'NotFoundError'); },
+    } });
+  });
   const page = await context.newPage();
   const release = { schema: 1, version: 'v0.4.2', commit: 'a'.repeat(40), buildId: '1234567890abcdef', knownBuilds: { abcdef1234567890: { version: 'v0.4.1', channel: 'release' }, aaaaaaaaaaaaaaaa: { version: 'v0.4.2', channel: 'development' }, bbbbbbbbbbbbbbbb: { version: 'v0.4.3', channel: 'release' } }, application: { file: 'app.bin', offset: 0x10000, size: 288, sha256: 'b'.repeat(64) }, full: { file: 'full.bin', offset: 0, size: 288, sha256: 'c'.repeat(64) } };
   await checkCompactConnection(context, release);
