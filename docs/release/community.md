@@ -66,5 +66,7 @@ project. Images show actual interfaces with fictional demo data, not device phot
 - Rebuild with `node tools/community_materials.mjs` after preparing the browser
   dependencies. Output and separate UTF-8 publishing fields are under ignored
   `build/community-market/v0.5.1/materials/`. The renderer does not upload anything.
+- Exported copy removes source-only soft line breaks while retaining paragraphs,
+  numbered steps and update bullets. The preview uses natural browser text wrapping.
 - Inspect the final four local PNGs and the metadata preview. Ask for author
   approval before community upload; GitHub publication does not imply community approval.

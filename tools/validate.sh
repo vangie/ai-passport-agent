@@ -19,6 +19,7 @@ run_static_checks() {
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_preview.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_firmware.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_public.py
+    node --test tests/test_community_copy.mjs
 
     actionlint_bin="${ACTIONLINT_BIN:-}"
     if [[ -z "${actionlint_bin}" ]]; then

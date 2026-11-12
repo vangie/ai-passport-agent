@@ -2,6 +2,7 @@ import { chromium } from '../web/node_modules/playwright/index.mjs';
 import { spawn } from 'node:child_process';
 import { readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { extractCommunityCopy, renderCommunityCopy } from './community_copy.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const output = resolve(root, 'build/community-market/v0.5.1/materials');
@@ -93,18 +94,17 @@ try {
   for (const filename of ['web-desktop.png', 'web-mobile.png']) await copyFile(resolve(shots, filename), resolve(output, filename));
   const sections = [];
   const metadata = { version: '0.5.1', title_zh: 'AI Passport OpenClaw · 随身语音助手', title_en: 'AI Passport OpenClaw · Your Wearable Voice Assistant', source_url: 'https://github.com/vangie/ai-passport-openclaw', release_url: 'https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.1', cover: '00-cover.png', images: ['01-ask-and-call.png', '02-web-studio.png', '03-mobile-setup.png'], status: 'prepared-not-submitted' };
-  const escape = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   for (const [language, suffix, headings] of [['zh', '.zh_CN', ['简介', '使用方法', '更新日志']], ['en', '', ['Description', 'Quick-start instructions', 'Update notes']]]) {
     const document = await readFile(resolve(root, `docs/release/community${suffix}.md`), 'utf8');
     for (const [index, field] of ['description', 'instructions', 'changelog'].entries()) {
-      const value = document.split(`## ${headings[index]}\n\n`)[1].split('\n## ')[0].trim();
+      const value = extractCommunityCopy(document, headings[index]);
       metadata[`${field}_${language}`] = value;
       await writeFile(resolve(output, `${field}.${language === 'zh' ? 'zh_CN' : 'en'}.txt`), value + '\n');
-      sections.push(`<h2>${headings[index]}</h2><pre>${escape(value)}</pre>`);
+      sections.push(`<section class="copy" lang="${language === 'zh' ? 'zh-CN' : 'en'}"><h2>${language === 'zh' ? '中文' : 'English'} · ${headings[index]}</h2><div class="copy-body">${renderCommunityCopy(value)}</div></section>`);
     }
   }
   await writeFile(resolve(output, 'metadata.json'), JSON.stringify(metadata, null, 2) + '\n');
-  await writeFile(resolve(output, 'preview.html'), `<!doctype html><meta charset="utf-8"><title>AI Passport OpenClaw · 社区素材预览</title><style>body{margin:40px;background:#eceee9;font:18px -apple-system,sans-serif;color:#18332f}main{max-width:1100px;margin:auto}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:24px}img{width:100%;border-radius:12px}p{line-height:1.8}pre{white-space:pre-wrap;background:white;padding:24px;border-radius:12px;font:17px/1.8 -apple-system,sans-serif}a{color:#ac4337}</style><main><h1>AI Passport OpenClaw · ${metadata.version}</h1><p>社区发布前预览，尚未提交审核。仅使用虚构数据；界面渲染不代表实机照片。</p><div class="gallery">${posters.map(([name]) => `<img src="${name}.png" alt="${name}">`).join('')}</div>${sections.join('')}</main>`);
+  await writeFile(resolve(output, 'preview.html'), `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AI Passport OpenClaw · 社区素材预览</title><style>*{box-sizing:border-box}body{margin:40px;background:#eceee9;font:18px -apple-system,sans-serif;color:#18332f}main{max-width:1100px;margin:auto}.gallery{display:grid;grid-template-columns:1fr 1fr;gap:24px}img{width:100%;border-radius:12px}p,li{line-height:1.8}.copy-body{background:white;padding:24px;border-radius:12px;font:17px/1.8 -apple-system,sans-serif;overflow-wrap:anywhere}.copy-body p{margin:0 0 1.25em}.copy-body p:last-child{margin-bottom:0}.copy-body ol,.copy-body ul{margin:0;padding-left:1.5em}.copy-body li+li{margin-top:.8em}a{color:#ac4337}@media(max-width:600px){body{margin:20px}.gallery{grid-template-columns:1fr}.copy-body{padding:20px}}</style><main><h1>AI Passport OpenClaw · ${metadata.version}</h1><p>社区发布前预览，尚未提交审核。仅使用虚构数据；界面渲染不代表实机照片。</p><div class="gallery">${posters.map(([name]) => `<img src="${name}.png" alt="${name}">`).join('')}</div>${sections.join('')}</main></html>`);
   console.log('Community posters and sanitized browser screenshots rendered successfully.');
 } finally {
   await browser?.close();

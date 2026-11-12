@@ -49,4 +49,5 @@ AI Passport OpenClaw · 随身语音助手
   均为 1152 × 1536 竖版，使用虚构 Wi-Fi／助手及 `wss://gateway.example`。
 - 准备网页依赖后运行 `node tools/community_materials.mjs` 可复现。输出与独立 UTF-8 提交字段放在
   忽略目录 `build/community-market/v0.5.1/materials/`，脚本不上传。
+- 导出文案时合并源码中的软换行，保留段落、编号步骤与更新条目；预览由浏览器自然折行。
 - 检查四张最终本地 PNG 与元数据预览，作者认可后才提交社区；GitHub 发布不等于社区审核通过。
