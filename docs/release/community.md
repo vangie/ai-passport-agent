@@ -2,12 +2,12 @@
 
 # Community submission · v0.7.0
 
-Prepared for existing play **2236** only. Not submitted. A readback on 2026-11-13
-confirmed published revision **5492**, approved, with both titles below and the
-current source repository. No draft or pending revision existed. The new scoped
-authorization matched this project and had no submission result. Before any update, read
-`projects` / `publishedRevision`. Stop if a draft/pending revision or version conflict
-exists; do not withdraw it, create a duplicate or consume an old code.
+Submitted to existing play **2236** on 2026-11-13 using its target-bound update grant.
+The API returned revision **5548**, **pending review**; a readback confirmed the
+firmware hash and both independent instructions/changelog fields. Public revision
+**5492** remained approved. This is not a claim that v0.7.0 is public in the community.
+Before a later update, obtain a fresh grant and read `projects` / `publishedRevision`.
+Stop on draft/pending or version conflicts; do not withdraw or create a duplicate.
 
 ## Title
 
@@ -57,10 +57,13 @@ Independent open-source community project. Images are actual UI renders with fic
 
 - Source: https://github.com/vangie/ai-passport-agent
 - Version: v0.7.0. Use only the verified assets from its completed GitHub release.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.0
+- Published full image SHA-256: `6634d1de807810ddb51c5cb836099eb4815361a92ef98939011b2f71e9a7420f`.
+  GitHub, the production setup website and community revision 5548 use identical firmware.
 - Preserve both approved titles from the paired documents. Do not change other plays.
 - Generate materials with `node tools/community_materials.mjs`; output:
   `build/community-market/v0.7.0/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
 - All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
   description, instructions and update-note files before uploading the same files. Generation does not submit anything.
-- Only use the verified published full firmware after release; compare with the actual public community revision,
-  not merely these candidate notes. Current private community status is unavailable without a fresh authorization.
+- This submission used the inspected cover and three optional posters, with the published full image.
+  The one-time grant is consumed; never reuse it for another release.
