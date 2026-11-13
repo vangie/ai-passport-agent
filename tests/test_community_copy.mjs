@@ -40,3 +40,13 @@ test('actual bilingual submission copy has natural paragraphs and intact lists',
     assert.equal(extractCommunityCopy(document, headings[2]).split('\n').length, 4);
   }
 });
+
+test('community titles are bilingual product names, independent from repository branding', async () => {
+  for (const [suffix, heading, expected] of [['', 'Title', 'Agent Talk'], ['.zh_CN', '标题', '随身搭档']]) {
+    const document = await readFile(new URL(`../docs/release/community${suffix}.md`, import.meta.url), 'utf8');
+    const title = extractCommunityCopy(document, heading);
+    assert.equal(title, expected);
+    assert.doesNotMatch(title, /AI Passport|OpenClaw/u);
+    assert.match(document, /https:\/\/github\.com\/vangie\/ai-passport-agent/u);
+  }
+});

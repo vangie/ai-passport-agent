@@ -2,20 +2,23 @@
 
 # Community submission · v0.6.0
 
-Submitted on 2026-11-13 for existing play **2236**, revision **5485**; status at
-submission: **pending review, not publicly released**. The existing public revision
-5467 remains available while the update is reviewed. Description, instructions and
-update notes are independent fields. A later update requires a fresh
+Submitted on 2026-11-13 for existing play **2236** as **Agent Talk**, revision
+**5492**; authenticated readback confirms **pending review, not publicly released**.
+The earlier pending revision 5485 was withdrawn before this replacement was
+submitted. Public revision **5467** remains available while the update is reviewed.
+The Chinese community name is maintained independently in the paired document;
+the GitHub repository and web studio keep the AI Passport Agent project name.
+Description, instructions and update notes are independent fields. An update requires a fresh
 `update_once` grant bound to that play; a `create_once` grant cannot update it.
 Do not create a duplicate play. Classification is assigned by the server.
 
 ## Title
 
-AI Passport Agent · Your Wearable Voice Assistant
+Agent Talk
 
 ## Description
 
-A wearable voice terminal for your personal agent. Currently supports OpenClaw.
+Agent Talk brings voice access to your own personal agent. Currently supports OpenClaw.
 Ask a question or give your own assistant a task; see your transcript and the
 streamed reply, then follow up in the same conversation. Call offers spoken
 replies and scrolling subtitles, with on-screen keys to mute, interrupt or end.
@@ -43,30 +46,32 @@ project. Images show actual interfaces with fictional demo data, not device phot
 ## Quick-start instructions
 
 1. Open https://ai-passport-agent.codelife.me/ in desktop Chrome/Edge and connect
-   Passport by USB. For a first install uncheck Keep settings, install and confirm;
-   compatible updates can preserve settings.
-2. Choose Copy Prompt in OpenClaw and send it to an agent with access to your
-   running gateway. Let it prepare the plugin and reachable ingress, then paste
-   the returned address and limited code into the page. Call needs realtime voice.
-3. Scan/select 2.4 GHz Wi-Fi, enter its password and Save configuration. Wait for
-   the Wi-Fi icon. Retry corrected settings without reflashing; regenerate expired
-   codes. For iPhone hotspots enable Allow Others to Join/Maximize Compatibility;
-   keep the Personal Hotspot settings page open if discovery fails.
-4. Choose Ask: press to record and again to send, or pause for automatic submission.
-   Read/page through replies and continue. Choose Call, wait for Listening and
-   speak; follow the keys to mute, interrupt or end. Switch saved networks under
-   Settings → Wi-Fi; add networks using USB or a Bluetooth browser such as Bluefy.
+   by USB. Choose Update firmware; for a first install uncheck Keep settings and
+   confirm. Compatible updates can preserve settings.
+2. Copy the prompt under OpenClaw to an agent with access to your running gateway.
+   Let it prepare the plugin and reachable ingress; paste its address and pairing
+   code into the page. Call additionally needs a realtime voice service.
+3. Scan/select 2.4 GHz Wi-Fi, enter its password and Save configuration. The Wi-Fi
+   icon confirms connection. Correct settings and retry without reflashing;
+   regenerate expired codes. For iPhone hotspots enable Allow Others to Join and
+   Maximize Compatibility; keep Personal Hotspot settings open if discovery fails.
+4. Ask: press to record, then press again or pause to send; read replies and follow
+   up. Call: wait for Listening, then speak; use the displayed keys to mute,
+   interrupt or leave. Switch saved networks under Settings → Wi-Fi; add networks
+   with USB or a Bluetooth browser (Bluefy on iPhone).
 
 ## Update notes
 
-- Renamed to AI Passport Agent; currently supports OpenClaw and retains existing pairing and saved networks.
+- Renamed the community play to Agent Talk, with a separate Chinese name; OpenClaw support, existing pairing and saved networks are unchanged.
 - Added on-device speech detection to Ask and Call, reducing non-speech uploads and accidental sends.
 - Kept completed chats when no speech is detected; Call retains the beginning of speech and checks for speech before voice interruption.
-- Moved setup to ai-passport-agent.codelife.me and refreshed source links, bilingual guides, the cover and configuration screenshots.
+- Moved setup to ai-passport-agent.codelife.me, kept old-address redirects and refreshed the cover, bilingual guides and source links.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
+- Community title: Agent Talk. Repository and web studio branding remain unchanged;
+  the renderer reads the community titles from these paired documents.
 - Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.6.0
 - Firmware: the exact release's verified `FoloToy-AI-Passport-full.bin`, not an older
   local build. Validate the published receipt/checksums before preparing upload.
