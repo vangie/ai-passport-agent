@@ -29,6 +29,7 @@ typedef struct {
     uint32_t sample_rate;
     uint32_t mute_chunks, response_chunks, echo_chunks, input_clipped;
     uint32_t play_stalls, play_gap_ms;
+    uint32_t voice_interrupts, button_interrupts;
     int32_t dc;
     bool worker_owned, response, muted;
 } passport_audio_diagnostics_t;

@@ -2,7 +2,7 @@
 
 # CI and Release
 
-The default delivery path is firmware, the OpenClaw plugin and the browser
+The default delivery path is firmware, OpenClaw/Hermes plugins and the browser
 configuration studio. Native apps remain in `mac/`, `ios/` and `shared/` as
 source-only alternatives. CI does not build, sign, run Simulator UI tests or
 package them. Their marketing versions no longer gate releases. Local development
@@ -23,23 +23,25 @@ Passing CI is not on-device acceptance or a live-provider test.
 
 ## Tag release
 
-Tags use `v<semver>` (for example `v0.5.1`). Review bilingual changelogs and release
+Tags use `v<semver>` (for example `v0.7.0`). Review bilingual changelogs and release
 notes, privacy checks and hardware compatibility before tagging. Never upload
 private NVS, pairing material, configuration, local logs or old local firmware.
 
 `.github/workflows/release.yml` builds from the pushed tag:
 
 1. Audit repository, private endpoints, secrets and workflows. The tag, plugin
-   package/runtime and lockfile versions, bilingual notes and dated changelogs
+   package/runtime, Hermes manifest, web/lockfile versions, bilingual notes and dated changelogs
    must agree. Native app versions are independent.
 2. Run host checks through the reusable static workflow, without app builds.
 3. Build fresh firmware, verify layout/hashes and package from its verified
    content-addressed archive. Public artifacts exclude ELF/MAP.
-4. Build the plugin package using locked dependencies.
-5. After audit, host tests, firmware and plugin succeed, collect five files:
-   plugin TGZ, firmware TAR.GZ, application and merged BINs, and `LICENSE.txt`.
+4. Build the OpenClaw package using locked dependencies. Package Hermes from an
+   explicit code/docs/license allowlist, excluding caches, credentials and state;
+   reject missing/empty/symlinked inputs. Run web unit and browser UI tests.
+5. After all gates succeed, collect six payloads: OpenClaw TGZ, versioned Hermes
+   TAR.GZ, firmware TAR.GZ, application and merged BINs, and `LICENSE.txt`.
    Reject missing, empty or unsafe inputs. Add `release-manifest.json` with source
-   commit, version, sizes and SHA-256 hashes, then `SHA256SUMS.txt`: seven files total.
+   commit, version, sizes and SHA-256 hashes, then `SHA256SUMS.txt`: eight files total.
 6. Create or resume the same tag's draft, upload, download and verify the full
    filename set, provenance and hashes before publishing as latest. Failures leave
    a draft; reruns never overwrite an already published release.
@@ -53,7 +55,7 @@ Optional `mac-resources`
 and `ios-source` helpers are local tools, not CI steps.
 
 Align plugin versions and bilingual notes/changelogs, then run
-`python3 tools/release.py check-version --tag v0.5.1` with the intended version.
+`python3 tools/release.py check-version --tag v0.7.0` with the intended version.
 Run the static gate and relevant firmware/plugin/web tests, merge reviewed source
 and push an immutable tag at that exact commit. Monitor Release to completion;
 a tag or successful build alone is not a release. Inspect a failed draft and
@@ -62,7 +64,9 @@ retry. Roll back with previous compatible artifacts, not rewritten public assets
 
 Actions are pinned to full SHAs. Permissions default to read-only; only publishing
 receives `contents: write`. Manual dispatch validates/builds but does not publish.
-The separate Web workflow deploys Pages; no workflow modifies an OpenClaw installation.
+The separate Web workflow deploys Pages; no workflow modifies a personal-agent installation.
+Hermes protocol tests run in CI; actual Hermes runtime compatibility remains a
+separate pinned-runtime check, not proven by tests that skip missing native imports.
 
 ## Local native development
 

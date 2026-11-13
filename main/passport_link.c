@@ -275,7 +275,7 @@ bool passport_link_agent_snapshot(passport_agent_t *out) {
     return agent != NULL;
 }
 
-bool passport_link_store_token(const passport_agent_t *expected, const char *token) {
+bool passport_link_store_token(const passport_agent_t *expected, const char *token, const char *kind) {
     if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(100)) != pdTRUE) return false;
     bool ok = false;
     for (size_t i = 0; i < s_store->agent_count; i++) {
@@ -283,6 +283,7 @@ bool passport_link_store_token(const passport_agent_t *expected, const char *tok
         if (strcmp(agent->url, expected->url) || strcmp(agent->bootstrap, expected->bootstrap) ||
             strcmp(agent->device_token, expected->device_token)) continue;
         snprintf(agent->device_token, sizeof(agent->device_token), "%s", token);
+        snprintf(agent->kind, sizeof(agent->kind), "%s", kind);
         memset(agent->bootstrap, 0, sizeof(agent->bootstrap));
         passport_store_bump(s_store);
         ok = passport_nvs_save(s_store);

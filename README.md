@@ -2,7 +2,7 @@
 
 <p align="center"><img src="assets/logo/logo.png" alt="AI Passport Agent" width="104" /></p>
 <h1 align="center">AI Passport Agent</h1>
-<p align="center"><strong>A wearable voice terminal for your personal agent</strong><br />Voice Q&amp;A and realtime calls. Currently supports OpenClaw.</p>
+<p align="center"><strong>A wearable voice terminal for your personal agent</strong><br />Voice Q&amp;A and realtime calls with OpenClaw or Hermes</p>
 <p align="center">
   <a href="https://ai-passport-agent.codelife.me/">Open web studio</a> ·
   <a href="#get-started">Get started</a> ·
@@ -16,7 +16,8 @@ Turn FoloToy AI Passport into a dedicated voice interface for your personal agen
 Ask a question, read the answer, or have a spoken conversation. The device connects
 over Wi-Fi; a phone is not an audio relay.
 
-**Currently supports OpenClaw.** Other agent integrations are not available yet.
+**v0.7.0: OpenClaw and Hermes.** Use the matching external plugin for your backend.
+Other agent integrations are not available yet.
 The project was previously named `ai-passport-openclaw`; existing devices and
 OpenClaw plugin installations remain compatible. The web studio is now at
 <https://ai-passport-agent.codelife.me/>; the former
@@ -38,9 +39,24 @@ the stock application and does not retain all of its original features.
 
 The home screen has **Settings / Call / Ask**. Captions beside the physical keys
 change with each screen. Chinese and English, volume adjustment, saved network
-switching and connection indicators are built in. Ask uses a dedicated `passport`
-agent; Call needs a realtime voice provider on the gateway. Speed, tools and voice
+switching and connection indicators are built in. Ask reaches your agent's tools
+and context, not just a standalone chat model. Call needs a realtime voice provider
+on the gateway. Speed, tools and voice
 quality depend on that provider, your gateway and network.
+
+## Choose your personal agent
+
+| Backend | Ask | Call | Installation |
+| --- | --- | --- | --- |
+| OpenClaw | Dedicated `passport` agent with its authorized tools | Realtime voice with agent delegation | [OpenClaw plugin](tools/openclaw/README.md) |
+| Hermes | Native personal agent, tools and memory; a conversation per device | Realtime voice with native-agent delegation | [External Hermes plugin](tools/hermes/README.md) |
+
+Call's realtime model handles ordinary dialogue; tasks, current information and
+private context can be delegated to the personal agent. Not every spoken turn
+runs a full agent task. Both backends need your own working model configuration;
+Call requires a separate realtime voice service. Provider charges are separate.
+
+<p align="center"><img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes backend on Passport, rendered with fictional assistant data" width="240" /></p>
 
 ## Configure in your browser
 
@@ -74,7 +90,7 @@ browser/OS combinations still need device testing. See [browser compatibility](d
 ## Get started
 
 You need an AI Passport, a data-capable USB cable, reachable **2.4 GHz Wi-Fi** or
-a compatible hotspot, and a running OpenClaw with a working model. Initial flashing
+a compatible hotspot, and a running OpenClaw or Hermes with a working model. Initial flashing
 needs desktop Chrome/Edge. **OpenClaw 2026.10.5** is the tested plugin baseline;
 check compatibility before upgrading. Call also needs realtime voice credentials.
 
@@ -84,9 +100,10 @@ check compatibility before upgrading. Call also needs realtime voice credentials
    and confirm. Compatible updates use **Update firmware** with settings kept.
    Read the [data policy](docs/development/engineering/firmware-layout.md#flashing-and-stored-data)
    before replacing another firmware; there is no automatic stock-firmware rollback.
-2. **Prepare OpenClaw.** In the OpenClaw section, choose **Copy Prompt** and send
+2. **Prepare your agent.** Under **Add assistant**, select OpenClaw or Hermes,
+   choose **Copy Prompt** and send
    it to an agent able to operate on your gateway host. It checks/installs the
-   project plugin, prepares the dedicated assistant and a secure reachable ingress,
+   matching plugin, prepares the backend's assistant and a secure reachable ingress,
    then returns an address and limited pairing code. Existing resources are reused;
    missing accounts, permissions or credentials still require your action.
 3. **Set Wi-Fi and pair.** Scan nearby networks or type a name and password.
@@ -109,12 +126,15 @@ See [configuration and everyday use](docs/configuration.md) for the full workflo
 
 ```text
 Web studio ── USB / Bluetooth ──> Passport settings
-Passport   ── Wi-Fi / WSS ─────> OpenClaw + project plugin ──> Your providers
+Passport   ── Wi-Fi / WSS ─────> OpenClaw or Hermes + plugin ──> Your providers
 ```
 
 The setup page is not a cloud assistant and does not carry conversations. Model
-API keys stay on the gateway. The plugin uses OpenClaw's native integration points
-instead of patching its installed files. See [plugin installation and upgrades](tools/openclaw/README.md).
+API keys stay on the gateway. Both plugins use native integration points, not core
+patches. Hermes installs outside the core checkout; ordinary core upgrades preserve
+the plugin and device grants. Future API compatibility still needs verification.
+The upgraded Hermes v0.23.1 passed plugin discovery and adapter tests; new-version
+microphone/speaker acceptance remains pending. See the backend installation guides.
 
 For remote use, the bilingual [connectivity and security guide](docs/networking.md)
 covers **Cloudflare Tunnel**, **SakuraFrp with TLS**, LAN access, proxies, pairing
@@ -123,8 +143,9 @@ device authentication and never distribute the administrator token. A tunnel
 provides reachability, not automatic access control. LAN-only use is possible
 when Passport can actually reach that LAN address.
 
-Possession of a paired device grants its configured authority. Limit the dedicated
-agent's tools and revoke lost devices. Bluetooth uses encrypted Just Works pairing,
+Possession of a paired device grants its configured authority. Limit OpenClaw's
+dedicated agent and review Hermes's native-agent tool policy; device-side interactive
+approval is not supported. Revoke lost devices. Bluetooth uses encrypted Just Works pairing,
 not proof of ownership or protection against an active man-in-the-middle; configure
 in a trusted environment and disable it when unnecessary in an untrusted place.
 Recording/calls temporarily release Bluetooth memory, then restore it afterward.
@@ -150,6 +171,7 @@ See [NFC details](docs/configuration.md#nfc-and-personal-hotspot).
 
 Releases contain application/merged firmware, a firmware bundle, an installable
 OpenClaw plugin, `release-manifest.json`, `SHA256SUMS.txt` and license information.
+v0.7.0 also packages `ai-passport-hermes-0.7.0.tar.gz`. No native apps are packaged.
 The web studio serves verified firmware on its own origin: your browser does not
 follow GitHub Release download redirects. GitHub Pages itself may still be
 unreachable on some networks. Hashes detect corruption, not a compromised publisher.
@@ -159,6 +181,7 @@ unreachable on some networks. Hashes detect corruption, not a compromised publis
 | Web studio | `web/` · [Browser guide](docs/web.md) |
 | Firmware | `app/`, `main/`, `components/bsp/` · [Build and test](docs/development/engineering/build-and-test.md) |
 | OpenClaw plugin | [`tools/openclaw/`](tools/openclaw/README.md) |
+| Hermes plugin | [`tools/hermes/`](tools/hermes/README.md) |
 | Network ingress | [Connectivity and security](docs/networking.md) |
 | Release process | [CI and releases](docs/development/ci/CI-build-and-release.md) |
 

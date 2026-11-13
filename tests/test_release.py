@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import tarfile
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -48,6 +49,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue((resources / 'build/firmware' / self.manifest['full_bin_sha256'] / 'manifest.json').is_file())
         self.assertTrue((resources / 'licenses/Noto-SIL-OFL.txt').is_file())
         self.assertTrue((resources / 'licenses/Monocypher.txt').is_file())
+        self.assertTrue((resources / 'licenses/Hermes-icon-MIT.txt').is_file())
         for notice in ['WebRTC-VAD.txt', 'WebRTC-VAD-PATENTS.txt', 'WebRTC-VAD-AUTHORS.txt']:
             self.assertTrue((resources / 'licenses' / notice).is_file())
 
@@ -139,6 +141,7 @@ class ReleaseTests(unittest.TestCase):
     def release_identity(self):
         for name in ['tools/openclaw/package.json', 'tools/openclaw/package-lock.json',
                      'tools/openclaw/index.mjs', 'tools/openclaw/doctor.mjs',
+                     'tools/hermes/plugin.yaml', 'web/package.json', 'web/package-lock.json',
                      'docs/release/notes.md', 'docs/release/notes.zh_CN.md',
                      'docs/CHANGELOG.md', 'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
@@ -152,6 +155,8 @@ class ReleaseTests(unittest.TestCase):
         for name in release.asset_names(version) - {'LICENSE.txt'}:
             if name.endswith('.tgz'):
                 relative = f'release-plugin/{name}'
+            elif name.startswith('ai-passport-hermes-'):
+                relative = f'release-hermes/{name}'
             elif '-firmware.tar.gz' in name:
                 relative = f'release-firmware/{name}'
             elif name.endswith('.bin'):
@@ -167,6 +172,7 @@ class ReleaseTests(unittest.TestCase):
     def test_release_identity_rejects_mismatch(self):
         version = self.release_identity()
         for name in ['tools/openclaw/package-lock.json', 'tools/openclaw/index.mjs',
+                     'tools/hermes/plugin.yaml', 'web/package.json', 'web/package-lock.json',
                      'docs/release/notes.md',
                      'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
@@ -183,7 +189,7 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, 'ROOT', self.root):
             release.prepare_assets(source, destination, tag, commit)
             release.verify_assets(destination, tag, commit)
-            self.assertEqual(len(list(destination.iterdir())), 7)
+            self.assertEqual(len(list(destination.iterdir())), 8)
             with self.assertRaises(ValueError):
                 release.prepare_assets(source, destination, tag, commit)
             with self.assertRaises(ValueError):
@@ -223,8 +229,43 @@ class ReleaseTests(unittest.TestCase):
         version = self.release_identity()
         self.assertEqual(release.asset_names(version), {
             f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
+            f'ai-passport-hermes-{version}.tar.gz',
             'FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'LICENSE.txt',
         })
+
+    def test_hermes_package_is_allowlisted_and_reproducible(self):
+        version = self.release_identity()
+        for name in release.HERMES_FILES:
+            path = self.root / 'tools/hermes' / name
+            if not path.exists():
+                path.write_text(f'fixture {name}')
+        (self.root / 'LICENSE').write_text('MIT fixture')
+        (self.root / 'tools/hermes/private.key').write_text('not for release')
+        (self.root / 'tools/hermes/devices.sqlite3').write_text('private state')
+        with patch.object(release, 'ROOT', self.root):
+            release.hermes_package(self.root / 'first')
+            release.hermes_package(self.root / 'second')
+            with self.assertRaises(FileExistsError):
+                release.hermes_package(self.root / 'first')
+        name = f'ai-passport-hermes-{version}.tar.gz'
+        first = self.root / 'first' / name
+        self.assertEqual(first.read_bytes(), (self.root / 'second' / name).read_bytes())
+        with tarfile.open(first) as archive:
+            self.assertEqual(set(archive.getnames()),
+                             {f'ai-passport-hermes/{name}' for name in release.HERMES_FILES | {'LICENSE'}})
+            self.assertTrue(all(member.isfile() and member.mode == 0o644 for member in archive))
+        path = self.root / 'tools/hermes/adapter.py'
+        for invalid in ['missing', 'empty', 'symlink']:
+            if path.exists():
+                path.unlink()
+            if invalid == 'empty':
+                path.touch()
+            elif invalid == 'symlink':
+                path.symlink_to(self.root / 'LICENSE')
+            with self.subTest(invalid=invalid), patch.object(release, 'ROOT', self.root):
+                with self.assertRaises(ValueError):
+                    release.hermes_package(self.root / invalid)
+                self.assertFalse((self.root / invalid).exists())
 
     def test_ci_does_not_build_or_package_native_apps(self):
         self.assertFalse((ROOT / '.github/workflows/ios.yml').exists())

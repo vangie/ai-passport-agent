@@ -43,6 +43,7 @@ let notice = null;
 let actionScope = 'save';
 let promptStatus = 'idle';
 let promptResetTimer;
+let promptBackend = 'openclaw';
 let manifest = null;
 let firmwareReady = false;
 let keepFirmwareSettings = true;
@@ -75,7 +76,8 @@ function updatePromptFeedback() {
   button.setAttribute('aria-busy', String(promptStatus === 'copying'));
   status.hidden = promptStatus === 'idle' || promptStatus === 'copying';
   status.classList.toggle('error', ['promptUnavailable', 'clipboardFailed'].includes(promptStatus));
-  status.textContent = status.hidden ? '' : text(promptStatus === 'copied' ? 'promptNext' : promptStatus);
+  status.textContent = status.hidden ? '' : promptStatus === 'copied' ? text('promptNext').replace('{backend}', promptBackend === 'hermes' ? 'Hermes' : 'OpenClaw') : text(promptStatus);
+  root.querySelectorAll('[name="prompt-backend"], [name="interface-language"]').forEach(input => { input.disabled = promptStatus === 'copying'; });
 }
 function setPromptStatus(status) {
   clearTimeout(promptResetTimer);
@@ -85,10 +87,12 @@ function setPromptStatus(status) {
 }
 async function copyPrompt() {
   if (busy || promptStatus === 'copying') return;
+  const source = promptBackend === 'hermes' ? 'setup-hermes' : 'setup';
+  const promptLanguage = language;
   setPromptStatus('copying');
   let prompt;
   try {
-    const response = await fetch(`./setup-${language}.txt`, { redirect: 'error' });
+    const response = await fetch(`./${source}-${promptLanguage}.txt`, { redirect: 'error' });
     if (!response.ok) throw new Error('promptUnavailable');
     prompt = await response.text();
   } catch {
@@ -199,7 +203,9 @@ function render() {
       ${feedback('wifi')}
     </div></section>
     <section id="agent-card" class="card">${sectionHeader('agent', 'agentTitle', 'agentDetail')}<div class="card-content"><div id="agent-list" class="list">${snapshot?.agents.length ? snapshot.agents.map(agent => agentRow(agent, linked)).join('') : `<p class="empty">${text('noAgents')}</p>`}</div>
-      <details id="pairing-details" ${!snapshot?.agents.length || draft.code ? 'open' : ''}><summary>${text('newAgent')}</summary><div class="prompt-actions"><button id="copy-prompt" class="quiet small" aria-describedby="copy-prompt-status">${text('prompt')}</button><span id="copy-prompt-status" class="prompt-status" role="status" aria-live="polite" hidden></span></div>${field('name', 'agentName', 'text', text('namePlaceholder'))}${field('address', 'address', 'url', 'wss://gateway.example')}<label class="field">${text('code')}<textarea id="code" data-field="code" autocomplete="off" spellcheck="false">${escape(draft.code)}</textarea></label><p class="hint">${text('codeHint')}</p></details>
+      <details id="pairing-details" ${!snapshot?.agents.length || draft.code ? 'open' : ''}><summary>${text('newAgent')}</summary>
+        <div class="agent-setup"><fieldset class="backend-switch"><legend>${text('agentBackend')}</legend><div class="backend-options">${['openclaw', 'hermes'].map(backend => `<label><input type="radio" name="prompt-backend" value="${backend}" ${promptBackend === backend ? 'checked' : ''}><span>${backend === 'hermes' ? 'Hermes' : 'OpenClaw'}</span></label>`).join('')}</div></fieldset><button id="copy-prompt" class="quiet small" aria-describedby="copy-prompt-status">${text('prompt')}</button></div>
+        <div class="prompt-actions"><span id="copy-prompt-status" class="prompt-status" role="status" aria-live="polite" hidden></span></div>${field('name', 'agentName', 'text', text('namePlaceholder'))}${field('address', 'address', 'url', 'wss://gateway.example')}<label class="field">${text('code')}<textarea id="code" data-field="code" autocomplete="off" spellcheck="false">${escape(draft.code)}</textarea></label><p class="hint">${text('codeHint')}</p></details>
       ${feedback('agent')}
     </div></section>
     <section id="preferences-card" class="card">${sectionHeader('settings', 'settingsTitle')}<fieldset class="card-content preference-fields" ${preferencesDisabled ? 'disabled' : ''}><div class="preferences"><label for="device-language">${text('screenLanguage')}</label><select id="device-language" data-field="language"><option value="zh" ${draft.language === 'zh' ? 'selected' : ''}>${text('chinese')}</option><option value="en" ${draft.language === 'en' ? 'selected' : ''}>${text('english')}</option></select></div><div class="preferences ${snapshot && !snapshot.capabilities.includes('device-control') ? 'is-unavailable' : ''}"><label for="volume">${text('volume')}</label><div class="volume"><input id="volume" data-field="volume" type="range" min="0" max="100" value="${draft.volume}" ${snapshot && !snapshot.capabilities.includes('device-control') ? 'disabled' : ''}><output id="volume-value">${draft.volume}%</output></div></div></fieldset></section>
@@ -391,6 +397,12 @@ function bind() {
     say('testOK');
   }, 'wifi'));
   on('copy-prompt', copyPrompt);
+  root.querySelectorAll('[name="prompt-backend"]').forEach(input => {
+    input.onchange = () => {
+      promptBackend = input.value;
+      setPromptStatus('idle');
+    };
+  });
   bindNetworks(root);
   for (const [attribute, command, ending, confirmation] of [['forget', 'FORGET', 'OK forget', 'confirmForget'], ['drop', 'DROP', 'OK drop', 'confirmRemove'], ['use', 'USE', 'OK use', null]]) {
     root.querySelectorAll(`[data-${attribute}]`).forEach(button => button.onclick = async () => {

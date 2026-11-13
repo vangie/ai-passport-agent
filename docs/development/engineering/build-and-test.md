@@ -154,6 +154,21 @@ cc -std=c11 -Wall -Wextra -Werror -Imain \
 /tmp/test_ui_pixel_math
 ```
 
+The Hermes protocol tests also require `cryptography>=45,<51` and `aiohttp>=3.12,<4`. Install them in
+a disposable virtual environment, not the managed ESP-IDF Python environment,
+and select its interpreter for the static or complete gate:
+
+```bash
+python3 -m venv /tmp/passport-hermes-tests
+/tmp/passport-hermes-tests/bin/python -m pip install 'cryptography>=45,<51' 'aiohttp>=3.12,<4'
+export HERMES_TEST_PYTHON=/tmp/passport-hermes-tests/bin/python
+```
+
+CI prepares the same isolated dependency. The native Hermes adapter tests are
+skipped without Hermes installed; run the suite in a real Hermes runtime for
+those checks. Real-provider tests are separate, opt-in, and may incur usage;
+see the [Hermes preview](../../../tools/hermes/README.md).
+
 Use the unified validation entry point:
 
 ```bash

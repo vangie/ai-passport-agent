@@ -4,17 +4,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "bsp_display_rounding.h"
 #include "../managed_components/lvgl__lvgl/src/misc/lv_text_private.h"
 #include "../main/passport_screen.c"
 
 static unsigned char s_pixels[PASSPORT_LCD_W * PASSPORT_LCD_H * 3];
 static unsigned s_flushes;
+static bool s_flushed_rows[PASSPORT_LCD_H];
 static const char *s_output;
 
 static void flush(lv_display_t *display, const lv_area_t *area, uint8_t *data) {
     s_flushes++;
+    for (int row=area->y1;row<=area->y2;row++) s_flushed_rows[row]=true;
     for (int y=area->y1;y<=area->y2;y++) for (int x=area->x1;x<=area->x2;x++) {
         unsigned rgb=data[0]|((unsigned)data[1]<<8);data+=2;
+        if (bsp_display_pixel_outside_rounded_rect(x,y,PASSPORT_LCD_W,PASSPORT_LCD_H,30)) rgb=0;
         size_t at=(size_t)(y*PASSPORT_LCD_W+x)*3;
         s_pixels[at]=((rgb>>11)&31)*255/31;
         s_pixels[at+1]=((rgb>>5)&63)*255/63;
@@ -71,7 +75,19 @@ static void check_choice_rows(size_t count, size_t first, size_t selected) {
 }
 
 static void render(const char *name, passport_view_t *v, passport_store_t *store) {
+    bool changed=s_layout!=(int)mode_for(v) || s_key_language!=(int)passport_lang_zh(store);
+    memset(s_flushed_rows,0,sizeof(s_flushed_rows));
     passport_screen_show(v,store);lv_obj_update_layout(lv_screen_active());lv_refr_now(NULL);
+    if (v->screen==PASSPORT_SCREEN_LIVE) {
+        if (changed) for (int row=0;row<PASSPORT_LCD_H;row++) assert(s_flushed_rows[row]);
+        static unsigned char incremental[sizeof(s_pixels)];
+        memcpy(incremental,s_pixels,sizeof(s_pixels));
+        lv_obj_invalidate(lv_screen_active());lv_refr_now(NULL);
+        if (memcmp(incremental,s_pixels,sizeof(s_pixels))) {
+            fprintf(stderr,"Partial refresh differs from full refresh on %s\n",name);
+            assert(false);
+        }
+    }
     check_labels(lv_screen_active());assert(lv_mem_test()==LV_RESULT_OK);
     for (size_t row=0;row<PASSPORT_REPLY_ROWS;row++) {
         lv_obj_t *message_row=s_chat_rows[row];
@@ -142,6 +158,12 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
     assert(lv_obj_get_x(s_wifi) + lv_obj_get_width(s_wifi) == (v->bluetooth_ready ? 152 : 166));
     /* The title must end before the first status icon, even with BLE on. */
     assert(lv_obj_get_x(s_title)+lv_obj_get_width(s_title) <= lv_obj_get_x(s_wifi));
+    if (!lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN)) {
+        for (int row=lv_obj_get_y(s_logo);row<lv_obj_get_y(s_logo)+lv_obj_get_height(s_logo);row++)
+            for (int column=lv_obj_get_x(s_logo)-2;column<lv_obj_get_x(s_logo)+lv_obj_get_width(s_logo)+2;column++)
+                assert(!bsp_display_pixel_outside_rounded_rect(column,row,PASSPORT_LCD_W,PASSPORT_LCD_H,30));
+        assert(lv_obj_get_x(s_title)==lv_obj_get_x(s_logo)+lv_obj_get_width(s_logo)+3);
+    }
     assert(lv_obj_get_x(s_battery)==168 && lv_obj_get_x(s_battery_text)==194);
     assert(lv_obj_get_x(s_battery_text)+lv_obj_get_width(s_battery_text)==PASSPORT_LCD_W-8);
     lv_point_t battery_text_size;
@@ -202,6 +224,36 @@ int main(int argc, char **argv) {
     passport_agent_upsert(&store,"助手·Cloudflare","openclaw","wss://gateway.example","",NULL,NULL,NULL);
     passport_view_t v;passport_view_init(&v);v.wifi_online=true;v.battery_soc=98;
     passport_screen_open();
+    render("openclaw-header",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_title),"OpenClaw"));
+    assert(lv_image_get_src(s_logo)==&passport_lobster_22);
+    strcpy(store.agents[0].kind,"hermes");
+    for (int language=0;language<2;language++) {
+        strcpy(store.lang,language ? "en" : "zh");
+        render(language ? "hermes-header-en" : "hermes-header-zh",&v,&store);
+        assert(!strcmp(lv_label_get_text(s_title),"Hermes"));
+        assert(lv_image_get_src(s_logo)==&passport_hermes_22);
+        assert(lv_obj_get_x(s_logo)==20 && lv_obj_get_y(s_logo)==3);
+        assert(lv_obj_get_width(s_logo)==22 && lv_obj_get_height(s_logo)==22);
+    }
+    strcpy(store.lang,"zh");strcpy(store.agents[0].name,"小夏");
+    render("hermes-home",&v,&store);
+    assert(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_LIVE);
+    render("hermes-call-connecting",&v,&store);
+    v.screen=PASSPORT_SCREEN_HOME;v.sending=false;
+    render("hermes-call-return",&v,&store);
+    strcpy(store.lang,"en");
+    assert(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_LIVE);
+    render("hermes-call-connecting-en",&v,&store);
+    v.screen=PASSPORT_SCREEN_HOME;v.sending=false;
+    strcpy(store.lang,"zh");
+    strcpy(store.agents[0].name,"助手·Cloudflare");
+    store.active_agent=-1;
+    render("unpaired-header",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_title),"Agent") && lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN));
+    store.active_agent=0;strcpy(store.agents[0].kind,"openclaw");strcpy(store.lang,"zh");
+    render("openclaw-header-restored",&v,&store);
+    assert(lv_image_get_src(s_logo)==&passport_lobster_22 && !lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN));
     for (passport_action_t action=PASSPORT_ACT_NETWORKS;action<=PASSPORT_ACT_LIVE_INTERRUPT;action++) {
         const char *caption=passport_action_label(action,false);
         if (!caption[0]) continue;
@@ -232,6 +284,8 @@ int main(int argc, char **argv) {
         for (int selection=0;selection<4;selection++) {
             v.preference_cursor=selection;
             render(settings_previews[language][selection],&v,&store);
+            assert(!strstr(lv_label_get_text(s_body),"OpenClaw"));
+            assert(strstr(lv_label_get_text(s_body),language ? "Agents" : "助手"));
             if (language) {
                 assert(!strcmp(s_key_word_text[0],"Next"));
                 assert(!strcmp(s_key_word_text[1],selection==2 ? "On" : "Open"));
@@ -387,7 +441,7 @@ int main(int argc, char **argv) {
     v.cursor=1; render("assistant-domestic",&v,&store);
     assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"  助手·Cloudflare"));
     assert(!strcmp(lv_label_get_text(s_chat_rows[1]),"> 助手·SakuraFrp"));
-    assert(!strcmp(lv_label_get_text(s_hint),"可切换到此助手\n直连"));
+    assert(!strcmp(lv_label_get_text(s_hint),"OpenClaw · 可切换\n直连"));
     store.agents[0].proxy=(passport_proxy_t){.enabled=true,.host="proxy.example",.secret="pw",.port=443};
     v.cursor=0; render("assistant-shadowsocks",&v,&store);
     assert(strstr(lv_label_get_text(s_hint),"经 Shadowsocks")!=NULL);

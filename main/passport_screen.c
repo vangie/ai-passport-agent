@@ -10,6 +10,7 @@ LV_FONT_DECLARE(passport_font_20);
 LV_FONT_DECLARE(lv_font_montserrat_14);
 LV_FONT_DECLARE(lv_font_montserrat_20);
 LV_IMAGE_DECLARE(passport_lobster_22);
+LV_IMAGE_DECLARE(passport_hermes_22);
 
 #define INK         0x0D1420
 #define SURFACE     0x172230
@@ -38,6 +39,7 @@ static uint8_t s_key_word_px[3][KEY_HEIGHT * KEY_WORD_WIDTH];
 static char s_key_word_text[3][12];
 static lv_obj_t *s_title, *s_wifi, *s_bluetooth, *s_battery, *s_battery_fill, *s_battery_tip, *s_battery_text;
 static lv_obj_t *s_bluetooth_symbol;
+static lv_obj_t *s_logo;
 static lv_obj_t *s_page_count, *s_progress_track, *s_progress_fill;
 static char s_page_text[PASSPORT_PAGE_TEXT_MAX];
 static char s_network_name_text[PASSPORT_SSID_MAX];
@@ -452,11 +454,10 @@ void passport_screen_open(void) {
     s_bindings_valid = s_icons_valid = false;
     s_network_name_text[0]=0;
     lv_obj_t *screen = box(NULL, 0, 0, PASSPORT_LCD_W, PASSPORT_LCD_H, INK, 0);
-    lv_obj_t *lobster = lv_image_create(screen);
-    lv_image_set_src(lobster, &passport_lobster_22); lv_obj_set_pos(lobster, 6, 3);
-    s_title = label(screen, &lv_font_montserrat_14, 31, 7, 102, 18, WHITE);
-    lv_obj_t *title = s_title;
-    text(title, "OpenClaw"); add_status_icons(screen);
+    s_logo = lv_image_create(screen);
+    lv_obj_set_pos(s_logo, 20, 3);
+    s_title = label(screen, &lv_font_montserrat_14, 45, 7, 88, 18, WHITE);
+    text(s_title, "Agent"); add_status_icons(screen);
     box(screen, 16, 69, 180, 1, EDGE, 0);
     s_status = label(screen, &passport_font_16, 16, 42, 124, 21, MUTED);
     lv_label_set_long_mode(s_status, LV_LABEL_LONG_DOT);
@@ -526,6 +527,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
     layout_t mode = mode_for(v);
     bool layout_changed = s_layout != (int)mode || s_key_language != (int)passport_lang_zh(s);
     layout(mode, passport_lang_zh(s)); update_icons(v);
+    if (layout_changed) lv_obj_invalidate(lv_screen_active());
     bool chat = mode == READER && v->chat_visible && v->chat_count;
     bool choices = v->screen == PASSPORT_SCREEN_NETS ||
         (v->screen == PASSPORT_SCREEN_SETTINGS && s->agent_count > 0);
@@ -543,6 +545,11 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
     uint32_t tone = mode == FAILURE ? AMBER : mode == CAPTURE || mode == CALL ? CORAL : mode == CANCELLING ? MUTED : MINT;
     set_tone(tone); update_waveform(v, mode);
     char value[224];
+    const passport_agent_t *agent = passport_agent_active(s);
+    text(s_title, passport_agent_platform(agent));
+    const lv_image_dsc_t *logo = agent && !strcmp(agent->kind, "hermes") ? &passport_hermes_22 : &passport_lobster_22;
+    if (lv_image_get_src(s_logo) != logo) lv_image_set_src(s_logo, logo);
+    visible(s_logo, agent != NULL);
     switch (mode) {
         case TRANSCRIPT: {
             text(s_status, tr(s, "等待回复", "WAITING"));
@@ -645,7 +652,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                 const char *bluetooth = v->bluetooth_busy ? tr(s, "处理中", "Busy")
                     : v->bluetooth_ready && v->bluetooth_connected ? tr(s, "已连接", "Connected")
                     : v->bluetooth_ready ? tr(s, "已开启", "On") : tr(s, "已关闭", "Off");
-                snprintf(value, sizeof(value), tr(s, "%s 网络与代理\n%s OpenClaw 助手\n%s 蓝牙  %s\n%s 音量  %u%%", "%s Wi-Fi & routing\n%s OpenClaw agents\n%s Bluetooth  %s\n%s Volume  %u%%"),
+                snprintf(value, sizeof(value), tr(s, "%s 网络与代理\n%s 助手\n%s 蓝牙  %s\n%s 音量  %u%%", "%s Wi-Fi & routing\n%s Agents\n%s Bluetooth  %s\n%s Volume  %u%%"),
                     v->preference_cursor == 0 ? ">" : " ", v->preference_cursor == 1 ? ">" : " ",
                     v->preference_cursor == 2 ? ">" : " ", bluetooth, v->preference_cursor == 3 ? ">" : " ", v->speaker_volume);
                 text(s_body, value);
@@ -673,8 +680,8 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                     ? tr(s, "用手机或 Mac 添加", "Add from phone or Mac")
                     : v->wifi_online && (int)selected == s->connected ? tr(s, "已连接", "Connected") : tr(s, "未连接", "Not connected"));
                 else {
-                    snprintf(value, sizeof(value), "%s\n%s", (int)selected == s->active_agent
-                        ? tr(s, "当前助手", "In use") : tr(s, "可切换到此助手", "Available to use"),
+                    snprintf(value, sizeof(value), "%s · %s\n%s", passport_agent_platform(&s->agents[selected]), (int)selected == s->active_agent
+                        ? tr(s, "当前助手", "In use") : tr(s, "可切换", "Available"),
                         s->agents[selected].proxy.enabled ? tr(s, "经 Shadowsocks", "Via Shadowsocks") : tr(s, "直连", "Direct"));
                     text(s_hint, value);
                 }
@@ -697,7 +704,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
             } else if (v->screen == PASSPORT_SCREEN_SETTINGS) {
                 text(s_status, tr(s, "对话设置", "ASSISTANTS")); text(s_headline, tr(s, "助手", "Assistant"));
                 text(s_page_count, "");
-                text(s_body, tr(s, "尚无助手\n\n用手机或 Mac 配置 OpenClaw", "No assistant yet.\n\nSet up OpenClaw from your phone or Mac."));
+                text(s_body, tr(s, "尚无助手\n\n用网页配置助手", "No assistant yet.\n\nAdd an agent in Web Studio."));
             } else {
                 text(s_page_count, "");
                 text(s_status, tr(s, "连接设置", "CONNECTION")); text(s_headline, tr(s, "蓝牙配置", "Bluetooth"));

@@ -36,6 +36,16 @@ class WebPublicTests(unittest.TestCase):
         self.firmware(payload=marker)
         self.assertEqual(audit_site(self.root, True), [])
 
+    def test_all_backend_prompts_are_allowed_and_still_scanned(self):
+        for filename in ['setup-zh.txt', 'setup-en.txt', 'setup-hermes-zh.txt', 'setup-hermes-en.txt']:
+            with self.subTest(filename=filename):
+                path = self.root / filename
+                path.write_text('https://github.com/vangie/ai-passport-agent wss://gateway.example')
+                self.assertEqual(audit_site(self.root), [])
+                path.write_text('wss://gateway.customer.net')
+                self.assertTrue(audit_site(self.root))
+                path.unlink()
+
     def test_rejects_secrets_and_personal_urls_without_echoing(self):
         token = 'ghp_' + 'a' * 36
         for text in [token, 'wss://gateway.customer.net']:

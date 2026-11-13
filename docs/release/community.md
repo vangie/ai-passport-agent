@@ -1,16 +1,13 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.6.0
+# Community submission · v0.7.0
 
-Submitted on 2026-11-13 for existing play **2236** as **Agent Talk**, revision
-**5492**; authenticated readback confirms **pending review, not publicly released**.
-The earlier pending revision 5485 was withdrawn before this replacement was
-submitted. Public revision **5467** remains available while the update is reviewed.
-The Chinese community name is maintained independently in the paired document;
-the GitHub repository and web studio keep the AI Passport Agent project name.
-Description, instructions and update notes are independent fields. An update requires a fresh
-`update_once` grant bound to that play; a `create_once` grant cannot update it.
-Do not create a duplicate play. Classification is assigned by the server.
+Prepared for existing play **2236** only. Not submitted. A readback on 2026-11-13
+confirmed published revision **5492**, approved, with both titles below and the
+current source repository. No draft or pending revision existed. The new scoped
+authorization matched this project and had no submission result. Before any update, read
+`projects` / `publishedRevision`. Stop if a draft/pending revision or version conflict
+exists; do not withdraw it, create a duplicate or consume an old code.
 
 ## Title
 
@@ -18,71 +15,52 @@ Agent Talk
 
 ## Description
 
-Agent Talk brings voice access to your own personal agent. Currently supports OpenClaw.
-Ask a question or give your own assistant a task; see your transcript and the
-streamed reply, then follow up in the same conversation. Call offers spoken
-replies and scrolling subtitles, with on-screen keys to mute, interrupt or end.
+Agent Talk is a voice interface to your own personal agent, with OpenClaw and Hermes support.
+Use Ask for questions and tasks: see your words, read replies as they arrive and follow up in the same conversation.
+Use Call for spoken back-and-forth, with scrolling subtitles and on-screen keys to mute, interrupt or end.
 
-This connects to your own agent, not just a generic model chat. Ask uses a
-dedicated OpenClaw assistant with its permitted tools. Call uses a realtime voice
-service and can consult the agent for tasks and context; not every spoken turn
-runs through the full agent. On-device speech detection reduces noise-triggered
-submissions, but does not identify the speaker or eliminate every false trigger.
+It connects to a personal agent, not just a generic chat model. Ask uses your agent's authorized tools and context:
+OpenClaw's dedicated assistant or your native Hermes agent. Call's realtime model handles ordinary conversation
+and can consult that agent for tasks, current information or private context; not every turn invokes the full agent.
 
-Configure in the browser: desktop Chrome/Edge handles USB installation and updates;
-compatible Bluetooth browsers edit Wi-Fi, hotspots and assistant connections.
-iPhone users can use Bluefy. Save home and office Wi-Fi networks and a phone hotspot
-on Passport, then select a saved network under Settings → Wi-Fi without re-entering
-its details. The page has no application backend and does not relay conversations. After setup the device connects directly
-over Wi-Fi. No phone audio relay is required.
+Set up in your browser. Use computer Chrome/Edge and USB to install or update firmware; use a compatible
+Bluetooth browser to change settings, including Bluefy on iPhone. Save home Wi-Fi, office Wi-Fi and a phone hotspot,
+then choose a saved network on Passport. The setup site has no application backend and does not relay conversations;
+once configured, Passport connects to your gateway over Wi-Fi without using the phone as an audio relay.
 
-Bring a running OpenClaw with a working model. Copy the web studio's setup prompt
-to an agent able to operate on the gateway host; it checks the plugin, dedicated
-assistant and secure ingress before limited pairing. Public access may require your
-own tunnel resources and authorization. Call additionally needs a realtime voice
-provider; provider fees are separate. This is an independent open-source community
-project. Images show actual interfaces with fictional demo data, not device photos.
+Bring a working OpenClaw or Hermes with a usable model. Choose its backend in the web studio and send the setup
+prompt to an agent with access to that host, to prepare the plugin, secure reachable ingress and limited pairing code.
+Remote access may require your own tunnel resources; Call needs a realtime voice service, billed by your provider.
+Independent open-source community project. Images are actual UI renders with fictional data, not device photographs.
 
 ## Quick-start instructions
 
-1. Open https://ai-passport-agent.codelife.me/ in desktop Chrome/Edge and connect
-   by USB. Choose Update firmware; for a first install uncheck Keep settings and
-   confirm. Compatible updates can preserve settings.
-2. Copy the prompt under OpenClaw to an agent with access to your running gateway.
-   Let it prepare the plugin and reachable ingress; paste its address and pairing
-   code into the page. Call additionally needs a realtime voice service.
-3. Scan/select 2.4 GHz Wi-Fi, enter its password and Save configuration. The Wi-Fi
-   icon confirms connection. Correct settings and retry without reflashing;
-   regenerate expired codes. For iPhone hotspots enable Allow Others to Join and
-   Maximize Compatibility; keep Personal Hotspot settings open if discovery fails.
-4. Ask: press to record, then press again or pause to send; read replies and follow
-   up. Call: wait for Listening, then speak; use the displayed keys to mute,
-   interrupt or leave. Switch saved networks under Settings → Wi-Fi; add networks
-   with USB or a Bluetooth browser (Bluefy on iPhone).
+1. In computer Chrome/Edge, open https://ai-passport-agent.codelife.me/, connect USB and update firmware.
+   For a first install, uncheck Keep settings and confirm; compatible updates may retain it.
+2. Select OpenClaw or Hermes under Add assistant. Send its setup prompt to an agent on your gateway host;
+   paste the returned address and pairing code into the page. Call also needs realtime voice configuration.
+3. Scan for reachable 2.4 GHz Wi-Fi, enter its password and Save configuration. The Wi-Fi icon confirms connection.
+   Correct failures and retry without reflashing; regenerate expired pairing codes. For iPhone hotspots enable Allow Others
+   to Join and Maximize Compatibility; keep that settings page open if discovery fails.
+4. Ask: press to record, then press again or pause to send; follow up after the reply. Call: wait for Listening,
+   speak and use displayed keys to mute, interrupt or end. Switch saved networks in Settings → Wi-Fi;
+   add networks through USB or Bluetooth in the web studio (Bluefy on iPhone).
 
 ## Update notes
 
-- Renamed the community play to Agent Talk, with a separate Chinese name; OpenClaw support, existing pairing and saved networks are unchanged.
-- Added on-device speech detection to Ask and Call, reducing non-speech uploads and accidental sends.
-- Kept completed chats when no speech is detected; Call retains the beginning of speech and checks for speech before voice interruption.
-- Moved setup to ai-passport-agent.codelife.me, kept old-address redirects and refreshed the cover, bilingual guides and source links.
+- Add Hermes alongside OpenClaw: Ask reaches the native personal agent and keeps a conversation per device; Call can delegate tasks.
+- Select the backend when adding an assistant; use matching bilingual setup prompts for installation and pairing.
+- Show the authenticated backend's icon separately from the assistant name; inset icons away from rounded screen corners.
+- Supply an external Hermes plugin that survives ordinary core upgrades, with versioned packaging and clearer setup guides. Fix replies cut short, false reconnecting states and incomplete redraws when entering Call.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
-- Community title: Agent Talk. Repository and web studio branding remain unchanged;
-  the renderer reads the community titles from these paired documents.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.6.0
-- Firmware: the exact release's verified `FoloToy-AI-Passport-full.bin`, not an older
-  local build. Validate the published receipt/checksums before preparing upload.
-- Cover: `00-cover.png`; gallery: `01-ask-and-call.png`, `02-web-studio.png`,
-  `03-mobile-setup.png`. All are exact 1152 × 1536 portrait layouts; interface renders
-  use fictional Wi-Fi/assistant data and `wss://gateway.example`.
-- Rebuild with `node tools/community_materials.mjs` after preparing the browser
-  dependencies. Output and separate UTF-8 publishing fields are under ignored
-  `build/community-market/v0.6.0/materials/`. The renderer does not upload anything.
-- Exported copy removes source-only soft line breaks while retaining paragraphs,
-  numbered steps and update bullets. The preview uses natural browser text wrapping.
-- Inspect the final four local PNGs and the metadata preview before each upload.
-  An explicit official update grant authorizes its target without another approval
-  step; otherwise obtain author approval. GitHub publication does not imply community approval.
+- Version: v0.7.0. Use only the verified assets from its completed GitHub release.
+- Preserve both approved titles from the paired documents. Do not change other plays.
+- Generate materials with `node tools/community_materials.mjs`; output:
+  `build/community-market/v0.7.0/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
+- All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
+  description, instructions and update-note files before uploading the same files. Generation does not submit anything.
+- Only use the verified published full firmware after release; compare with the actual public community revision,
+  not merely these candidate notes. Current private community status is unavailable without a fresh authorization.

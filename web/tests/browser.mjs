@@ -466,7 +466,9 @@ try {
   assert.equal(await page.locator('#firmware-card button').count(), 1);
   assert.match(await page.locator('#firmware-mode-note').textContent(), /通过 USB 连接设备/);
   assert.equal(await page.getByRole('group', { name: '界面语言' }).count(), 1);
-  assert.equal(await page.getByRole('radio').count(), 2);
+  assert.equal(await page.getByRole('group', { name: '界面语言' }).getByRole('radio').count(), 2);
+  assert.equal(await page.getByRole('group', { name: '助手类型' }).getByRole('radio').count(), 2);
+  assert.equal(await page.getByRole('radio', { name: 'OpenClaw', exact: true }).isChecked(), true);
   assert.equal(await page.locator('#language-zh').isChecked(), true);
   assert.equal(await page.locator('#language-en').isChecked(), false);
   await page.locator('label[for="language-en"]').click();
@@ -804,7 +806,7 @@ try {
   await page.locator('#code').evaluate(element => { window.codeBeforeCopy = element; });
   await page.locator('#copy-prompt').click();
   await page.getByRole('button', { name: '已复制', exact: true }).waitFor();
-  assert.equal(await page.locator('#copy-prompt-status').textContent(), '粘贴给运行网关的 OpenClaw Agent');
+  assert.equal(await page.locator('#copy-prompt-status').textContent(), '粘贴给能操作 OpenClaw 网关主机的 Agent');
   assert.equal(await page.locator('#copy-prompt-status').getAttribute('role'), 'status');
   assert.equal(await page.locator('#copy-prompt').getAttribute('aria-describedby'), 'copy-prompt-status');
   assert.equal(await page.locator('#code').evaluate(element => element === window.codeBeforeCopy), true);
@@ -816,6 +818,13 @@ try {
   assert.ok((await page.evaluate(() => navigator.clipboard.readText())).includes('openclaw qr'));
   assert.equal(await page.locator('#discard').isDisabled(), true);
   await mkdir('../build/web-shots', { recursive: true });
+  await page.locator('.backend-options label:has([value="hermes"])').click();
+  assert.equal(await page.locator('#copy-prompt-status').isVisible(), false);
+  assert.equal(await page.locator('#code').evaluate(element => element === window.codeBeforeCopy), true);
+  assert.equal(await page.locator('#discard').isDisabled(), true);
+  await page.locator('.backend-options label:has([value="openclaw"])').click();
+  await page.locator('#copy-prompt').click();
+  await page.getByRole('button', { name: '已复制', exact: true }).waitFor();
   await page.locator('.prompt-actions').screenshot({ path: '../build/web-shots/prompt-copied.png' });
   await page.clock.fastForward(4100);
   assert.equal(await page.locator('#copy-prompt').textContent(), '复制配置提示词');
@@ -828,11 +837,14 @@ try {
   assert.equal(await page.locator('#copy-prompt').textContent(), '正在复制…');
   assert.equal(await page.locator('#copy-prompt').isDisabled(), true);
   assert.equal(await page.locator('#copy-prompt').getAttribute('aria-busy'), 'true');
+  assert.equal(await page.locator('[name="prompt-backend"][value="hermes"]').isDisabled(), true);
+  assert.equal(await page.locator('[name="interface-language"][value="en"]').isDisabled(), true);
   assert.equal(await page.locator('#refresh').isEnabled(), true);
   await pendingPrompt.fulfill({ status: 503, body: '' });
   await page.getByText('提示词暂时无法读取，请重试。', { exact: true }).waitFor();
   assert.equal(await page.locator('#save-feedback').textContent(), noticeBeforeCopy);
   assert.equal(await page.locator('#copy-prompt').isEnabled(), true);
+  assert.equal(await page.locator('[name="prompt-backend"][value="hermes"]').isEnabled(), true);
   await page.unroute('**/setup-zh.txt');
   await page.evaluate(() => {
     window.originalClipboardWrite = navigator.clipboard.writeText.bind(navigator.clipboard);
@@ -853,6 +865,38 @@ try {
   await page.clock.fastForward(4100);
   assert.equal(await page.locator('#copy-prompt').textContent(), 'Copy setup prompt');
   assert.equal(await page.locator('#copy-prompt-status').isVisible(), false);
+  const commandsBeforeBackend = await page.evaluate(() => window.fixtureCommands.length);
+  for (const locale of ['zh', 'en']) {
+    await page.locator(`label[for="language-${locale}"]`).click();
+    for (const backend of ['hermes', 'openclaw']) {
+      await page.locator(`.backend-options label:has([value="${backend}"])`).click();
+      assert.equal(await page.locator('#copy-prompt-status').isVisible(), false);
+      assert.equal(await page.locator('#code').inputValue(), code);
+      assert.equal(await page.locator('#name').inputValue(), nameBeforeCopy);
+      assert.equal(await page.locator('#address').inputValue(), addressBeforeCopy);
+      assert.equal(await page.locator('#discard').isDisabled(), true);
+      await page.locator('#copy-prompt').click();
+      await page.getByRole('button', { name: locale === 'zh' ? '已复制' : 'Copied', exact: true }).waitFor();
+      const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
+      assert.match(copiedPrompt, locale === 'zh' ? /^请/ : /^(?:On the host|Prepare)/);
+      assert.ok(copiedPrompt.includes(backend === 'hermes' ? 'hermes plugins enable ai-passport-hermes' : 'openclaw qr --json'));
+      assert.equal(copiedPrompt.includes('passport_auth.py --home'), backend === 'hermes');
+      assert.ok((await page.locator('#copy-prompt-status').textContent()).includes(backend === 'hermes' ? 'Hermes' : 'OpenClaw'));
+      for (const width of [1360, 390, 320]) {
+        await page.setViewportSize({ width, height: 1150 });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        assert.equal(await page.locator('.agent-setup').evaluate(element => element.scrollWidth <= element.clientWidth), true);
+        if (backend === 'hermes') await page.locator('#pairing-details').screenshot({ path: `../build/web-shots/agent-backend-${locale}-${width}.png` });
+      }
+      await page.clock.fastForward(4100);
+    }
+  }
+  assert.equal(await page.evaluate(() => window.fixtureCommands.length), commandsBeforeBackend);
+  await page.locator('.backend-options label:has([value="hermes"])').click();
+  await page.locator('label[for="language-zh"]').click();
+  assert.equal(await page.getByRole('radio', { name: 'Hermes', exact: true }).isChecked(), true);
+  await page.locator('.backend-options label:has([value="openclaw"])').click();
+  await page.setViewportSize({ width: 1360, height: 1150 });
   await page.locator('label[for="language-zh"]').click();
   const pairingBeforeLanguage = await page.locator('#code').inputValue();
   await page.locator('label[for="language-en"]').click();

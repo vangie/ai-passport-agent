@@ -25,6 +25,12 @@ The 16 px reply font also includes the explicit `PUNCTUATION` inventory in `tool
 
 ## Images
 
+The v0.7.0 candidate adds `images/screenshots/firmware-hermes.png`, a 240 × 320
+actual LVGL render with the official Hermes icon and fictional assistant data.
+Reproduce with `make preview-ui`, then convert `sim/shots/ui-redesign/hermes-home.ppm`
+to PNG. It is not a device photograph. The icon's MIT notice is included in
+release firmware bundles. Community posters use this alongside the OpenClaw screens.
+
 Store reusable source images and generated display assets in `images/`.
 
 | File | Dimensions and format | Use and source |
@@ -33,7 +39,8 @@ Store reusable source images and generated display assets in `images/`.
 | [`images/readme-hardware-specs.png`](images/readme-hardware-specs.png) | 2172 × 724, PNG RGBA | Optional technical infographic retained as a reference asset; it is no longer used as the homepage hero. Generated for this repository with the built-in image generation tool on 2026-09-17; the six labels and values were checked against the documented hardware contract. |
 | [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336, PNG RGBA | Transparent black wordmark extracted from the repository's original `images/logo.png`; used by the hardware overview for light backgrounds. |
 | [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336, PNG RGBA | White version of the wordmark, used by the hardware overview's dark-mode `<picture>` element. |
-| [`images/passport-lobster.svg`](images/passport-lobster.svg), [`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22, SVG source and LVGL ARGB8888 | Original project artwork, provided under the repository license. A compact lobster beside the firmware's OpenClaw title; no emoji font is required. Rebuild the C asset with `python3 tools/make_lobster.py` (ImageMagick 7). The 1,936-byte pixel data stays in Flash and uses one image widget. |
+| [`images/passport-lobster.svg`](images/passport-lobster.svg), [`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22, SVG source and LVGL I4 | Original project artwork under the repository license. OpenClaw agents use the lobster; Hermes agents use the official artwork below. Run `python3 tools/make_lobster.py` (ImageMagick 7) to regenerate both icons: resize to 22 × 22, quantize to a 16-color BGRA palette, and pack four-bit indices. Each 306-byte image stays in Flash; both share one image widget. |
+| [`images/passport-hermes.svg`](images/passport-hermes.svg), [`images/passport_hermes_22.c`](images/passport_hermes_22.c) | 1024 × 1024 SVG source; 22 × 22 LVGL I4 | Official Hermes icon from [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent/blob/c314285f077e91937c995d419b9fa40af9eb4981/assets/icon-master.svg), commit `c314285f077e91937c995d419b9fa40af9eb4981`. The upstream [MIT license](images/HERMES-LICENSE.txt) is retained; conversion follows the row above. Firmware follows the selected agent kind and hides platform artwork until paired. |
 | [`logo/logo.png`](logo/logo.png) | 1024 × 1024, PNG | Existing project/app icon used by the OpenClaw README heading, website header and browser tab. The website imports the source asset through Vite without a duplicate copy. Retained project artwork, not a new hardware photograph. |
 | [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804, PNG RGBA, 8-bit | Home / Ask / Call overview, composed from the three actual firmware renders below, enlarged 2× with nearest-neighbor sampling. Project UI/artwork under the repository license; Noto font notice above applies. |
 | [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png), [`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png), [`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | Each 240 × 320, PNG indexed RGB, 8-bit | Actual `main/passport_screen.c` rendered with the host LVGL setup from `sim/ui_preview/`, using synthetic device state. Original-resolution screenshots, not generated UI mockups. |

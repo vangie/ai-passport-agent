@@ -34,6 +34,12 @@ jobs:
           git -C "$RUNNER_TEMP/cJSON" checkout c859b25da02955fef659d658b8f324b5cde87be3
           echo "CJSON_SOURCE_DIR=$RUNNER_TEMP/cJSON" >> "$GITHUB_ENV"
 
+      - name: Prepare isolated Hermes protocol tests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/hermes-tests"
+          "$RUNNER_TEMP/hermes-tests/bin/python" -m pip install 'cryptography>=45,<51' 'aiohttp>=3.12,<4'
+          echo "HERMES_TEST_PYTHON=$RUNNER_TEMP/hermes-tests/bin/python" >> "$GITHUB_ENV"
+
       - name: Install verified actionlint
         run: |
           actionlint_bin="$(./tools/install-actionlint.sh "$RUNNER_TEMP/actionlint")"

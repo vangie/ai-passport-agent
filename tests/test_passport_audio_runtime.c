@@ -42,6 +42,8 @@ BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore, TickType_t ticks);
 static int16_t fixture_sample;
 static FILE *fixture_speech;
 static bool stop_after_write;
+static bool check_playback_pcm;
+static int16_t expected_playback[480];
 static bool fixture_alternating;
 static int64_t fixture_clock;
 static unsigned fixture_read_ms = 16;
@@ -54,6 +56,9 @@ static bool playback_stream;
 static unsigned fixture_resample_phase;
 static int16_t fixture_resample_sample;
 static size_t fixture_input_voiced, fixture_input_silent;
+static bool fixture_probe_resume;
+static unsigned fixture_probe_pauses;
+static size_t fixture_probe_tail;
 
 BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore, TickType_t ticks) {
     if (playback_stream && semaphore == s_play_ready) {
@@ -81,6 +86,12 @@ BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore, TickType_t ticks) {
 
 void vTaskDelay(TickType_t ticks) {
     fixture_clock += (int64_t)ticks * 1000;
+    if (fixture_probe_resume && s_barge->probing) {
+        assert(s_output_tail==fixture_probe_tail && !s_played);
+        int16_t silence[AUDIO_CHUNK]={0};
+        assert(!passport_barge_process(s_barge,silence,AUDIO_CHUNK,fixture_clock,true,false,false));
+        fixture_probe_pauses++;
+    }
     if (synthetic_end && fixture_clock >= synthetic_end) s_stop = true;
 }
 
@@ -108,6 +119,10 @@ esp_err_t bsp_audio_read(void *pcm, size_t bytes) {
 }
 
 esp_err_t bsp_audio_write(const void *pcm, size_t bytes) {
+    if (check_playback_pcm) {
+        assert(bytes==sizeof(expected_playback));
+        assert(!memcmp(pcm,expected_playback,bytes));
+    }
     esp_err_t result = fixture_audio_write(pcm, bytes);
     if (playback_stream) {
         assert(bytes == sizeof(wakeup_pcm) && !memcmp(pcm, wakeup_pcm, bytes));
@@ -200,6 +215,9 @@ static void test_live_speech_worker(void) {
         assert(fixture_input_voiced>50000 && fixture_input_silent>30000);
     }
     assert(passport_audio_live_take_interrupt()==(mode==1));
+    passport_audio_diagnostics_t diagnostics;
+    passport_audio_diagnostics(&diagnostics);
+    assert((diagnostics.voice_interrupts>0)==(mode==1) && !diagnostics.button_interrupts);
     assert(!passport_audio_live_dropped() && !s_live_voice_dropped);
     test_run_worker(s_play_task);
     assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
@@ -507,6 +525,9 @@ static void test_live_interrupt(void) {
         bool muted = turn % 2;
         passport_audio_live_mute(muted);
         assert(passport_audio_live_interrupt() && s_output_blocked && !s_response && !s_output_pcm);
+        passport_audio_diagnostics_t diagnostics;
+        passport_audio_diagnostics(&diagnostics);
+        assert(diagnostics.button_interrupts==turn+1 && !diagnostics.voice_interrupts);
         assert(s_task == capture && s_play_task == playback && !s_stop && s_muted == muted);
         assert(passport_audio_live_take_interrupt() && !passport_audio_live_take_interrupt());
         assert(passport_audio_live_push(output, sizeof(output)) == ESP_OK && passport_audio_live_drained());
@@ -664,6 +685,38 @@ static void test_compressed_playback(void) {
     assert(passport_audio_stop() == ESP_OK && passport_audio_release() == ESP_OK && !s_ima);
 }
 
+static void test_probe_preserves_playback(void) {
+    for (unsigned compressed=0;compressed<2;compressed++) {
+        test_task_count=0;
+        assert((compressed?passport_audio_live_ima_start(false):passport_audio_live_start())==ESP_OK);
+        int16_t source[480];
+        for (unsigned sample=0;sample<480;sample++) source[sample]=(int16_t)(sample*17-4000);
+        if (compressed) {
+            uint8_t block[PASSPORT_IMA_BYTES];int index=0;
+            size_t bytes=passport_ima_encode(source,480,&index,block,sizeof(block));
+            assert(passport_ima_decode(block,bytes,expected_playback,480)==480);
+            assert(passport_audio_live_push_ima(block,bytes)==ESP_OK);
+        } else {
+            memcpy(expected_playback,source,sizeof(source));
+            assert(passport_audio_live_push(source,sizeof(source))==ESP_OK);
+        }
+        s_barge->probing=true;
+        fixture_clock=1000000;s_barge->probe_at=fixture_clock;
+        fixture_probe_tail=s_output_tail;fixture_probe_pauses=0;
+        fixture_probe_resume=true;
+        passport_audio_live_response(true);
+        check_playback_pcm=true;stop_after_write=true;
+        test_run_worker(s_play_task);
+        fixture_probe_resume=false;
+        assert(fixture_probe_pauses>=20 && !s_barge->probing && !s_voice_interrupts);
+        check_playback_pcm=false;
+        test_run_worker(s_task);
+        assert(s_played==sizeof(source) && passport_audio_live_completed()==sizeof(source));
+        assert(passport_audio_live_drained());
+        assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
+    }
+}
+
 int main(void) {
     test_ask_endpoint();
     assert(passport_audio_set_volume(75)==ESP_OK && s_output_volume==75);
@@ -765,6 +818,7 @@ int main(void) {
     test_live_silence_clock();
     test_playback_packet_jitter();
     test_compressed_playback();
+    test_probe_preserves_playback();
     test_task_count=0;
     for (unsigned transition=0;transition<4;transition++) {
         assert(!s_task && !s_play_task && !s_live_pcm && !s_live_capture);

@@ -14,6 +14,8 @@ static void project(const char *wire, const char *expected) {
     }
 }
 int main(void) {
+    project("{\"type\":\"res\",\"ok\":true,\"payload\":{\"backend\":\"hermes\",\"passportProtocol\":1}}",
+            "{\"type\":\"res\",\"ok\":true,\"payload\":{\"backend\":\"hermes\",\"passportProtocol\":1}}");
     project("{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"upstreamAvailable\":true,\"upstreamConfigured\":false,\"providerRegistered\":true}}",
             "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"upstreamAvailable\":true,\"upstreamConfigured\":false,\"providerRegistered\":true}}");
     project("{\"type\":\"res\",\"id\":\"passport-transcript\",\"ok\":true,\"payload\":{\"runId\":\"run-1\",\"requestId\":\"clip-1\",\"text\":\"水浒传的林冲\"}}",

@@ -10,9 +10,11 @@ add_executable(preview
     "${REPO}/tests/test_passport_screen.c"
     "${REPO}/app/passport_ui.c" "${REPO}/app/passport_store.c" "${REPO}/app/passport_proxy.c"
     "${REPO}/app/passport_network.c"
+    "${REPO}/components/bsp/src/bsp_display_rounding.c"
     "${REPO}/assets/fonts/passport_font_16.c" "${REPO}/assets/fonts/passport_font_20.c"
-    "${REPO}/assets/images/passport_lobster_22.c")
-target_include_directories(preview PRIVATE "${REPO}/app")
+    "${REPO}/assets/images/passport_lobster_22.c"
+    "${REPO}/assets/images/passport_hermes_22.c")
+target_include_directories(preview PRIVATE "${REPO}/app" "${REPO}/components/bsp/src")
 target_link_libraries(preview PRIVATE lvgl m)
 enable_testing()
 add_test(NAME screen COMMAND preview)

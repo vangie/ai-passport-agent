@@ -22,6 +22,11 @@ class PublicAuditTests(unittest.TestCase):
         self.assertEqual(audit.findings('shared/config.swift', 'wss://gateway.example'), [])
         self.assertEqual(audit.findings('main/config.c', 'http://192.168.4.1'), [])
         self.assertEqual(audit.findings('tools/openclaw/passport-proxy.mjs', 'ws://127.0.0.1 192.0.2.1'), [])
+        self.assertEqual(audit.findings('tools/hermes/adapter.py', 'ws://127.0.0.1 wss://gateway.example'), [])
+        self.assertTrue(audit.findings('tools/hermes/adapter.py', 'wss://private-gateway.test'))
+        self.assertEqual(audit.findings('tools/hermes/passport_talk.py', 'wss://api.openai.com/v1/realtime'), [])
+        self.assertTrue(audit.findings('tools/hermes/passport_talk.py', 'wss://api.openai.com.customer.net/v1/realtime'))
+        self.assertTrue(audit.findings('tools/hermes/adapter.py', 'wss://api.openai.com/v1/realtime'))
 
     def test_local_identity_rejected(self):
         path = '/Users/' + 'fixture/' + 'private'
@@ -30,6 +35,8 @@ class PublicAuditTests(unittest.TestCase):
         self.assertTrue(audit.findings('mac/project.yml', team))
 
     def test_browser_endpoints_require_placeholders(self):
+        self.assertTrue(audit.findings('web/prompts/hermes-zh.txt', 'wss://gateway.customer.net'))
+        self.assertEqual(audit.findings('web/prompts/hermes-en.txt', 'wss://gateway.example'), [])
         self.assertTrue(audit.findings('web/src/main.js', 'wss://gateway.customer.net'))
         self.assertTrue(audit.findings('web/public/settings.json', '10.23.45.67'))
         self.assertEqual(audit.findings('web/src/main.js', 'wss://gateway.example'), [])

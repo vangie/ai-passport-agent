@@ -14,7 +14,7 @@ const endCallTool = {
     parameters: {type: 'object', properties: {}, required: []}
 };
 
-export function createPassportProvider(getProvider, upstreamId = 'openai') {
+export function createPassportProvider(getProvider, upstreamId = 'openai', diagnostic = () => {}) {
     if (!upstreamId || upstreamId === PASSPORT_PROVIDER) throw new Error('Invalid Passport upstream provider');
     function upstream(cfg) {
         const provider = getProvider(upstreamId, cfg);
@@ -62,14 +62,38 @@ export function createPassportProvider(getProvider, upstreamId = 'openai') {
                 return closeCompletion;
             }
             const callbacks = Object.fromEntries(['onAudio', 'onClearAudio', 'onMark',
-                'onResponseDone', 'onReady', 'onEvent', 'onError'].filter(name => typeof request[name] === 'function')
+                'onReady'].filter(name => typeof request[name] === 'function')
                 .map(name => [name, (...args) => { if (!ending && !ended) return request[name](...args); }]));
+            function report(type, detail = {}) {
+                const fields = Object.fromEntries(['status', 'reason', 'code', 'type'].map(key =>
+                    [key, detail[key] ?? detail.error?.[key]]).filter(([, value]) =>
+                    typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)));
+                try { diagnostic({event: type, ...fields}); } catch {}
+            }
             bridge = provider.createBridge({
                 ...request,
                 ...callbacks,
                 autoRespondToAudio: true,
+                interruptResponseOnInputAudio: false,
+                providerConfig: {...request.providerConfig, interruptResponseOnInputAudio: false},
                 instructions: withPassportVoiceInstructions(request.instructions, request.language, true, true),
                 tools: [...(request.tools ?? []).filter(tool => tool.name !== PASSPORT_END_CALL), endCallTool],
+                onResponseDone(outcome) {
+                    if (ending || ended) return;
+                    report('response.done', outcome);
+                    return request.onResponseDone?.(outcome);
+                },
+                onEvent(event) {
+                    if (ending || ended) return;
+                    if (['error', 'input_audio_buffer.speech_started', 'session.reconnect.scheduled',
+                        'session.reconnect.ready'].includes(event.type)) report(event.type);
+                    return request.onEvent?.(event);
+                },
+                onError(error) {
+                    if (ending || ended) return;
+                    report('provider.error', error);
+                    return request.onError?.(error);
+                },
                 onToolCall(event) {
                     if (ending || ended) return;
                     if (event.name !== PASSPORT_END_CALL) return request.onToolCall?.(event);

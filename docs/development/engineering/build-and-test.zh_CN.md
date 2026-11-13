@@ -130,6 +130,19 @@ cc -std=c11 -Wall -Wextra -Werror -Imain \
 
 静态门禁还将真实 BSP 和 demo 实现与轻量平台桩编译在一起，故障注入覆盖任务退出交接与停止重试、录音失败、Wi-Fi/BLE 启动回滚、按键分配与 ADC 错误、LVGL 初始化锁与重试、codec 打开/休眠/唤醒恢复。只需主机 C 编译器和 Python，不依赖 ESP-IDF 或已下载的 Managed Components。这些测试不代表真实时序、电气行为或设备兼容性；固件门禁会使用锁定依赖进行编译。
 
+Hermes 协议测试还需要 `cryptography>=45,<51` 和 `aiohttp>=3.12,<4`。请安装到临时虚拟环境，
+不要修改 ESP-IDF 管理的 Python；静态或完整门禁通过以下变量选择解释器：
+
+```bash
+python3 -m venv /tmp/passport-hermes-tests
+/tmp/passport-hermes-tests/bin/python -m pip install 'cryptography>=45,<51' 'aiohttp>=3.12,<4'
+export HERMES_TEST_PYTHON=/tmp/passport-hermes-tests/bin/python
+```
+
+CI 会准备相同的隔离依赖。未安装 Hermes 时会跳过原生适配器测试，这部分需要在
+真实 Hermes 运行环境中执行。真实模型测试需单独显式启用，可能产生模型用量，
+见 [Hermes 预览说明](../../../tools/hermes/README.zh_CN.md)。
+
 统一验证入口：
 
 ```bash

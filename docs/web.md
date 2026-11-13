@@ -180,7 +180,8 @@ remain disabled, while a full firmware installation is available over USB.
    nearby 2.4 GHz networks with Passport, or type a name. Leave the password blank
    only for a saved or explicitly open network. Wi-Fi testing may switch the
    Passport connection, never the computer's Wi-Fi.
-3. Copy the setup prompt to an agent on the OpenClaw gateway host. Paste its
+3. Under **Add an agent**, select **OpenClaw** or **Hermes**, then copy the matching
+   setup prompt to an agent with access to that gateway host. Paste its
    pairing code or QR JSON and name the agent. A conflicting address is rejected,
    not silently replaced. No camera-based QR reader is included in this version.
 4. Each agent lists its saved connection method. Choose **Connection settings**
@@ -199,6 +200,14 @@ The floating save bar shows a single status beside its buttons. After saving it
 shows **Saved**, without an additional summary line or a taller bar. Editing again
 restores the unsaved-changes status. Errors and partial-save details can wrap so
 the recovery instructions remain readable on a narrow screen.
+
+The agent type selects the setup instructions only; switching it keeps entered
+names, addresses and pairing codes and does not change saved device settings.
+Prompts follow the website language. OpenClaw instructions use its plugin and QR
+commands; Hermes instructions use its external platform plugin, active profile
+and pairing tool. Hermes requires compatible v0.7.0 or newer firmware and plugin;
+it is not included in v0.6.0. The device recognizes the backend after an
+authenticated connection, independently of the assistant's display name.
 
 Copy feedback stays beside **Copy setup prompt**, never in the page-wide notice.
 The button briefly shows **Copied** with a check mark and a short next-step hint;

@@ -85,9 +85,35 @@ jobs:
           path: build/openclaw/*.tgz
           if-no-files-found: error
 
+  hermes:
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Package external Hermes plugin
+        run: python3 tools/release.py hermes-package build/hermes
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-hermes
+          path: build/hermes/*.tar.gz
+          if-no-files-found: error
+
+  web-checks:
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
+      - run: npm ci --prefix web --ignore-scripts --no-audit --no-fund
+      - run: npx --prefix web playwright install --with-deps chromium
+      - run: python3 tools/web.py prepare
+      - run: npm test --prefix web && npm run test:ui --prefix web
+
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [audit, host-tests, firmware, plugin]
+    needs: [audit, host-tests, firmware, plugin, hermes, web-checks]
     runs-on: ubuntu-latest
     permissions:
       contents: write

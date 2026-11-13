@@ -210,6 +210,7 @@ bool passport_agent_drop(passport_store_t *store, size_t index);
 bool passport_agent_set_proxy(passport_store_t *store, size_t index, const passport_proxy_t *proxy,
                            const char *secret);
 const passport_agent_t *passport_agent_active(const passport_store_t *store);
+const char *passport_agent_platform(const passport_agent_t *agent);
 void passport_store_bump(passport_store_t *store);
 bool passport_lang_set(passport_store_t *store, const char *lang);
 bool passport_lang_zh(const passport_store_t *store);

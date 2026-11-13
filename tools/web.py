@@ -29,6 +29,7 @@ def prepare():
             raise ValueError('Setup prompt source is missing')
         prompt = '\n'.join(line[4:] if line.startswith('    ') else line for line in match[1].splitlines())
         (public / f'setup-{language}.txt').write_text(prompt + '\n')
+        shutil.copy2(WEB / f'prompts/hermes-{language}.txt', public / f'setup-hermes-{language}.txt')
 
 
 def release_identity(source):

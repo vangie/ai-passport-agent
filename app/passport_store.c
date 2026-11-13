@@ -132,7 +132,7 @@ bool passport_agent_upsert(passport_store_t *store, const char *name, const char
                         const char *url, const char *bootstrap, const char *device_token,
                         const char *access_id, const char *access_secret) {
     if (store == NULL || name == NULL || name[0] == '\0' || kind == NULL ||
-        strcmp(kind, "openclaw") != 0 || url == NULL || !url_ok(url)) {
+        (strcmp(kind, "openclaw") && strcmp(kind, "hermes")) || url == NULL || !url_ok(url)) {
         return false;
     }
     for (size_t i = 0; i < store->agent_count; i++) {
@@ -166,6 +166,10 @@ bool passport_agent_upsert(passport_store_t *store, const char *name, const char
     }
     store->agent_count++;
     return true;
+}
+
+const char *passport_agent_platform(const passport_agent_t *agent) {
+    return !agent ? "Agent" : !strcmp(agent->kind, "hermes") ? "Hermes" : !strcmp(agent->kind, "openclaw") ? "OpenClaw" : "Agent";
 }
 
 void passport_store_bump(passport_store_t *store) {

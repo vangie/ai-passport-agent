@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 import argparse
+import gzip
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import shutil
 import subprocess
+import tarfile
 import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+HERMES_FILES = {'__init__.py', 'adapter.py', 'passport_auth.py', 'passport_ima.py',
+                'passport_protocol.py', 'passport_speech.py', 'passport_talk.py',
+                'plugin.yaml', 'README.md', 'README.zh_CN.md'}
 
 
 def check_version(tag=None):
@@ -21,6 +27,15 @@ def check_version(tag=None):
     lock = json.loads((ROOT / 'tools/openclaw/package-lock.json').read_text())
     if lock['version'] != version or lock['packages']['']['version'] != version:
         raise ValueError('Plugin lockfile version mismatch')
+    web = json.loads((ROOT / 'web/package.json').read_text())
+    web_lock = json.loads((ROOT / 'web/package-lock.json').read_text())
+    if any(value != version for value in [web['version'], web_lock['version'],
+                                          web_lock['packages']['']['version']]):
+        raise ValueError('Web version mismatch')
+    hermes_versions = re.findall(r'^version: (\S+)$',
+                                (ROOT / 'tools/hermes/plugin.yaml').read_text(), re.MULTILINE)
+    if hermes_versions != [version]:
+        raise ValueError('Hermes plugin version mismatch')
     for name in ['index.mjs', 'doctor.mjs']:
         versions = re.findall(r"pluginVersion: '([^']+)'", (ROOT / 'tools/openclaw' / name).read_text())
         if versions != [version]:
@@ -36,7 +51,8 @@ def check_version(tag=None):
 
 
 def asset_names(version):
-    return {f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
+    return {f'ai-passport-openclaw-{version}.tgz', f'ai-passport-hermes-{version}.tar.gz',
+            'ai-passport-agent-firmware.tar.gz',
             'FoloToy-AI-Passport-full.bin',
             'FoloToy-AI-Passport.bin', 'LICENSE.txt'}
 
@@ -47,6 +63,7 @@ def prepare_assets(source, destination, tag, commit):
         raise ValueError('Release source commit must be a full Git SHA')
     inputs = {
         f'ai-passport-openclaw-{version}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{version}.tgz',
+        f'ai-passport-hermes-{version}.tar.gz': source / 'release-hermes' / f'ai-passport-hermes-{version}.tar.gz',
         'ai-passport-agent-firmware.tar.gz': source / 'release-firmware/ai-passport-agent-firmware.tar.gz',
         'FoloToy-AI-Passport-full.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport-full.bin',
         'FoloToy-AI-Passport.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport.bin',
@@ -152,10 +169,37 @@ def licenses(destination):
                'ESP-WebSocket-Client.txt': 'components/passport_transport/LICENSE',
                'WebRTC-VAD.txt': 'components/passport_vad/LICENSE',
                'WebRTC-VAD-PATENTS.txt': 'components/passport_vad/PATENTS',
-               'WebRTC-VAD-AUTHORS.txt': 'components/passport_vad/AUTHORS'}
+               'WebRTC-VAD-AUTHORS.txt': 'components/passport_vad/AUTHORS',
+               'Hermes-icon-MIT.txt': 'assets/images/HERMES-LICENSE.txt'}
     destination.mkdir(parents=True, exist_ok=True)
     for name, source in sources.items():
         shutil.copy2(ROOT / source, destination / name)
+
+
+def hermes_package(destination):
+    version = check_version()
+    directory = ROOT / 'tools/hermes'
+    sources = {name: directory / name for name in HERMES_FILES}
+    sources['LICENSE'] = ROOT / 'LICENSE'
+    for name, source in sources.items():
+        if (not source.is_file() or source.is_symlink() or source.stat().st_size == 0
+                or not source.resolve().is_relative_to(ROOT.resolve())
+                or any((ROOT / parent).is_symlink() for parent in source.relative_to(ROOT).parents)):
+            raise ValueError(f'Missing, empty or unsafe Hermes package input: {name}')
+    contents = io.BytesIO()
+    with gzip.GzipFile(fileobj=contents, mode='wb', filename='', mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode='w') as archive:
+            for name, source in sorted(sources.items()):
+                data = source.read_bytes()
+                record = tarfile.TarInfo(f'ai-passport-hermes/{name}')
+                record.size = len(data)
+                record.mode = 0o644
+                archive.addfile(record, io.BytesIO(data))
+    destination.mkdir(parents=True, exist_ok=True)
+    target = destination / f'ai-passport-hermes-{version}.tar.gz'
+    with target.open('xb') as output:
+        output.write(contents.getvalue())
+    print(target)
 
 
 def firmware(destination):
@@ -217,6 +261,8 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     bundle = commands.add_parser('firmware')
     bundle.add_argument('destination', type=Path)
+    hermes = commands.add_parser('hermes-package')
+    hermes.add_argument('destination', type=Path)
     mac = commands.add_parser('mac-resources')
     mac.add_argument('application', type=Path)
     mac.add_argument('firmware', type=Path)
@@ -235,6 +281,8 @@ def main():
     args = parser.parse_args()
     if args.command == 'firmware':
         firmware(args.destination.resolve())
+    elif args.command == 'hermes-package':
+        hermes_package(args.destination.absolute())
     elif args.command == 'mac-resources':
         mac_resources(args.application.resolve(), args.firmware.resolve())
     elif args.command == 'ios-source':

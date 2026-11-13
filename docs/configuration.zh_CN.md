@@ -4,8 +4,9 @@
 
 ## 项目名称与兼容性
 
-AI Passport Agent 是产品名称，源码仓库为 `vangie/ai-passport-agent`；当前仅支持
-OpenClaw。其插件的软件包名、ID、已有配置项及版本化 `.tgz` 包继续使用
+AI Passport Agent 是产品名称，源码仓库为 `vangie/ai-passport-agent`。
+v0.7.0 支持 OpenClaw 与 Hermes；v0.6.0 仅支持 OpenClaw。
+OpenClaw 插件的软件包名、ID、已有配置项及版本化 `.tgz` 包继续使用
 `ai-passport-openclaw`，这是后端接入名称，而非产品主名称。
 
 现有固件在 USB／蓝牙的 `HELLO` 消息中仍使用 `ai-passport-openclaw`。
@@ -26,27 +27,30 @@ OpenClaw。其插件的软件包名、ID、已有配置项及版本化 `.tgz` �
 兼容 Web Bluetooth 的浏览器支持无线配置。iPhone 请[在 App Store 获取 Bluefy](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055)，
 安装后在 Bluefy 中打开配置网页，而非 Safari／Chrome。网页的蓝牙兼容提示也提供商店直达入口。
 iPhone 的 Safari／Chrome 不提供网页蓝牙能力；Bluefy 支持这一功能，网页才能通过蓝牙配置 Passport。
-Bluefy 仅用于配置，保存后即可关闭，Passport 会通过 Wi-Fi 独立连接 OpenClaw。
+Bluefy 仅用于配置，保存后即可关闭，Passport 会通过 Wi-Fi 独立连接已配置的 Agent。
 更新固件仍需电脑与 USB，参见[兼容性说明](web.zh_CN.md)。
 
-## 让 OpenClaw 完成网关接入准备
+## 准备个人 Agent 网关
 
-在 OpenClaw 区域点击「复制提示词」，交给能够操作网关主机的 Agent；网关可以不是当前配置电脑。
+在「新增助手」先选 OpenClaw 或 Hermes，再点击「复制提示词」，交给能够操作网关主机的 Agent；网关可以不是当前配置电脑。
 网页不会自行安装服务端软件。需要准备：
 
-- 已运行、有可用模型的 OpenClaw，以及 Agent 对网关主机的操作能力。
+- 已运行、有可用模型的 OpenClaw 或 Hermes，以及 Agent 对网关主机的操作能力。
 - Passport、首次刷机所需电脑／数据线，可达的 2.4 GHz Wi-Fi 或兼容手机热点。
 - 外网接入所需隧道授权与可用 DNS／TLS。提示词复用已有入口；缺登录、权限或资源时会提示，
   不会自动提供账号、免费服务或新增付费授权。
 - 通话需要实时语音服务；提问可以独立配置。
 
-Agent 检查／安装兼容插件，准备专属 `passport` 助手、转写／模型设置和持久公网 WSS 入口。
+Agent 检查／安装对应插件，准备转写／模型设置和持久公网 WSS 入口。
+OpenClaw 使用专属 `passport` 助手，Hermes 使用原生个人 Agent 与每台设备独立会话，不能混用命令。
 修改前备份，保留设备认证和回环监听，仅在必要时重启。先检查 DNS／TLS／WebSocket，
 再返回受限配对码；这不是麦克风实机验收。将地址和配对码填回网页，与 Wi-Fi 一并保存。
 过期或已使用的配对码需要重新生成；不要把管理员 token 或模型 Key 填入设备。
 
-手动或仅局域网接入见[插件指南](../tools/openclaw/README.zh_CN.md)和[网络与安全](networking.zh_CN.md)。
-工具权限在专属 agent 限制；助手配置选择连接，不是任意切换提问 agent ID。
+手动或仅局域网接入见 [OpenClaw 指南](../tools/openclaw/README.zh_CN.md)、
+[Hermes 指南](../tools/hermes/README.zh_CN.md)和[网络与安全](networking.zh_CN.md)。
+限制 OpenClaw 专属 agent 工具，并检查 Hermes 原生工具策略；设备暂不支持交互式审批。
+助手配置选择连接。
 
 ## 连接、保存与撤销
 
@@ -69,8 +73,19 @@ Agent 检查／安装兼容插件，准备专属 `passport` 助手、转写／�
 
 通话把未确认的麦克风噪声替换为静音，保留最多 171 毫秒的压缩预录，
 尽量保住开头的音节。静音和播放保护会清空预录；语音打断还需要在回声检查
-探测期间确认人声，按键打断不要求人声。队列满时丢弃最旧的预录并计入音频
-诊断，避免把开头延后乱序发送。
+探测期间确认人声。v0.7.0 候选版短暂停住播放游标，不消费已经排队的回复音频；
+等待正在进行的播放写入完成，再留出 100 毫秒让扬声器／DMA 回声消退，
+确认仍有人声才取消回复。未确认的探测在 350 毫秒内原位续播，不丢弃音节；按键打断仍立即生效。
+细化回声匹配可以减少探测，但单独使用不足以保证可靠：上一候选版的实机记录确认了误语音打断。
+测试覆盖无法匹配的回声、真正人声、PCM／IMA 暂停续播以及真实 VAD 确认。
+诊断分别记录语音／按键打断次数，不记录麦克风内容。
+OpenClaw Passport 插件保留服务端轮次检测，但关闭上游自动音频打断。
+只有设备确认的语音／按键打断才取消回复，避免两套检测器竞争控制播放。
+Hermes 适配器采用相同的设备主导打断策略。OpenClaw 明确的回复阶段错误立即显示可重试失败，
+不再假装重连 30 秒；启动／传输恢复仍保留既有时限。
+队列满时丢弃最旧的预录并计入音频诊断，避免把开头延后乱序发送。
+通话布局切换时，在 LVGL 锁内请求完整重绘，由显示任务执行绘制。
+应用任务不强制同步刷新，避免渲染器占用其较小的任务栈而导致设备重启。
 
 这不是声纹识别，也不能保证完全没有误触发。电视、旁人说话、音乐及较强的
 类人声噪声仍可能通过，过短、过轻或距离较远的人声可能漏检。

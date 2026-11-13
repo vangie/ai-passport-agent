@@ -2,7 +2,7 @@
 
 <p align="center"><img src="assets/logo/logo.png" alt="AI Passport Agent" width="104" /></p>
 <h1 align="center">AI Passport Agent</h1>
-<p align="center"><strong>个人 Agent 的随身语音终端</strong><br />语音问答与实时通话，当前支持 OpenClaw</p>
+<p align="center"><strong>个人 Agent 的随身语音终端</strong><br />语音问答与实时通话，连接 OpenClaw 或 Hermes</p>
 <p align="center">
   <a href="https://ai-passport-agent.codelife.me/">打开网页配置</a> ·
   <a href="#开始使用">开始使用</a> ·
@@ -15,7 +15,8 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**当前支持 OpenClaw，尚未提供其他 Agent 接入。** 项目原名为 `ai-passport-openclaw`，
+**v0.7.0：支持 OpenClaw 与 Hermes。** 按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
+项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
 参见[命名与兼容性](docs/configuration.zh_CN.md#项目名称与兼容性)。
@@ -34,8 +35,21 @@
 
 首页只有 **设置／通话／提问**。屏幕右侧提示与实体按键对应，随当前页面变化。
 支持中英文、音量调节、已存网络切换和连接状态显示。
-提问使用专属 `passport` agent；通话需要在网关配置实时语音服务。
+提问使用个人 Agent 的工具与上下文，不只是通用模型聊天；通话需要在网关配置实时语音服务。
 响应速度、可用工具和语音效果取决于模型服务、网关及网络。
+
+## 选择自己的个人 Agent
+
+| 后端 | 提问 | 通话 | 安装 |
+| --- | --- | --- | --- |
+| OpenClaw | 专属 `passport` agent 及已授权工具 | 实时语音，按需委托 Agent | [OpenClaw 插件](tools/openclaw/README.zh_CN.md) |
+| Hermes | 原生个人 Agent、工具与记忆，每台设备独立会话 | 实时语音，按需委托原生 Agent | [Hermes 外置插件](tools/hermes/README.zh_CN.md) |
+
+通话中的日常交流由实时语音模型应答，需要任务、实时信息或私人上下文时可委托个人 Agent，
+并非每句话都执行完整 Agent 任务。两种后端都需要自行配置可用模型；通话另需实时语音服务，
+模型与服务商费用另计。
+
+<p align="center"><img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes 后端的实际界面渲染，助手数据为虚构" width="240" /></p>
 
 ## 在浏览器里配置
 
@@ -63,14 +77,15 @@
 ## 开始使用
 
 准备 AI Passport、USB 数据线、可连接的 **2.4 GHz Wi-Fi** 或兼容热点，以及已运行、
-有可用模型的 OpenClaw。首次刷机需要电脑上的 Chrome／Edge。
+有可用模型的 OpenClaw 或 Hermes。首次刷机需要电脑上的 Chrome／Edge。
 插件已验证基线为 **OpenClaw 2026.10.5**，升级前请检查兼容性；通话另需实时语音服务凭据。
 
 1. **安装固件。** USB 连接设备，打开[配置网页](https://ai-passport-agent.codelife.me/)，选择串口。
    首次安装取消「保留配置」，点击「安装固件」并确认；兼容更新保留勾选，点击「更新固件」。
    替换其他固件前请阅读[数据策略](docs/development/engineering/firmware-layout.zh_CN.md)，没有自动还原原厂固件的功能。
-2. **准备 OpenClaw。** 在网页 OpenClaw 区域点击「复制提示词」，发给能够操作网关主机的 Agent。
-   它检查／安装项目插件、准备专属助手和安全可达入口，再返回地址与受限配对码。
+2. **准备个人 Agent。** 在网页「新增助手」中选择 OpenClaw 或 Hermes，点击「复制提示词」，
+   发给能够操作网关主机的 Agent。它检查／安装对应插件、准备该后端的助手和安全可达入口，
+   再返回地址与受限配对码。
    优先复用已有资源；缺少账号、授权或凭据时，仍需你完成必要操作。
 3. **配网并保存。** 扫描或输入 Wi-Fi 名称与密码，填入网关地址、配对码，点击「保存配置」。
    等设备显示 Wi-Fi 图标，可先测试设备连接再提问。失败修改后重试即可，无需重新刷机；配对码过期需重新生成。
@@ -88,19 +103,21 @@
 
 ```text
 配置网页 ── USB／蓝牙 ──> Passport 配置
-Passport ── Wi-Fi／WSS ──> OpenClaw＋项目插件 ──> 你的模型服务
+Passport ── Wi-Fi／WSS ──> OpenClaw 或 Hermes＋插件 ──> 你的模型服务
 ```
 
 网页不是云端助手，也不中转对话。模型 API Key 留在网关。
-插件通过 OpenClaw 原生扩展接入，不修改已安装的网关文件。
-参见[插件安装与升级](tools/openclaw/README.zh_CN.md)。
+两种插件均通过原生扩展接入，不修改核心文件。Hermes 插件和设备授权独立保存在核心目录之外，
+常规核心升级不会覆盖；未来 API 是否兼容仍需验证。升级后的 Hermes v0.23.1 已通过插件发现与
+适配器测试，该版本的实机麦克风／扬声器验收仍待完成。安装方法见对应后端指南。
 
 外网访问的[网络与安全指南](docs/networking.zh_CN.md)介绍了 **Cloudflare Tunnel**、
 **SakuraFrp 配合 TLS**、局域网、代理、配对与撤销。
 保持网关监听回环地址，公网使用 **WSS**，保留设备认证，不向设备分发管理员 token。
 隧道只解决可达性，不自动提供访问控制。仅在局域网使用也可以，前提是设备实际能访问该地址。
 
-持有已配对设备就拥有它的配置权限。请限制专属 agent 工具，遗失后撤销授权。
+持有已配对设备就拥有它的配置权限。请限制 OpenClaw 专属 agent 工具，检查 Hermes 原生 Agent
+的工具授权策略；设备暂不能回答交互式工具审批。遗失后撤销授权。
 蓝牙使用 Just Works 加密配对，不代表所有权认证，也不防主动中间人攻击；
 请在可信环境配置，不需要时可在设备设置关闭。录音／通话期间会临时释放蓝牙内存，结束后恢复。
 
@@ -119,6 +136,9 @@ iOS 自动化表现随系统版本变化，这不是设备认证。参见[NFC �
 
 ## 版本与开发
 
+v0.7.0 同时提供 `ai-passport-hermes-0.7.0.tar.gz`。
+原生 App 不参与构建或发布。
+
 Release 包含应用／完整固件、固件打包文件、OpenClaw 插件、`release-manifest.json`、
 `SHA256SUMS.txt` 与许可说明。网页从同一站点提供验证过的固件，浏览器不跳转到 GitHub Release
 下载地址；GitHub Pages 本身仍可能受网络影响。哈希能发现传输损坏，不能防止发布者被入侵。
@@ -128,6 +148,7 @@ Release 包含应用／完整固件、固件打包文件、OpenClaw 插件、`re
 | 配置网页 | `web/` · [浏览器指南](docs/web.zh_CN.md) |
 | 固件 | `app/`、`main/`、`components/bsp/` · [构建与测试](docs/development/engineering/build-and-test.zh_CN.md) |
 | OpenClaw 插件 | [`tools/openclaw/`](tools/openclaw/README.zh_CN.md) |
+| Hermes 插件 | [`tools/hermes/`](tools/hermes/README.zh_CN.md) |
 | 网络接入 | [网络与安全](docs/networking.zh_CN.md) |
 | 发布机制 | [CI 与 Release](docs/development/ci/CI-build-and-release.zh_CN.md) |
 

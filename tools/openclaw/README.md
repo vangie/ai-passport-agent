@@ -136,6 +136,12 @@ call. Both button and local voice detection use native `talk.session.cancelOutpu
 with `reason: "barge-in"`; no OpenClaw core patch is required. The transport drops
 queued old audio/text while cancellation completes, and preserves microphone
 input for the next turn. Muting disables voice interruption, not the button.
+The Passport provider disables automatic upstream audio interruption: the device
+owns echo-confirmed voice interruption and the interrupt button. Server VAD still
+detects normal turn endings and starts replies; it must not independently cancel
+speaker output. This policy is local to Passport calls, not other clients.
+Gateway diagnostics retain bounded response status/reason/error-code fields,
+not transcript text, endpoint URLs or credentials.
 The top key can mute while connecting; audio startup retains that choice and
 muted input is sent as silence, without silencing the assistant's speaker.
 Connecting displays “Connecting”, not a recording prompt. The bottom key can

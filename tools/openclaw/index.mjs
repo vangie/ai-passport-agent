@@ -13,7 +13,8 @@ export default {
         if (typeof api.registerRealtimeVoiceProvider !== 'function' || typeof api.registerHttpRoute !== 'function' ||
             typeof api.registerService !== 'function' || typeof api.registerGatewayMethod !== 'function')
             throw new Error('OpenClaw plugin SDK is incompatible; run the Passport doctor');
-        api.registerRealtimeVoiceProvider(createPassportProvider(getRealtimeVoiceProvider, upstreamId));
+        api.registerRealtimeVoiceProvider(createPassportProvider(getRealtimeVoiceProvider, upstreamId,
+            event => api.logger.info(`Passport realtime diagnostic ${JSON.stringify(event)}`)));
         registerPassportTranscripts(api);
         let transport;
         api.registerHttpRoute({path: PASSPORT_PATH, auth: 'plugin', match: 'exact',
@@ -36,7 +37,7 @@ export default {
                 const providerConfig = provider.resolveConfig({cfg: config, rawConfig: {}, agentId, surface: 'gateway-relay'});
                 upstreamConfigured = provider.isConfigured({cfg: config, providerConfig, agentId});
             } catch {}
-            respond(true, {pluginVersion: '0.6.0', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
+            respond(true, {pluginVersion: '0.7.0', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
                 upstreamProvider: upstreamId, upstreamAvailable: Boolean(upstream), upstreamConfigured,
                 providerRegistered: Boolean(getRealtimeVoiceProvider('passport-realtime', config)),
                 ...(transport?.diagnostics() ?? {connections: 0})});

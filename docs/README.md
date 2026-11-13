@@ -1,7 +1,7 @@
 **English** · [简体中文](/docs/README.zh_CN.md)
 
 > This is retained upstream hardware/baseline documentation. For this product's
-> actual firmware, configuration app, plugin and releases, start at the
+> actual firmware, browser setup, plugins and releases, start at the
 > [AI Passport Agent README](../README.md). Its `main` is a product branch,
 > not the unmodified hardware-test baseline described below.
 
@@ -210,7 +210,9 @@ provide reference material. Choose the entry that matches your task.
 
 | Resource | What you will find |
 | --- | --- |
-| [OpenClaw configuration](configuration.md) | macOS/iOS setup, saved networks, Bluetooth, personal hotspots and NFC tips |
+| [Agent configuration](configuration.md) | Browser USB/Bluetooth setup, saved networks, personal hotspots and NFC tips |
+| [Hermes plugin](../tools/hermes/README.md) | Native-agent Ask/Call, external installation, secure pairing and validation limits |
+| [Release readiness](release/readiness.md) | Candidate scope, acceptance gaps and community submission prerequisites |
 | [Development](development/README.md) | AI workflow, engineering conventions, CI, and release guidance |
 | [AI skills](../skills/README.md) | Development, environment setup, builds, device testing, and debugging |
 | [Hardware](hardware-design/README.md) | Board facts, interface boundaries, acceptance checklists, and troubleshooting |

@@ -98,8 +98,19 @@ input:not([type="checkbox"]):not([type="range"]):not([type="radio"]), select, te
 textarea { resize: vertical; min-height: 77px; font-family: ui-monospace, monospace; font-size: 11px; }
 input::placeholder, textarea::placeholder { color: #a4aaa4; font-size: 12px; }
 .hint { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.7; }
-.prompt-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; margin-top: 6px; }
-#copy-prompt { min-width: 142px; justify-content: flex-start; }
+.agent-setup { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; }
+.backend-switch { min-width: 0; margin: 0; padding: 0; border: 0; }
+.backend-switch legend { padding: 0; margin-bottom: 5px; font-size: 12px; color: var(--muted); }
+.backend-options { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--soft); }
+.backend-options label { position: relative; display: flex; cursor: pointer; }
+.backend-options input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.backend-options span { padding: 3px 10px; border-radius: 5px; color: var(--muted); font-size: 12px; font-weight: 550; }
+.backend-options input:checked + span { background: white; color: var(--green); box-shadow: 0 0 0 1px var(--line); }
+.backend-options input:focus-visible + span { outline: 3px solid #8ec5b2; outline-offset: 2px; }
+.backend-options label:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+.prompt-actions { display: flex; }
+.prompt-status:not([hidden]) { margin-top: 6px; }
+#copy-prompt { margin-left: auto; min-height: 33px; }
 #copy-prompt .icon { width: 14px; height: 14px; }
 #copy-prompt.copied { color: var(--green); }
 .prompt-status { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }

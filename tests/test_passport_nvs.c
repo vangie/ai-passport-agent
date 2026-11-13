@@ -78,6 +78,9 @@ int main(void) {
         assert(restored.count==1 && restored.agent_count==1 && !strcmp(restored.nets[0].pass,"fixture-password"));
         assert(passport_nvs_save(&restored) && allocations==releases);
     }
+    assert(passport_agent_upsert(&restored,"Hermes fixture","hermes","wss://hermes.example","",NULL,NULL,NULL));
+    assert(passport_nvs_save(&restored) && passport_nvs_load(&store));
+    assert(store.agent_count==2 && !strcmp(store.agents[0].kind,"openclaw") && !strcmp(store.agents[1].kind,"hermes"));
     for (unsigned failure=0;failure<5;failure++) {
         passport_store_t before=restored;
         fail_allocation=failure==0;fail_open=failure==1;fail_read=failure==2;
@@ -111,6 +114,6 @@ int main(void) {
     assert(passport_nvs_volume_save(0) && passport_nvs_volume_load()==0);
     assert(passport_nvs_volume_save(100) && passport_nvs_volume_load()==100);
     assert(allocations==allocations_before+1 && allocations==releases);
-    assert(passport_nvs_load(&restored) && restored.count==1 && restored.agent_count==1);
+    assert(passport_nvs_load(&restored) && restored.count==1 && restored.agent_count==2);
     puts("NVS workspace: repeated load/save, allocation/storage failures and complete release PASS");
 }

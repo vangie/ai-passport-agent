@@ -1,6 +1,6 @@
 [English](/docs/README.md) · **简体中文**
 
-> 本文保留上游硬件／基线说明。本产品的固件、配置 App、插件及发行版请从 [AI Passport Agent README](../README.zh_CN.md) 开始。这里的 `main` 是产品分支，不是下文描述的未修改硬件测试基线。
+> 本文保留上游硬件／基线说明。本产品的固件、网页配置、插件及发行版请从 [AI Passport Agent README](../README.zh_CN.md) 开始。这里的 `main` 是产品分支，不是下文描述的未修改硬件测试基线。
 
 <h1 align="center">FoloToy AI PASSPORT</h1>
 
@@ -201,7 +201,9 @@ LICENSE                  仓库许可证
 
 | 入口 | 你可以找到 |
 | --- | --- |
-| [OpenClaw 配置](configuration.zh_CN.md) | macOS App／iOS App 配置、已存网络、蓝牙、个人热点和 NFC 技巧 |
+| [Agent 配置](configuration.zh_CN.md) | 网页 USB／蓝牙配置、已存网络、个人热点和 NFC 技巧 |
+| [Hermes 插件](../tools/hermes/README.zh_CN.md) | 原生 Agent 提问／通话、外置安装、安全配对与验证范围 |
+| [发布检查](release/readiness.zh_CN.md) | 候选范围、待验收项目与社区更新前提 |
 | [开发指南](development/README.zh_CN.md) | AI 工作流、工程规范、CI 与发布流程 |
 | [AI 技能](../skills/README.zh_CN.md) | 开发、环境准备、构建、真机测试与故障诊断 |
 | [硬件资料](hardware-design/README.zh_CN.md) | 板卡事实、接口边界、验收清单与排障 |

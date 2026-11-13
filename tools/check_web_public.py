@@ -13,6 +13,7 @@ from check_public import PATTERNS, findings
 def audit_site(directory, require_firmware=False):
     errors = []
     allowed = {'index.html', 'lobster.svg', 'setup-zh.txt', 'setup-en.txt',
+               'setup-hermes-zh.txt', 'setup-hermes-en.txt',
                'firmware/manifest.json', 'firmware/FoloToy-AI-Passport.bin',
                'firmware/FoloToy-AI-Passport-full.bin'}
     for path in sorted(directory.rglob('*')):

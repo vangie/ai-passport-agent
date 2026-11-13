@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import shutil
 import struct
 import sys
 import tempfile
@@ -19,6 +20,31 @@ with patch.object(sys, 'path', [str(ROOT / 'tools'), *sys.path]):
 
 
 class WebFirmwareTests(unittest.TestCase):
+    def test_prepare_builds_distinct_bilingual_backend_prompts(self):
+        for source in ['assets/images/passport-lobster.svg', 'shared/PairPrompt.swift',
+                       'web/prompts/hermes-zh.txt', 'web/prompts/hermes-en.txt']:
+            destination = self.root / source
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / source, destination)
+        web.prepare()
+        for language in ['zh', 'en']:
+            with self.subTest(language=language):
+                openclaw = (self.root / f'web/public/setup-{language}.txt').read_text()
+                hermes = (self.root / f'web/public/setup-hermes-{language}.txt').read_text()
+                self.assertIn('openclaw plugins install', openclaw)
+                self.assertIn('openclaw qr --json', openclaw)
+                self.assertNotIn('hermes plugins enable', openclaw)
+                self.assertIn('hermes plugins enable ai-passport-hermes', hermes)
+                self.assertIn('hermes plugins doctor', hermes)
+                self.assertIn('/passport_auth.py --home', hermes)
+                self.assertIn('gateway.platforms.ai_passport', hermes)
+                self.assertIn('/passport/v1', hermes)
+                self.assertIn('127.0.0.1', hermes)
+                self.assertIn('v0.6.0', hermes)
+                self.assertNotIn('openclaw gateway call', hermes)
+                self.assertNotIn('openclaw qr --json', hermes)
+                self.assertEqual(hermes, (self.root / f'web/prompts/hermes-{language}.txt').read_text())
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)

@@ -5,7 +5,8 @@
 ## Project name and compatibility
 
 AI Passport Agent is the product name; `vangie/ai-passport-agent` is its source
-repository. OpenClaw is the only supported agent backend today. Its plugin keeps
+repository. v0.7.0 supports OpenClaw and Hermes; v0.6.0 supports OpenClaw only.
+The OpenClaw plugin keeps
 the package/ID `ai-passport-openclaw`, including existing configuration entries
 and versioned `.tgz` packages; this is an integration name, not the product name.
 
@@ -33,16 +34,16 @@ browsers support wireless settings. On iPhone, [get Bluefy from the App Store](h
 and open the configuration site inside it, not Safari/Chrome. The site's Bluetooth compatibility hint links directly to this listing.
 Safari/Chrome on iPhone do not provide Web Bluetooth; Bluefy does, letting this page
 configure Passport over Bluetooth. Bluefy is only a setup browser: close it after saving,
-and Passport connects to OpenClaw independently over Wi-Fi.
+and Passport connects to its configured agent independently over Wi-Fi.
 Firmware flashing still needs a computer and USB. See [browser compatibility](web.md).
 
-## Let OpenClaw prepare the gateway
+## Prepare your agent gateway
 
-Choose **Copy Prompt** in the OpenClaw section and send it to an agent able to
+Choose OpenClaw or Hermes under **Add assistant**, then **Copy Prompt**. Send it to an agent able to
 operate on the gateway host. That host need not be your setup computer. The page
 does not install server software itself. You need:
 
-- A running OpenClaw with a working model and host access for the setup agent.
+- A running OpenClaw or Hermes with a working model and host access for the setup agent.
 - Passport, a computer/data cable for initial flashing, and reachable 2.4 GHz
   Wi-Fi or a compatible phone hotspot.
 - Authorized tunnel resources and usable DNS/TLS for remote access. The prompt
@@ -50,8 +51,9 @@ does not install server software itself. You need:
   it does not provide accounts, free services or permission for new charges.
 - A realtime voice provider for Call. Ask can be configured independently.
 
-The agent checks/installs the compatible project plugin, prepares the dedicated
-`passport` agent, transcription/model settings and persistent public WSS ingress.
+The agent checks/installs the matching plugin, prepares transcription/model settings
+and persistent public WSS ingress. OpenClaw uses the dedicated `passport` agent;
+Hermes uses its native personal agent and per-device sessions, not an OpenClaw agent.
 It backs up affected configuration, retains device authentication and loopback
 binding, and restarts only when necessary. DNS/TLS/WebSocket checks precede the
 limited pairing code; these are readiness checks, not microphone acceptance.
@@ -59,9 +61,10 @@ Paste the returned address/code into the page and save alongside Wi-Fi settings.
 Expired or consumed codes need regeneration. Never paste administrator tokens
 or model keys into device configuration.
 
-For manual or LAN-only setup, see the [plugin guide](../tools/openclaw/README.md)
-and [network/security guide](networking.md). Restrict tools on the dedicated agent;
-assistant profiles select connections, not arbitrary Ask agent IDs.
+For manual or LAN-only setup, see the [OpenClaw guide](../tools/openclaw/README.md),
+[Hermes guide](../tools/hermes/README.md) and [network/security guide](networking.md).
+Restrict the dedicated OpenClaw agent and review Hermes tool policy. Device-side
+interactive approval is not supported. Assistant profiles select connections.
 
 ## Connect, save and discard
 
@@ -95,8 +98,26 @@ is preserved. Cancel and re-record controls are unchanged.
 Call sends silence instead of unconfirmed microphone noise and keeps up to
 171 ms of compressed pre-roll to retain the beginning of speech. Mute and
 playback protection clear pre-roll. Voice interruption also requires speech
-confirmation during its echo-checking probe; button interruption still works
-without speech. Buffer overflow drops the oldest pre-roll rather than replaying
+confirmation during its echo-checking probe. Candidate v0.7.0 pauses the playback
+cursor without consuming queued reply audio, waits 100 ms after the in-flight
+write finishes for speaker/DMA echo to settle, and confirms continued speech
+before cancelling output. An unconfirmed probe resumes at the same cursor within
+350 ms; it does not discard reply syllables. Button interruption remains immediate.
+Finer echo matching reduces probes but is not sufficient by itself: a device
+recording confirmed false voice cancellation in the previous candidate. Tests
+cover unmatched echo, genuine speech, PCM/IMA pause/resume and real VAD confirmation.
+Diagnostics expose
+separate voice/button interruption counts without recording microphone content.
+The OpenClaw Passport plugin disables upstream automatic audio interruption while
+retaining server turn detection. Only a device-confirmed voice/button interruption
+cancels output; another upstream detector must not compete with it.
+The Hermes adapter uses the same device-owned interruption policy. An OpenClaw
+reply-phase failure is shown immediately as retryable failure, not a fictional
+30-second reconnection; startup/transport recovery retains its existing bound.
+Call layout changes invalidate the full screen under the LVGL lock; the display
+task performs rendering. The application task never forces a synchronous refresh,
+which would put the renderer on its smaller stack and can restart the device.
+Buffer overflow drops the oldest pre-roll rather than replaying
 it out of order, and is counted in audio diagnostics.
 
 This is not speaker identification or a guarantee against false activation.

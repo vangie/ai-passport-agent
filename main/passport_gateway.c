@@ -145,7 +145,7 @@ static void timing(const char *phase, int64_t start) {
 bool passport_wifi_is_online(void);
 esp_err_t passport_wifi_gateway_performance(bool enabled);
 bool passport_link_agent_snapshot(passport_agent_t *out);
-bool passport_link_store_token(const passport_agent_t *expected, const char *token);
+bool passport_link_store_token(const passport_agent_t *expected, const char *token, const char *kind);
 esp_err_t passport_link_pause_bluetooth(void);
 esp_err_t passport_link_resume_bluetooth(void);
 
@@ -337,7 +337,7 @@ static void auth_error(const cJSON *frame) {
     const cJSON *error = cJSON_GetObjectItemCaseSensitive(frame, "error");
     const cJSON *details = cJSON_GetObjectItemCaseSensitive(error, "details");
     const char *code = str(details, "code");
-    if (strstr(code, "PAIRING_REQUIRED")) state(PASSPORT_SEND_FAILED, "请在 OpenClaw 批准设备后重试");
+    if (strstr(code, "PAIRING_REQUIRED")) state(PASSPORT_SEND_FAILED, "请在网关批准设备后重试");
     else if (strstr(code, "BOOTSTRAP")) state(PASSPORT_SEND_FAILED, "配对码失效，请重新配对");
     else if (strstr(code, "SCOPE")) state(PASSPORT_SEND_FAILED, "设备权限不足，请重新配对");
     else {
@@ -485,10 +485,13 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     if (!ok) { auth_error(hello); cJSON_Delete(hello); goto fail; }
     s_connect_retryable = false;
     const cJSON *payload = cJSON_GetObjectItemCaseSensitive(hello, "payload");
+    const char *kind = !strcmp(str(payload, "backend"), "hermes") ? "hermes" : "openclaw";
+    bool platform_changed = strcmp(s_agent.kind, kind) != 0;
+    snprintf(s_agent.kind, sizeof(s_agent.kind), "%s", kind);
     const cJSON *passport_protocol = cJSON_GetObjectItemCaseSensitive(payload, "passportProtocol");
     if (s_talk_auth && (!cJSON_IsNumber(passport_protocol) || passport_protocol->valueint != 1)) {
         cJSON_Delete(hello);
-        state(PASSPORT_SEND_FAILED, "网关不支持实时语音，请升级 OpenClaw"); goto fail;
+        state(PASSPORT_SEND_FAILED, "网关不支持实时语音，请升级插件"); goto fail;
     }
     const cJSON *policy = cJSON_GetObjectItemCaseSensitive(payload, "policy");
     const cJSON *max_payload = cJSON_GetObjectItemCaseSensitive(policy, "maxPayload");
@@ -504,7 +507,7 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
             if (cJSON_IsString(scope) && (!strcmp(scope->valuestring,"operator.talk") || !strcmp(scope->valuestring,"operator.admin"))) granted = true;
         }
         if (!granted) {
-            cJSON_Delete(hello); state(PASSPORT_SEND_FAILED,"请在 OpenClaw 为此设备授权 operator.talk"); goto fail;
+            cJSON_Delete(hello); state(PASSPORT_SEND_FAILED,"请在网关为此设备授权 operator.talk"); goto fail;
         }
     }
     const char *token = str(auth, "deviceToken");
@@ -520,7 +523,7 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     }
     if (*token && strlen(token) < sizeof(s_token)) snprintf(s_token, sizeof(s_token), "%s", token);
     cJSON_Delete(hello);
-    if (bootstrap && (!s_token[0] || !passport_link_store_token(&s_agent, s_token))) {
+    if ((bootstrap || platform_changed) && (!s_token[0] || !passport_link_store_token(&s_agent, s_token, s_agent.kind))) {
         state(PASSPORT_SEND_FAILED, "配对凭据未保存，请重新配对"); goto fail;
     }
     if (bootstrap) {
@@ -556,7 +559,7 @@ static esp_transport_handle_t open_gateway_retry(bool bootstrap,
                                                  esp_transport_handle_t *parent) {
     for (int attempt = 0; attempt < 3 && !passport_tls_cancelled(); attempt++) {
         if (attempt > 0) {
-            state(PASSPORT_SEND_CONNECTING, "正在重试 OpenClaw");
+            state(PASSPORT_SEND_CONNECTING, "正在重试连接");
             for (int tick=0;tick<12 && !passport_tls_cancelled();tick++) vTaskDelay(pdMS_TO_TICKS(100));
             if (passport_tls_cancelled()) break;
         }
@@ -831,7 +834,7 @@ static bool await_reply(esp_transport_handle_t ws) {
             }
             if (!strcmp(stage,"final")) {
                 const cJSON *msg=cJSON_GetObjectItemCaseSensitive(payload,"message");
-                if (!show_reply(msg)) { s_reply.complete=true;state(PASSPORT_SEND_DONE,s_live[0]?s_live:"OpenClaw 已完成"); }
+                if (!show_reply(msg)) { s_reply.complete=true;state(PASSPORT_SEND_DONE,s_live[0]?s_live:"助手已完成"); }
                 cJSON_Delete(frame);return true;
             }
             if (!strcmp(stage,"error") || !strcmp(stage,"aborted")) {
@@ -1000,7 +1003,7 @@ static bool talk_tool_event(esp_transport_handle_t ws, const char *session, cons
         talk_tool_complete(tool);
     } else if (!strcmp(id, tool->request)) {
         if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(frame, "ok"))) {
-            snprintf(tool->answer, sizeof(tool->answer), "OpenClaw could not start the voice task");
+            snprintf(tool->answer, sizeof(tool->answer), "The agent could not start the voice task");
             tool->terminal = tool->failed = true;
         } else if (tool->control) {
             passport_reply_live_apply(tool->answer, sizeof(tool->answer), str(payload, "message"), true);
@@ -1020,10 +1023,10 @@ static bool talk_tool_event(esp_transport_handle_t ws, const char *session, cons
         const char *status = str(payload, "state");
         if (!strcmp(status, "final")) {
             message_text(cJSON_GetObjectItemCaseSensitive(payload, "message"), tool->answer, sizeof(tool->answer));
-            if (!tool->answer[0]) snprintf(tool->answer, sizeof(tool->answer), "OpenClaw finished with no text");
+            if (!tool->answer[0]) snprintf(tool->answer, sizeof(tool->answer), "The agent finished with no text");
             tool->terminal = true;
         } else if (!strcmp(status, "error") || !strcmp(status, "aborted")) {
-            snprintf(tool->answer, sizeof(tool->answer), "OpenClaw voice task failed or was cancelled");
+            snprintf(tool->answer, sizeof(tool->answer), "The voice task failed or was cancelled");
             tool->terminal = tool->failed = true;
         }
     }
@@ -1038,7 +1041,7 @@ static bool talk_tool_event(esp_transport_handle_t ws, const char *session, cons
 static const char *talk_failure(const cJSON *detail) {
     const char *code = str(detail, "code"), *message = str(detail, "message");
     if (strstr(message, "unknown method") || strstr(message, "Unknown method"))
-        return "网关不支持实时语音，请升级 OpenClaw";
+        return "网关不支持实时语音，请升级插件";
     if (strstr(message, "scope") || strstr(message, "permission") || strstr(code, "FORBIDDEN"))
         return "实时语音权限不足，请检查网关授权";
     if (strstr(message, "401") || strstr(message, "API key") || strstr(message, "API Key") ||
@@ -1136,7 +1139,7 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
             s_talk_trace.step = "synthetic-complete";
             talk_close(ws, session);
             result = true;
-            state(PASSPORT_SEND_DONE, "OpenClaw 已连接");
+            state(PASSPORT_SEND_DONE, "助手已连接");
             break;
         }
         s_talk_trace.dropped = audio_started ? passport_audio_live_dropped() : 0;
@@ -1466,11 +1469,15 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
                 else if (!strcmp(event, "error")) {
                     s_talk_trace.step = "provider-error";
                     failure = talk_failure(payload);
+                    if (!strcmp(str(payload, "phase"), "response")) {
+                        state(PASSPORT_SEND_FAILED, failure);
+                        cJSON_Delete(frame); break;
+                    }
                     ESP_LOGW("passport_gateway", "talk_recovering=%s", failure);
                     if (!recovery_deadline) recovery_deadline = now + 30000000;
                     ready = false;
                     passport_audio_live_response(true);
-                    state(PASSPORT_SEND_CONNECTING, "正在连接 OpenClaw");
+                    state(PASSPORT_SEND_CONNECTING, "正在连接助手");
                 } else if (!strcmp(event, "close")) {
                     s_talk_trace.step = "session-close";
                     if (audio_started && !failure && !strcmp(str(payload, "reason"), "completed")) {
@@ -1629,7 +1636,7 @@ static void check_capabilities(esp_transport_handle_t ws) {
     portENTER_CRITICAL(&s_guard);
     s_check = result;
     portEXIT_CRITICAL(&s_guard);
-    state(PASSPORT_SEND_DONE, "OpenClaw 已连接");
+    state(PASSPORT_SEND_DONE, "助手已连接");
 }
 
 static void send_operation(int mode, esp_transport_handle_t *connection, esp_transport_handle_t *transport) {
@@ -1676,7 +1683,7 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
         atomic_store(&s_accepted,s_reply.acknowledged);
     }
     if (!ws && !s_token[0]) {
-        if (!s_agent.bootstrap[0]) { state(PASSPORT_SEND_FAILED, "请先配置 OpenClaw"); goto done; }
+        if (!s_agent.bootstrap[0]) { state(PASSPORT_SEND_FAILED, "请先配置助手"); goto done; }
         ws = open_gateway_retry(true, &parent);
         if (!ws) goto done;
         passport_tls_forget_socket();
@@ -1703,7 +1710,7 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
             }
             if (!received) goto done;
         }
-        state(PASSPORT_SEND_DONE, "OpenClaw 已连接"); goto done;
+        state(PASSPORT_SEND_DONE, "助手已连接"); goto done;
     }
     if (s_deferred_abort.valid && !memcmp(s_deferred_abort.scope,s_reply.scope,32)) {
         if (abort_run(ws,s_deferred_abort.run_id)) s_deferred_abort.valid=false;
@@ -1897,10 +1904,10 @@ static esp_err_t start_send_ex(int mode, bool preconnect) {
     atomic_store(&s_preconnect, preconnect);
     s_recording_stopped_us = preconnect ? 0 : esp_timer_get_time();
     atomic_store(&s_go, !preconnect);
-    if (!passport_link_agent_snapshot(&s_requested_agent)) { state(PASSPORT_SEND_FAILED, "请先配置 OpenClaw"); return ESP_FAIL; }
+    if (!passport_link_agent_snapshot(&s_requested_agent)) { state(PASSPORT_SEND_FAILED, "请先配置助手"); return ESP_FAIL; }
     s_probe = probe;
     if (!resume) s_resume_requested[0]=0;
-    state(PASSPORT_SEND_CONNECTING, "正在连接 OpenClaw");
+    state(PASSPORT_SEND_CONNECTING, "正在连接助手");
     (void)passport_wifi_gateway_performance(true);
     /* Release the old workers before allocating the network stack itself.
      * A pre-connect starts while the microphone is recording, so the audio

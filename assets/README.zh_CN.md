@@ -23,6 +23,11 @@
 
 ## 图片（images）
 
+v0.7.0 候选新增 `images/screenshots/firmware-hermes.png`，为 240 × 320 的真实 LVGL 渲染，
+使用 Hermes 官方图标与虚构助手数据。运行 `make preview-ui` 后，将
+`sim/shots/ui-redesign/hermes-home.ppm` 转为 PNG 可复现；不是实机照片。
+图标的 MIT 许可纳入固件发布包，社区海报同时展示此图与 OpenClaw 界面。
+
 可复用的源图与生成的显示资产放在 `images/`。
 
 | 文件 | 尺寸与格式 | 用途与来源 |
@@ -31,7 +36,8 @@
 | [`images/readme-hardware-specs.png`](images/readme-hardware-specs.png) | 2172 × 724，PNG RGBA | 保留为可选技术参考图，不再用于首页主视觉。于 2026-09-17 使用内置图像生成工具为本仓库生成；已根据文档中的硬件能力契约核对图中的六项标签与参数。 |
 | [`images/logo-wordmark.png`](images/logo-wordmark.png) | 1648 × 336，PNG RGBA | 从仓库原始 `images/logo.png` 中精确裁切并去除背景的黑色字标，用于硬件概览浅色主题。 |
 | [`images/logo-wordmark-dark.png`](images/logo-wordmark-dark.png) | 1648 × 336，PNG RGBA | 字标的白色版本，由硬件概览的 `<picture>` 元素在深色主题使用。 |
-| [`images/passport-lobster.svg`](images/passport-lobster.svg)、[`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22，SVG 源图和 LVGL ARGB8888 | 项目原创图案，按仓库许可证提供。用于固件 OpenClaw 标题旁的小龙虾，不依赖 emoji 字体。运行 `python3 tools/make_lobster.py`（ImageMagick 7）可重新生成 C 资源。1,936 字节像素数据保存在 Flash 中，只使用一个图片控件。 |
+| [`images/passport-lobster.svg`](images/passport-lobster.svg)、[`images/passport_lobster_22.c`](images/passport_lobster_22.c) | 22 × 22，SVG 源图和 LVGL I4 | 项目原创图案，按仓库许可证提供。OpenClaw 助手使用龙虾，Hermes 助手使用下方官方图案。运行 `python3 tools/make_lobster.py`（ImageMagick 7）同时生成两个图标：缩至 22 × 22、量化为 16 色 BGRA 调色板、每像素 4 位打包；每个资源 306 字节，保存在 Flash 中，复用同一个图片控件。 |
+| [`images/passport-hermes.svg`](images/passport-hermes.svg)、[`images/passport_hermes_22.c`](images/passport_hermes_22.c) | 1024 × 1024 SVG 源图；22 × 22 LVGL I4 | 来自 [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent/blob/c314285f077e91937c995d419b9fa40af9eb4981/assets/icon-master.svg) 的官方 Hermes 图标，提交 `c314285f077e91937c995d419b9fa40af9eb4981`。上游 [MIT 许可证](images/HERMES-LICENSE.txt) 随资源保留；转换方法同上。固件按当前助手类型切换图标，未配对时不显示平台图标。 |
 | [`logo/logo.png`](logo/logo.png) | 1024 × 1024，PNG | 既有项目／App 图标，用于 OpenClaw README 标题、网页页头和浏览器标签页。网页通过 Vite 直接引用源素材，不维护重复副本。沿用项目素材，并非新增硬件实拍。 |
 | [`images/screenshots/firmware.png`](images/screenshots/firmware.png) | 1600 × 804，PNG RGBA，8 位 | 首页／提问／通话总览，由下述真实渲染图以最近邻放大 2 倍后排版。项目 UI／图案按仓库许可证提供，Noto 字体声明见上文。 |
 | [`images/screenshots/firmware-home.png`](images/screenshots/firmware-home.png)、[`images/screenshots/firmware-ask.png`](images/screenshots/firmware-ask.png)、[`images/screenshots/firmware-call.png`](images/screenshots/firmware-call.png) | 各 240 × 320，PNG 索引 RGB，8 位 | 使用 `sim/ui_preview/` 的主机 LVGL 环境，以虚构设备状态渲染实际 `main/passport_screen.c`。原始分辨率截图，不是生成的 UI 概念图。 |

@@ -79,19 +79,40 @@ const nativeProvider = {
     isConfigured: () => true,
     createBridge(request) { launched = request; return nativeBridge; }
 };
-const provider = createPassportProvider(name => name === 'openai' ? nativeProvider : undefined);
+const diagnostics = [];
+const provider = createPassportProvider(name => name === 'openai' ? nativeProvider : undefined, 'openai',
+    event => diagnostics.push(event));
 assert.equal(provider.id, PASSPORT_PROVIDER);
 const providerConfig = provider.resolveConfig({cfg: config, rawConfig: {silenceDurationMs: 600}});
 assert.equal(providerConfig.model, 'fixture-model');
 assert.equal(providerConfig.voice, 'coral');
 assert.equal(resolved.autoRespondToAudio, true);
 const onToolCall = () => {};
-const bridge = provider.createBridge({cfg: config, providerConfig, language: 'zh', instructions: 'Keep agent identity.', onToolCall});
+const callbackEvents = [];
+const bridge = provider.createBridge({cfg: config,
+    providerConfig: {...providerConfig, interruptResponseOnInputAudio: true},
+    interruptResponseOnInputAudio: true, language: 'zh', instructions: 'Keep agent identity.', onToolCall,
+    onResponseDone: outcome => callbackEvents.push(outcome.status),
+    onEvent: event => callbackEvents.push(event.type),
+    onError: error => callbackEvents.push(error.type)});
 assert(launched.instructions.startsWith('Keep agent identity.'));
 assert(launched.instructions.includes('普通话'));
 assert(launched.instructions.includes('passport_end_call') && launched.instructions.includes('我不想聊了'));
 assert.equal(launched.tools.at(-1).name, PASSPORT_END_CALL);
 assert.equal(launched.autoRespondToAudio, true);
+assert.equal(launched.interruptResponseOnInputAudio, false);
+assert.equal(launched.providerConfig.interruptResponseOnInputAudio, false);
+assert.equal(providerConfig.interruptResponseOnInputAudio, undefined);
+launched.onResponseDone({status: 'incomplete', reason: 'max_output_tokens',
+    error: {code: 'server_error', message: 'private conversation text'}, responseId: 'private-id'});
+launched.onEvent({type: 'input_audio_buffer.speech_started', detail: 'private transcript'});
+launched.onError({code: 'private-token contains spaces', type: 'server_error', message: 'private endpoint'});
+assert.deepEqual(diagnostics, [
+    {event: 'response.done', status: 'incomplete', reason: 'max_output_tokens', code: 'server_error'},
+    {event: 'input_audio_buffer.speech_started'},
+    {event: 'provider.error', type: 'server_error'}
+]);
+assert.deepEqual(callbackEvents, ['incomplete', 'input_audio_buffer.speech_started', 'server_error']);
 bridge.sendUserMessage('Read the tool result.');
 assert(spoken.includes('普通话'));
 bridge.handleBargeIn({audioPlaybackActive: true});
@@ -99,6 +120,11 @@ assert.deepEqual(interrupted, {audioPlaybackActive: true, force: true});
 await bridge.close();
 assert.equal(closed, 1);
 assert.equal(connected, 0);
+launched.onResponseDone({status: 'failed'});
+launched.onEvent({type: 'error'});
+launched.onError({type: 'server_error'});
+assert.equal(diagnostics.length, 3);
+assert.equal(callbackEvents.length, 3);
 function callFixture({rejectClose = false, providerCloses = true, closeReason = 'completed'} = {}) {
     const events = [], delegated = [], transcripts = [];
     let request, closeCount = 0, resolveClose;

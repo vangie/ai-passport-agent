@@ -30,6 +30,21 @@ static void test_hotspot_detection(void) {
     }
 }
 
+static void test_agent_platform(void) {
+    passport_store_t store, restored;
+    uint8_t blob[5120];
+    passport_store_init(&store);
+    expect(!strcmp(passport_agent_platform(NULL),"Agent"),"unpaired platform is neutral");
+    expect(passport_agent_upsert(&store,"Hermes nickname","openclaw","wss://first.example","",NULL,NULL,NULL),"legacy OpenClaw remains valid");
+    expect(passport_agent_upsert(&store,"Custom assistant","hermes","wss://second.example","",NULL,NULL,NULL),"Hermes platform is accepted");
+    expect(!passport_agent_upsert(&store,"Other","unknown","wss://third.example","",NULL,NULL,NULL),"unknown platform rejected");
+    expect(!strcmp(passport_agent_platform(&store.agents[0]),"OpenClaw"),"nickname does not determine platform");
+    expect(!strcmp(passport_agent_platform(&store.agents[1]),"Hermes"),"custom nickname retains Hermes platform");
+    int size=passport_store_save(&store,blob,sizeof(blob));
+    expect(size>0 && passport_store_load(&restored,blob,(size_t)size),"mixed platforms round trip");
+    expect(!strcmp(restored.agents[0].kind,"openclaw") && !strcmp(restored.agents[1].kind,"hermes"),"platform survives reload");
+}
+
 static void test_store_order(void) {
     passport_store_t store;
     bool visible[4] = {true, true, false, false};
@@ -1218,6 +1233,7 @@ static void test_frame(void) {
 }
 
 int main(void) {
+    test_agent_platform();
     test_hotspot_detection();
     test_store_order();
     test_navigation();

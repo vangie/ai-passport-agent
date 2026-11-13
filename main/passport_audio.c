@@ -70,6 +70,7 @@ static atomic_uint s_capture_ms, s_read_gap_ms, s_clip_total, s_input_high_water
 static atomic_uint s_capture_rate;
 static atomic_uint s_mute_chunks, s_response_chunks, s_echo_chunks, s_input_clipped;
 static atomic_uint s_play_stalls, s_play_gap_ms;
+static atomic_uint s_voice_interrupts, s_button_interrupts;
 static atomic_uint s_response_epoch;
 static bool s_live_capture;
 static bool s_synthetic;
@@ -193,6 +194,7 @@ static void live_interrupt_locked(unsigned echo_guard) {
 
 bool passport_audio_live_interrupt(void) {
     if (!s_live_pcm || xSemaphoreTake(s_lock, pdMS_TO_TICKS(5)) != pdTRUE) return false;
+    atomic_fetch_add(&s_button_interrupts,1);
     live_interrupt_locked(6);
     xSemaphoreGive(s_lock);
     return true;
@@ -240,6 +242,12 @@ static void playback_task(void *arg) {
     unsigned primed_epoch = atomic_load(&s_response_epoch);
     while (!s_stop) {
         if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(10)) != pdTRUE) continue;
+        if (s_barge && s_barge->probing) {
+            passport_barge_paused(s_barge,esp_timer_get_time());
+            xSemaphoreGive(s_lock);
+            vTaskDelay(pdMS_TO_TICKS(5));
+            continue;
+        }
         unsigned epoch = atomic_load(&s_response_epoch);
         if (primed_epoch != epoch) {
             primed = false;
@@ -293,7 +301,7 @@ static void playback_task(void *arg) {
             atomic_store(&s_playing, true);
             s_play_bytes = play;
             atomic_store(&s_echo_guard, 20);
-            if (atomic_load(&s_output_blocked) || (s_barge && s_barge->probing)) memset(playback, 0, play);
+            if (atomic_load(&s_output_blocked)) memset(playback, 0, play);
             if (s_barge) passport_barge_reference(s_barge, playback, play / 2, esp_timer_get_time());
         }
         xSemaphoreGive(s_lock);
@@ -481,11 +489,13 @@ static void audio_task(void *arg) {
             bool response = atomic_load(&s_response), muted = atomic_load(&s_muted);
             bool playback = s_output_head != s_output_tail || atomic_load(&s_playing);
             bool blocked = response || muted || echo_guard || playback;
-            bool probe = s_barge && s_barge->probing && !muted && read_at - s_barge->probe_at >= 80000;
+            if (s_barge && !atomic_load(&s_playing)) passport_barge_paused(s_barge,read_at);
+            bool probe = s_barge && !muted && passport_barge_listen(s_barge,read_at);
             bool forward = live_input_prepare(&input_gate, samples, AUDIO_CHUNK, blocked && !probe);
             bool interrupted = s_barge && passport_barge_process(s_barge, samples, AUDIO_CHUNK, read_at,
                 response || playback || echo_guard, muted, input_gate.voiced);
             if (interrupted) {
+                atomic_fetch_add(&s_voice_interrupts,1);
                 s_input_tail = s_input_head; s_input_silence = 0;
                 live_interrupt_locked(0);
                 blocked = false;
@@ -594,6 +604,7 @@ static esp_err_t start_capture(bool retain) {
     s_capture_ms = s_read_gap_ms = s_clip_total = s_input_high_water = 0;
     s_capture_rate = s_live_capture ? 24000 : AUDIO_RATE;
     s_mute_chunks = s_response_chunks = s_echo_chunks = s_input_clipped = 0;
+    s_voice_interrupts = s_button_interrupts = 0;
     s_error = ESP_OK;
     esp_err_t err = s_synthetic ? ESP_OK : passport_audio_prepare();
     if (err != ESP_OK) return err;
@@ -749,6 +760,7 @@ void passport_audio_diagnostics(passport_audio_diagnostics_t *out) {
         .mute_chunks = s_mute_chunks, .response_chunks = s_response_chunks,
         .echo_chunks = s_echo_chunks, .input_clipped = s_input_clipped,
         .play_stalls = s_play_stalls, .play_gap_ms = s_play_gap_ms,
+        .voice_interrupts = s_voice_interrupts, .button_interrupts = s_button_interrupts,
     };
 }
 

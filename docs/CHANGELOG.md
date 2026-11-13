@@ -12,6 +12,26 @@
 
 ## Unreleased
 
+No pending changes.
+
+## v0.7.0 - 2026-11-13
+
+- Keep Call reply audio intact during tentative voice-interruption checks, shared
+  by OpenClaw and Hermes. Continue checking echo before confirming an interruption.
+- Prevent competing upstream voice interruption from cutting replies short; surface
+  reply errors promptly instead of leaving calls in a false reconnecting state.
+- Redraw the complete Call layout before starting its connection so previous-page
+  content is not left behind during setup; unchanged frames remain incremental.
+- Add Hermes Ask and Call integration with the native personal agent, tools and
+  per-device conversation continuity. Call can delegate tasks and private context.
+- Recognize the authenticated backend on Passport; show the OpenClaw/Hermes icon
+  separately from the configured assistant name, with inset icons for screen corners.
+- Let the web studio select the backend before adding an assistant and provide
+  separate bilingual setup prompts. Existing OpenClaw settings remain compatible.
+- Package an external Hermes plugin with versioned downloads and checksums;
+  ordinary Hermes core upgrades preserve its installation and device grants.
+  Add its icon license and browser checks to the release gate.
+
 ## v0.6.0 - 2026-11-13
 
 - Renamed the project to AI Passport Agent, a wearable voice terminal for your

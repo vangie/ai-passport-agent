@@ -5,7 +5,9 @@ import { resolve } from 'node:path';
 import { extractCommunityCopy, renderCommunityCopy } from './community_copy.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const output = resolve(root, 'build/community-market/v0.6.0/materials');
+const version = JSON.parse(await readFile(resolve(root, 'tools/openclaw/package.json'), 'utf8')).version;
+if (!/^\d+\.\d+\.\d+$/u.test(version)) throw new Error('Invalid materials version');
+const output = resolve(root, `build/community-market/v${version}/materials`);
 const shots = resolve(root, 'assets/images/screenshots');
 const titles = {
   zh: extractCommunityCopy(await readFile(resolve(root, 'docs/release/community.zh_CN.md'), 'utf8'), '标题'),
@@ -23,7 +25,7 @@ try {
   await mkdir(shots, { recursive: true });
   browser = await chromium.launch({ channel: 'chrome', args: ['--disable-gpu'] });
   const page = await browser.newPage({ viewport: { width: 1360, height: 1040 }, locale: 'zh-CN', deviceScaleFactor: 1 });
-  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: 'v0.6.0', commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'FoloToy-AI-Passport.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'FoloToy-AI-Passport-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: 'v0.6.0', channel: 'release' } } } }));
+  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: `v${version}`, commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'FoloToy-AI-Passport.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'FoloToy-AI-Passport-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: `v${version}`, channel: 'release' } } } }));
   await page.goto('http://127.0.0.1:4189/');
   await page.evaluate(async () => {
     const { DemoTransport } = await import('/src/transports.js');
@@ -76,8 +78,8 @@ try {
   const brand = `<div class="brand"><img src="${logo}">${titles.zh} · ${titles.en}</div>`;
   const foot = label => `<div class="foot"><span>${label}</span><span>开源 · 自己的助手</span></div>`;
   const posters = [
-    ['00-cover', `${brand}<div class="eyebrow">PERSONAL AGENT · 随身语音终端</div><h1>把助手带在身边</h1><p class="lead">语音问答，实时通话<br>连接自己的 OpenClaw，不只是聊天模型</p><div class="screens">${await image('firmware-home.png', 240, 320, 'device')}${await image('firmware-ask.png', 240, 320, 'device')}${await image('firmware-call.png', 240, 320, 'device')}</div><div class="strip"><div><strong>电脑 USB 刷机</strong><p>网页设置网络与助手</p></div><div><strong>手机蓝牙配置</strong><p>连热点，方便换网</p></div><div><strong>设备直连网关</strong><p>不经过手机中转</p></div></div><div class="note"><strong>v0.6 · 更懂何时开始说话</strong><br>端侧人声检测，减少噪声误提交<br>当前支持 OpenClaw · 已有配对继续使用</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
-    ['01-ask-and-call', `${brand}<div class="eyebrow">两种对话方式</div><h2>语音问答，实时通话</h2><p class="lead">提问看文字回复，通话听语音应答</p><div class="mode-grid"><div>${await image('firmware-ask.png', 240, 320)}<h3>提问</h3><p>按一下录音，再按发送<br>说完停顿也可自动提交<br>读完回复，接着追问</p></div><div>${await image('firmware-call.png', 240, 320)}<h3>通话</h3><p>连上后直接说话<br>语音回复，滚动字幕<br>按提示静音、打断或结束</p></div></div><div class="note">需自备已运行的 OpenClaw；通话另需配置实时语音服务。</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
+    ['00-cover', `${brand}<div class="eyebrow">PERSONAL AGENT · 随身语音终端</div><h1>把助手带在身边</h1><p class="lead">语音问答，实时通话<br>连接 OpenClaw 或 Hermes，使用自己的 Agent</p><div class="screens">${await image('firmware-hermes.png', 240, 320, 'device')}${await image('firmware-ask.png', 240, 320, 'device')}${await image('firmware-call.png', 240, 320, 'device')}</div><div class="strip"><div><strong>电脑 USB 刷机</strong><p>网页设置网络与助手</p></div><div><strong>手机蓝牙配置</strong><p>连热点，方便换网</p></div><div><strong>设备直连网关</strong><p>不经过手机中转</p></div></div><div class="note"><strong>OpenClaw + Hermes</strong><br>连接个人 Agent 的工具与上下文<br>网页配置 · 已有 OpenClaw 配对继续用</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
+    ['01-ask-and-call', `${brand}<div class="eyebrow">两种对话方式</div><h2>语音问答，实时通话</h2><p class="lead">提问看文字回复，通话听语音应答</p><div class="mode-grid"><div>${await image('firmware-ask.png', 240, 320)}<h3>提问</h3><p>按一下录音，再按发送<br>说完停顿也可自动提交<br>读完回复，接着追问</p></div><div>${await image('firmware-call.png', 240, 320)}<h3>通话</h3><p>连上后直接说话<br>语音回复，滚动字幕<br>按提示静音、打断或结束</p></div></div><div class="note">需自备 OpenClaw 或 Hermes；通话另需实时语音服务。</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
     ['02-web-studio', `${brand}<div class="eyebrow">电脑 USB 连接</div><h2>在网页里配置与刷机</h2><p class="lead">设置 Wi-Fi 和助手，需要时更新固件</p>${await image('web-desktop.png', 1360, 1040, 'webshot')}<div class="strip"><div><strong>配置网络与助手</strong><p>改好后统一保存</p></div><div><strong>需要时更新固件</strong><p>改配置，不刷机</p></div></div><div class="note">无应用后台 · 配置直接写入设备<br>电脑推荐 Chrome／Edge，固件从本站下载</div>${foot('网页实际界面 · 虚构网络、助手与示例地址')}`],
     ['03-mobile-setup', `${brand}<div class="eyebrow">手机蓝牙配置 · 多网络保存</div><h2>连接手机热点，灵活切换网络</h2><p class="lead">保存常用 Wi-Fi 和热点，在设备上按需切换</p><div class="mobile-row">${await image('web-mobile.png', 390, 844, 'mobile-shot')}<div class="steps"><h3>连接手机热点</h3><p>iPhone 用 Bluefy 打开配置网页<br>把个人热点保存到 Passport</p><h3>保存多套网络</h3><p>家中、办公室或手机热点<br>都保存在设备上</p><h3>在设备上切换</h3><p>「设置 → Wi-Fi」选择已存网络<br>使用手机热点时保持热点开启</p></div></div><div class="note">iPhone 的 Safari／Chrome 不支持网页蓝牙，请用 Bluefy；更新固件请用电脑 USB。</div>${foot('网页移动布局演示 · 非手机实拍，无真实凭据')}`],
   ];
@@ -101,7 +103,7 @@ try {
   }
   for (const filename of ['web-desktop.png', 'web-mobile.png']) await copyFile(resolve(shots, filename), resolve(output, filename));
   const sections = [];
-  const metadata = { version: '0.6.0', title_zh: titles.zh, title_en: titles.en, source_url: 'https://github.com/vangie/ai-passport-agent', release_url: 'https://github.com/vangie/ai-passport-agent/releases/tag/v0.6.0', cover: '00-cover.png', images: ['01-ask-and-call.png', '02-web-studio.png', '03-mobile-setup.png'], status: 'prepared-not-submitted' };
+  const metadata = { version, title_zh: titles.zh, title_en: titles.en, source_url: 'https://github.com/vangie/ai-passport-agent', release_url: null, candidate_tag: `v${version}`, cover: '00-cover.png', images: ['01-ask-and-call.png', '02-web-studio.png', '03-mobile-setup.png'], status: 'prepared-not-submitted' };
   for (const [language, suffix, headings] of [['zh', '.zh_CN', ['简介', '使用方法', '更新日志']], ['en', '', ['Description', 'Quick-start instructions', 'Update notes']]]) {
     const document = await readFile(resolve(root, `docs/release/community${suffix}.md`), 'utf8');
     for (const [index, field] of ['description', 'instructions', 'changelog'].entries()) {

@@ -16,6 +16,7 @@ PATTERNS = {
     'deployment hostname': re.compile(r'\b[A-Za-z0-9-]+\.(?:online|local|trycloudflare\.com)\b', re.I),
 }
 SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com', 'apps.apple.com', 'www.w3.org'}
+SERVICE_ENDPOINTS = {'tools/hermes/passport_talk.py': {'wss://api.openai.com/v1/realtime'}}
 
 
 def findings(name, data):
@@ -23,10 +24,11 @@ def findings(name, data):
     for label, pattern in PATTERNS.items():
         if pattern.search(data):
             errors.append(f'{name}: {label}; remove or replace with a placeholder')
-    if (name.startswith(('app/', 'main/', 'mac/', 'ios/', 'shared/', 'tools/openclaw/', 'web/src/', 'web/public/', 'web/dist/')) or name == 'web/index.html') and not name.endswith('.md'):
-        for value in re.findall(r'(?:https?|wss?)://[A-Za-z0-9._-]+(?::[0-9]+)?', data):
+    if (name.startswith(('app/', 'main/', 'mac/', 'ios/', 'shared/', 'tools/openclaw/', 'tools/hermes/', 'web/src/', 'web/prompts/', 'web/public/', 'web/dist/')) or name == 'web/index.html') and not name.endswith('.md'):
+        for value in re.findall(r'(?:https?|wss?)://[A-Za-z0-9._-]+(?::[0-9]+)?(?:/[A-Za-z0-9_./-]*)?', data):
             host = urlsplit(value).hostname
-            if not host or host in SERVICE_HOSTS or host in {'localhost', 'ai-passport', '192.168.4.1'} or host.endswith(('.example', '.invalid')):
+            if (value in SERVICE_ENDPOINTS.get(name, set()) or not host or host in SERVICE_HOSTS or
+                    host in {'localhost', 'ai-passport', '192.168.4.1'} or host.endswith(('.example', '.invalid'))):
                 continue
             try:
                 address = ipaddress.ip_address(host)

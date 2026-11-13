@@ -552,6 +552,47 @@ class NetworkRuntimeTests(unittest.TestCase):
                          ["request_bluetooth_config", "close_bluetooth_config", "maintain_bluetooth_mode"], BLUETOOTH_CONTROLLER_TEST,
                          [ROOT / "app/passport_radio.c"])
 
+    def test_call_refresh_stays_on_display_task(self):
+        harness = r"""
+static struct { bool sleeping; } s_power;
+static passport_view_t s_view;
+static passport_store_t s_store;
+static bool locked, lock_fails;
+static unsigned shown;
+#define lv_refr_now(display) assert(!"Rendering must stay on the LVGL task")
+#define lv_display_refr_timer(timer) assert(!"Rendering must stay on the LVGL task")
+#define lv_timer_handler() assert(!"Rendering must stay on the LVGL task")
+static bool bsp_lvgl_lock(int timeout) {
+    assert(timeout==50 && !locked);
+    if (lock_fails) return false;
+    locked=true;return true;
+}
+static void bsp_lvgl_unlock(void) { assert(locked);locked=false; }
+static void passport_screen_show(const passport_view_t *view, const passport_store_t *store) {
+    assert(locked && view==&s_view && store==&s_store);shown++;
+}
+"""
+        acceptance = r"""
+int main(void) {
+    (void)esp_wifi_get_config;(void)passport_wifi_is_online;
+    s_view.screen=PASSPORT_SCREEN_HOME;redraw();assert(shown==1 && !locked);
+    s_view.screen=PASSPORT_SCREEN_LIVE;
+    lock_fails=true;redraw();assert(shown==1 && !locked);
+    lock_fails=false;redraw();assert(shown==2 && !locked);
+    redraw();assert(shown==3 && !locked);
+    s_view.live_ready=true;redraw();assert(shown==4 && !locked);
+    s_view.live_ready=false;redraw();assert(shown==5 && !locked);
+    s_view.live_failed=true;redraw();assert(shown==6 && !locked);
+    s_view.screen=PASSPORT_SCREEN_HOME;redraw();assert(shown==7 && !locked);
+    unsigned before=shown;
+    s_power.sleeping=true;s_view.screen=PASSPORT_SCREEN_LIVE;s_view.live_failed=false;
+    redraw();assert(shown==before && !locked);
+    s_power.sleeping=false;redraw();assert(shown==before+1 && !locked);
+    return 0;
+}
+"""
+        self.run_harness(harness, (ROOT / "main/passport_app.c").read_text(), ["redraw"], acceptance)
+
 
 if __name__ == "__main__":
     unittest.main()

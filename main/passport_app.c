@@ -266,10 +266,11 @@ static void audio_diagnostic_reply(const char *prefix) {
     passport_link_diagnostic_reply(line);
     passport_gateway_timing_diagnostic(line, sizeof(line));
     passport_link_diagnostic_reply(line);
-    snprintf(line, sizeof(line), "INPUT muted_chunks=%lu response_chunks=%lu echo_chunks=%lu clipped=%lu play_stalls=%lu play_gap_ms=%lu",
+    snprintf(line, sizeof(line), "INPUT muted_chunks=%lu response_chunks=%lu echo_chunks=%lu clipped=%lu play_stalls=%lu play_gap_ms=%lu voice_interrupts=%lu button_interrupts=%lu",
         (unsigned long)audio.mute_chunks, (unsigned long)audio.response_chunks,
         (unsigned long)audio.echo_chunks, (unsigned long)audio.input_clipped,
-        (unsigned long)audio.play_stalls, (unsigned long)audio.play_gap_ms);
+        (unsigned long)audio.play_stalls, (unsigned long)audio.play_gap_ms,
+        (unsigned long)audio.voice_interrupts, (unsigned long)audio.button_interrupts);
     passport_link_diagnostic_reply(line);
     passport_memory_report("app_diag");
 }
@@ -617,6 +618,7 @@ void app_main(void) {
             ESP_LOGI(TAG, "key=%d action=%d screen=%d recording=%d sending=%d",
                      input.btn, action, s_view.screen, s_view.recording, s_view.sending);
             if (action == PASSPORT_ACT_LIVE) {
+                redraw();
                 if (!passport_gateway_abandon() || passport_gateway_live(passport_lang_zh(&s_store)) != ESP_OK) {
                     s_view.sending = false; s_view.screen = PASSPORT_SCREEN_HOME;
                     snprintf(s_view.reply, sizeof(s_view.reply), "实时语音启动失败，请检查网络");
