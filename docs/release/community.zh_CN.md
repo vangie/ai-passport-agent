@@ -31,7 +31,7 @@ AI Passport Agent · 随身语音助手
 
 ## 使用方法
 
-1. 电脑 Chrome／Edge 打开 https://vangie.github.io/ai-passport-agent/，USB 连接设备。
+1. 电脑 Chrome／Edge 打开 https://ai-passport-agent.codelife.me/，USB 连接设备。
    首次取消「保留配置」并安装确认；兼容更新可保留配置。
 2. 在 OpenClaw 区域复制提示词，交给能操作已运行网关的 Agent；完成插件与可达入口准备，
    将返回的地址、配对码填回网页。通话另需实时语音服务。
@@ -44,8 +44,8 @@ AI Passport Agent · 随身语音助手
 
 - 更名为 AI Passport Agent，本版支持 OpenClaw，沿用已有配对与已存网络。
 - 提问与通话加入端侧人声检测，减少非语音上传和误发送。
-- 无人声时保留已有聊天；通话增加短时预录，语音打断结合人声确认。
-- 更新网页名称、源码链接与双语上手指南，采用新版封面与配置界面配图。
+- 无人声时保留已有聊天；通话保留开头语音，确认有人说话后才触发语音打断。
+- 配置网址迁移至 ai-passport-agent.codelife.me，同步源码链接、双语指南、新版封面与配置配图。
 
 ## 文件与来源
 

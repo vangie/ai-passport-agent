@@ -4,7 +4,7 @@
 <h1 align="center">AI Passport Agent</h1>
 <p align="center"><strong>个人 Agent 的随身语音终端</strong><br />语音问答与实时通话，当前支持 OpenClaw</p>
 <p align="center">
-  <a href="https://vangie.github.io/ai-passport-agent/">打开网页配置</a> ·
+  <a href="https://ai-passport-agent.codelife.me/">打开网页配置</a> ·
   <a href="#开始使用">开始使用</a> ·
   <a href="https://github.com/vangie/ai-passport-agent/releases/latest">最新版本</a> ·
   <a href="README.md">English</a>
@@ -16,7 +16,7 @@
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
 **当前支持 OpenClaw，尚未提供其他 Agent 接入。** 项目原名为 `ai-passport-openclaw`，
-更名不影响已有设备和 OpenClaw 插件；配置网页使用新仓库的固定 Pages 链接。
+更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 参见[命名与兼容性](docs/configuration.zh_CN.md#项目名称与兼容性)。
 
 这是基于 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport) 的独立社区项目，
@@ -38,7 +38,7 @@
 
 ## 在浏览器里配置
 
-**[打开网页配置 →](https://vangie.github.io/ai-passport-agent/)** 无需安装应用、Python 或命令行刷机工具。
+**[打开网页配置 →](https://ai-passport-agent.codelife.me/)** 无需安装应用、Python 或命令行刷机工具。
 
 ![网页配置界面，网络与网关均为虚构演示数据](assets/images/screenshots/web-desktop.png)
 
@@ -65,7 +65,7 @@
 有可用模型的 OpenClaw。首次刷机需要电脑上的 Chrome／Edge。
 插件已验证基线为 **OpenClaw 2026.10.5**，升级前请检查兼容性；通话另需实时语音服务凭据。
 
-1. **安装固件。** USB 连接设备，打开[配置网页](https://vangie.github.io/ai-passport-agent/)，选择串口。
+1. **安装固件。** USB 连接设备，打开[配置网页](https://ai-passport-agent.codelife.me/)，选择串口。
    首次安装取消「保留配置」，点击「安装固件」并确认；兼容更新保留勾选，点击「更新固件」。
    替换其他固件前请阅读[数据策略](docs/development/engineering/firmware-layout.zh_CN.md)，没有自动还原原厂固件的功能。
 2. **准备 OpenClaw。** 在网页 OpenClaw 区域点击「复制提示词」，发给能够操作网关主机的 Agent。

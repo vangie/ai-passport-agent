@@ -2,7 +2,8 @@
 
 # 浏览器配置台
 
-正式地址：<https://vangie.github.io/ai-passport-agent/>。
+正式地址：<https://ai-passport-agent.codelife.me/>。
+仓库的 Pages 地址 <https://vangie.github.io/ai-passport-agent/> 会跳转到该自定义域名。
 
 已验证的历史固件身份保留在 `web/release-builds.json`，不依赖旧 Release 下载是否仍然存在。
 

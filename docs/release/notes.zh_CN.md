@@ -15,8 +15,8 @@
 
 ## 安装与升级
 
-从 <https://vangie.github.io/ai-passport-agent/> 和[上手步骤](../../README.zh_CN.md#开始使用)开始。
-域名迁移期间，该固定 Pages 链接会跳转到当前生效的自定义域名。
+从 <https://ai-passport-agent.codelife.me/> 和[上手步骤](../../README.zh_CN.md#开始使用)开始。
+仓库的 [Pages 地址](https://vangie.github.io/ai-passport-agent/)会跳转到该域名。
 
 兼容 USB 更新保持勾选「保留配置」。首次安装或完整替换会覆盖设备配置，先阅读
 [数据策略](../development/engineering/firmware-layout.zh_CN.md#刷写与已存数据)。

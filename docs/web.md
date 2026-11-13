@@ -2,7 +2,9 @@
 
 # Browser configuration studio
 
-Open the published studio at <https://vangie.github.io/ai-passport-agent/>.
+Open the published studio at <https://ai-passport-agent.codelife.me/>.
+The repository's Pages address, <https://vangie.github.io/ai-passport-agent/>,
+redirects to this custom domain.
 
 The static website is the new browser-first configuration path. Existing
 macOS App and iOS App remain as source-only alternatives, without CI builds or

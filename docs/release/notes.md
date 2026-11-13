@@ -20,9 +20,9 @@
 
 ## Install and update
 
-Start at <https://vangie.github.io/ai-passport-agent/> and follow the
-[getting-started guide](../../README.md#get-started). The stable Pages link follows
-the active custom domain during the hostname transition.
+Start at <https://ai-passport-agent.codelife.me/> and follow the
+[getting-started guide](../../README.md#get-started). The repository's
+[Pages address](https://vangie.github.io/ai-passport-agent/) redirects to this domain.
 
 For a compatible USB update, leave **Keep settings** enabled. A first installation
 or full replacement overwrites device configuration; see the

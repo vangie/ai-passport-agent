@@ -40,7 +40,7 @@ project. Images show actual interfaces with fictional demo data, not device phot
 
 ## Quick-start instructions
 
-1. Open https://vangie.github.io/ai-passport-agent/ in desktop Chrome/Edge and connect
+1. Open https://ai-passport-agent.codelife.me/ in desktop Chrome/Edge and connect
    Passport by USB. For a first install uncheck Keep settings, install and confirm;
    compatible updates can preserve settings.
 2. Choose Copy Prompt in OpenClaw and send it to an agent with access to your
@@ -59,8 +59,8 @@ project. Images show actual interfaces with fictional demo data, not device phot
 
 - Renamed to AI Passport Agent; currently supports OpenClaw and retains existing pairing and saved networks.
 - Added on-device speech detection to Ask and Call, reducing non-speech uploads and accidental sends.
-- Kept completed chats when no speech is detected; added bounded Call pre-roll and speech-confirmed interruption.
-- Refreshed the web studio, source links and bilingual quick start, with a new cover and configuration screenshots.
+- Kept completed chats when no speech is detected; Call retains the beginning of speech and checks for speech before voice interruption.
+- Moved setup to ai-passport-agent.codelife.me and refreshed source links, bilingual guides, the cover and configuration screenshots.
 
 ## Files and provenance
 

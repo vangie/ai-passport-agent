@@ -4,7 +4,7 @@
 <h1 align="center">AI Passport Agent</h1>
 <p align="center"><strong>A wearable voice terminal for your personal agent</strong><br />Voice Q&amp;A and realtime calls. Currently supports OpenClaw.</p>
 <p align="center">
-  <a href="https://vangie.github.io/ai-passport-agent/">Open web studio</a> ·
+  <a href="https://ai-passport-agent.codelife.me/">Open web studio</a> ·
   <a href="#get-started">Get started</a> ·
   <a href="https://github.com/vangie/ai-passport-agent/releases/latest">Latest release</a> ·
   <a href="README.zh_CN.md">Simplified Chinese</a>
@@ -18,7 +18,8 @@ over Wi-Fi; a phone is not an audio relay.
 
 **Currently supports OpenClaw.** Other agent integrations are not available yet.
 The project was previously named `ai-passport-openclaw`; existing devices and
-OpenClaw plugin installations remain compatible. The web studio is available through the repository’s stable Pages link. See [naming and compatibility](docs/configuration.md#project-name-and-compatibility).
+OpenClaw plugin installations remain compatible. The web studio is now at
+<https://ai-passport-agent.codelife.me/>. See [naming and compatibility](docs/configuration.md#project-name-and-compatibility).
 
 An independent community project based on [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport),
 not official FoloToy firmware or an OpenClaw distribution. Installing it replaces
@@ -41,7 +42,7 @@ quality depend on that provider, your gateway and network.
 
 ## Configure in your browser
 
-**[Open the web studio →](https://vangie.github.io/ai-passport-agent/)** No app installation,
+**[Open the web studio →](https://ai-passport-agent.codelife.me/)** No app installation,
 local Python or command-line flasher required.
 
 ![Web studio with fictional Wi-Fi and gateway data](assets/images/screenshots/web-desktop.png)
@@ -76,7 +77,7 @@ needs desktop Chrome/Edge. **OpenClaw 2026.10.5** is the tested plugin baseline;
 check compatibility before upgrading. Call also needs realtime voice credentials.
 
 1. **Install firmware.** Connect Passport by USB, open the
-   [web studio](https://vangie.github.io/ai-passport-agent/) and select its serial
+   [web studio](https://ai-passport-agent.codelife.me/) and select its serial
    port. For a first install, uncheck **Keep settings**, choose **Install firmware**
    and confirm. Compatible updates use **Update firmware** with settings kept.
    Read the [data policy](docs/development/engineering/firmware-layout.md#flashing-and-stored-data)
