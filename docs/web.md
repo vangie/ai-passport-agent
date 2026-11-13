@@ -6,6 +6,35 @@ Open the published studio at <https://ai-passport-agent.codelife.me/>.
 The repository's Pages address, <https://vangie.github.io/ai-passport-agent/>,
 redirects to this custom domain.
 
+### Legacy address compatibility
+
+Keep `ai-passport-openclaw.codelife.me` as a compatibility entry, not a second
+configuration studio. Its DNS record is `ai-passport-openclaw`, type `CNAME`,
+value `vangie.github.io`, with the default TTL. Keep the new hostname's record
+unchanged. DNS alone is insufficient: GitHub Pages needs a separate site bound
+to the old hostname because a Pages site supports only one custom hostname.
+
+The dedicated `vangie/ai-passport-legacy-site` repository hosts only a static
+redirect, with the old hostname in its `CNAME` file and HTTPS enabled after its
+certificate is issued. Generate its deployment files with
+`python3 tools/legacy_site.py`; publish the resulting `build/legacy-site/`
+contents to that repository's Pages source. Do not publish them to the main
+studio or replace its custom hostname. The redirect source lives in
+`tools/legacy-site/index.html`; its `404.html` copy handles old deep links too.
+It uses `location.replace` to avoid a back-button loop, preserves paths, query
+parameters and fragments, has no third-party requests or analytics, and includes
+a bilingual link when scripts are disabled. This is a browser redirect, not an
+HTTP redirect for firmware download clients. The new studio serves its own
+firmware directly as before.
+
+Restoring the old DNS record and its valid HTTPS certificate is necessary for
+old bookmarks to work. Users with an already-open old page should reload it.
+Device Wi-Fi, assistant credentials and firmware remain unchanged. Browser USB
+and Bluetooth grants are origin-specific, so users may need to authorize their
+device again at the new address; they do not need to erase or re-pair it merely
+because the website moved. Keep the legacy hostname reserved and bound to this
+redirect while its DNS points to GitHub Pages; do not delete the binding first.
+
 The static website is the new browser-first configuration path. Existing
 macOS App and iOS App remain as source-only alternatives, without CI builds or
 new Release packages. No account, database or configuration

@@ -2,7 +2,7 @@ name: Web configuration studio
 
 on:
   pull_request:
-    paths: &web-paths ['web/**', 'assets/logo/logo.png', 'assets/images/passport-lobster.svg', 'tools/web.py', 'tools/web_preview.py', 'tools/check_public.py', 'tools/check_web_public.py', 'tools/check-secrets.sh', 'tests/test_public_audit.py', 'tests/test_web_public.py', 'tests/test_web_preview.py', 'tests/test_web_firmware.py', 'Makefile', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+    paths: &web-paths ['web/**', 'assets/logo/logo.png', 'assets/images/passport-lobster.svg', 'tools/web.py', 'tools/web_preview.py', 'tools/legacy_site.py', 'tools/legacy-site/**', 'tools/check_public.py', 'tools/check_web_public.py', 'tools/check-secrets.sh', 'tests/test_public_audit.py', 'tests/test_web_public.py', 'tests/test_web_preview.py', 'tests/test_web_firmware.py', 'tests/test_legacy_site.mjs', 'Makefile', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
   push:
     branches: [main]
     paths: *web-paths
@@ -32,6 +32,7 @@ jobs:
           bash tools/check-secrets.sh
           PYTHONDONTWRITEBYTECODE=1 python3 tests/test_public_audit.py
           PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_public.py
+          node --test tests/test_legacy_site.mjs
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24

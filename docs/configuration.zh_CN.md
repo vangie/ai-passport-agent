@@ -13,7 +13,10 @@ OpenClaw。其插件的软件包名、ID、已有配置项及版本化 `.tgz` �
 保留的原生客户端生成 `ai-passport-agent://` 配置链接，同时接受旧的
 `ai-passport-openclaw://` 链接；原有 Wi-Fi 缓存路径也保持不变。更名不要求重新刷机或配对。
 
-配置网页的固定 Pages 链接在域名迁移期间跟随当前生效域名。网站域名与社区页面更新独立处理，
+配置网页的固定 Pages 链接在域名迁移期间跟随当前生效域名。旧地址
+`ai-passport-openclaw.codelife.me` 保留并跳转到 `ai-passport-agent.codelife.me`，
+参见[旧地址兼容](web.zh_CN.md#旧地址兼容)。新地址可能需要重新授权浏览器 USB／蓝牙权限，
+但设备配置不会改变。网站域名与社区页面更新独立处理，
 均不改变用户的网关地址。
 后续 Release 的固件压缩包使用 `ai-passport-agent-firmware.tar.gz`，已发布文件保留原名。
 

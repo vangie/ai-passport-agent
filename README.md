@@ -19,7 +19,9 @@ over Wi-Fi; a phone is not an audio relay.
 **Currently supports OpenClaw.** Other agent integrations are not available yet.
 The project was previously named `ai-passport-openclaw`; existing devices and
 OpenClaw plugin installations remain compatible. The web studio is now at
-<https://ai-passport-agent.codelife.me/>. See [naming and compatibility](docs/configuration.md#project-name-and-compatibility).
+<https://ai-passport-agent.codelife.me/>; the former
+`ai-passport-openclaw.codelife.me` address redirects there. See
+[naming and compatibility](docs/configuration.md#project-name-and-compatibility).
 
 An independent community project based on [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport),
 not official FoloToy firmware or an OpenClaw distribution. Installing it replaces

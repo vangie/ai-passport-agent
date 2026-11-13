@@ -5,6 +5,26 @@
 正式地址：<https://ai-passport-agent.codelife.me/>。
 仓库的 Pages 地址 <https://vangie.github.io/ai-passport-agent/> 会跳转到该自定义域名。
 
+### 旧地址兼容
+
+保留 `ai-passport-openclaw.codelife.me` 作为兼容入口，不维护第二套配置台。
+DNS 主机记录为 `ai-passport-openclaw`，类型 `CNAME`，记录值为 `vangie.github.io`，
+TTL 保持默认；新域名的解析不要改。仅恢复 DNS 不够：每个 GitHub Pages 站点只支持
+一个自定义域名，旧域名需要单独绑定一个站点。
+
+独立仓库 `vangie/ai-passport-legacy-site` 只托管静态跳转页，`CNAME` 文件绑定旧域名，
+证书签发后开启 HTTPS。运行 `python3 tools/legacy_site.py` 生成部署文件，
+将 `build/legacy-site/` 的内容发布至该仓库的 Pages 源；不要覆盖主配置台或修改其域名。
+跳转源码位于 `tools/legacy-site/index.html`，同时生成为 `404.html`，兼容旧深层链接。
+通过 `location.replace` 跳转，避免返回键循环；保留路径、查询参数与片段，
+不加载第三方资源、不做统计，禁用脚本时仍有中英文入口链接。
+这是浏览器跳转，不是供固件下载客户端使用的 HTTP 重定向；新配置台依然直接提供固件。
+
+必须同时恢复旧 DNS 和有效 HTTPS 证书，旧书签才可正常访问；已打开旧网页的用户需刷新。
+设备里的 Wi-Fi、助手凭据和固件均不受影响。USB／蓝牙浏览器授权与网站来源绑定，
+新地址可能需要重新授权设备，但不必因为网站搬迁而清空配置或重新配对。
+旧域名 DNS 指向 GitHub Pages 期间，应持续保留该域名和跳转站点的绑定，不要先删除绑定。
+
 已验证的历史固件身份保留在 `web/release-builds.json`，不依赖旧 Release 下载是否仍然存在。
 
 静态网站作为新的主推配置入口，macOS App / iOS App 仅保留源码，CI 不再构建，

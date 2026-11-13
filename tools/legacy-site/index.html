@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, follow">
+    <meta name="referrer" content="no-referrer">
+    <title>AI Passport Agent</title>
+    <style>
+      :root { color-scheme: light; font-family: system-ui, sans-serif; color: #243033; background: #f7f8f5; }
+      body { margin: 0; min-height: 100svh; display: grid; place-items: center; }
+      main { width: min(32rem, calc(100% - 3rem)); padding: 3rem 0; }
+      h1 { font-size: clamp(1.5rem, 5vw, 2rem); letter-spacing: -.04em; }
+      p { line-height: 1.7; color: #536364; }
+      a { display: inline-block; padding: .8rem 1.2rem; border-radius: .7rem; color: white; background: #176b5c; text-decoration: none; }
+      a:focus-visible { outline: 3px solid #82c9b6; outline-offset: 4px; }
+      small { display: block; margin-top: 1.5rem; line-height: 1.7; color: #536364; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>AI Passport Agent</h1>
+      <p lang="zh-CN">配置入口已更新，正在前往新地址。设备中已保存的配置不受影响，无需重新刷机。</p>
+      <p>The setup page has moved. Your saved device settings are unchanged; no firmware update is needed.</p>
+      <a id="destination" href="https://ai-passport-agent.codelife.me/">打开配置台 · Open web studio</a>
+      <small lang="zh-CN">若未自动跳转，请点击上方按钮。新地址可能需要重新授权 USB 或蓝牙。</small>
+      <small>If you are not redirected, use the button above. The new address may ask for USB or Bluetooth permission again.</small>
+    </main>
+    <script>
+      const destination = new URL('https://ai-passport-agent.codelife.me/');
+      destination.pathname = window.location.pathname;
+      destination.search = window.location.search;
+      destination.hash = window.location.hash;
+      document.getElementById('destination').href = destination.href;
+      window.location.replace(destination.href);
+    </script>
+  </body>
+</html>

@@ -17,6 +17,7 @@
 
 **当前支持 OpenClaw，尚未提供其他 Agent 接入。** 项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
+原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
 参见[命名与兼容性](docs/configuration.zh_CN.md#项目名称与兼容性)。
 
 这是基于 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport) 的独立社区项目，

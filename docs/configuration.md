@@ -16,9 +16,13 @@ native clients generate `ai-passport-agent://` configuration links and still
 accept `ai-passport-openclaw://` links. Their existing Wi-Fi cache path is also
 unchanged. Renaming does not require reflashing or pairing again.
 
-The stable Pages URL follows the active custom domain during migration. Website
-hostname and community listing changes are separate from the repository rename; neither changes a
-user's gateway endpoint. Firmware archives use `ai-passport-agent-firmware.tar.gz`
+The stable Pages URL follows the active custom domain during migration. The old
+`ai-passport-openclaw.codelife.me` address redirects to
+`ai-passport-agent.codelife.me`; see [legacy address compatibility](web.md#legacy-address-compatibility).
+Browser USB/Bluetooth permissions may need granting again at the new origin;
+device configuration is unchanged. Website hostname and community listing
+changes are separate from the repository rename; neither changes a user's
+gateway endpoint. Firmware archives use `ai-passport-agent-firmware.tar.gz`
 in future releases; already-published assets retain their original names.
 
 ## Configuration tools
