@@ -37,6 +37,7 @@ typedef struct {
 void passport_audio_diagnostics(passport_audio_diagnostics_t *out);
 bool passport_audio_finished(void);
 bool passport_audio_submit_ready(void);
+bool passport_audio_has_speech(void);
 esp_err_t passport_audio_live_start(void);
 esp_err_t passport_audio_live_test_start(void);
 esp_err_t passport_audio_live_ima_start(bool synthetic);

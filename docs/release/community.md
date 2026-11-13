@@ -1,28 +1,35 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.5.1
+# Community submission · v0.6.0
 
 Prepared for author review; **not submitted**. Description, instructions and update
-notes are independent fields. Do not reuse expired one-time authorizations or create
-a duplicate play to update an existing one. Classification is assigned by the server.
+notes are independent fields. Updating existing play 2236 requires a fresh
+`update_once` grant bound to that play; a `create_once` grant cannot update it.
+Do not create a duplicate play. Classification is assigned by the server.
 
 ## Title
 
-AI Passport OpenClaw · Your Wearable Voice Assistant
+AI Passport Agent · Your Wearable Voice Assistant
 
 ## Description
 
-A lightweight, wearable voice interface for your own OpenClaw. Ask records a
-question, shows your transcript and streams the text reply; follow up without
-starting over. Call supports spoken conversation, scrolling subtitles, muting,
-interruption and ending with the on-screen key labels.
+A wearable voice terminal for your personal agent. Currently supports OpenClaw.
+Ask a question or give your own assistant a task; see your transcript and the
+streamed reply, then follow up in the same conversation. Call offers spoken
+replies and scrolling subtitles, with on-screen keys to mute, interrupt or end.
+
+This connects to your own agent, not just a generic model chat. Ask uses a
+dedicated OpenClaw assistant with its permitted tools. Call uses a realtime voice
+service and can consult the agent for tasks and context; not every spoken turn
+runs through the full agent. On-device speech detection reduces noise-triggered
+submissions, but does not identify the speaker or eliminate every false trigger.
 
 Configure in the browser: desktop Chrome/Edge handles USB installation and updates;
 compatible Bluetooth browsers edit Wi-Fi, hotspots and assistant connections.
 iPhone users can use Bluefy. Save home and office Wi-Fi networks and a phone hotspot
 on Passport, then select a saved network under Settings → Wi-Fi without re-entering
 its details. The page has no application backend and does not relay conversations. After setup the device connects directly
-over Wi-Fi. No companion application needs to stay open.
+over Wi-Fi. No phone audio relay is required.
 
 Bring a running OpenClaw with a working model. Copy the web studio's setup prompt
 to an agent able to operate on the gateway host; it checks the plugin, dedicated
@@ -33,7 +40,7 @@ project. Images show actual interfaces with fictional demo data, not device phot
 
 ## Quick-start instructions
 
-1. Open https://ai-passport-openclaw.codelife.me/ in desktop Chrome/Edge and connect
+1. Open https://vangie.github.io/ai-passport-agent/ in desktop Chrome/Edge and connect
    Passport by USB. For a first install uncheck Keep settings, install and confirm;
    compatible updates can preserve settings.
 2. Choose Copy Prompt in OpenClaw and send it to an agent with access to your
@@ -50,15 +57,15 @@ project. Images show actual interfaces with fictional demo data, not device phot
 
 ## Update notes
 
-- Browser-first USB flashing and Bluetooth configuration, including iPhone Bluefy.
-- Unified Save/Discard, progressive Wi-Fi scan, assistant routes and bundled firmware.
-- More reliable encrypted Bluetooth handover and clearer connection/button indicators.
-- Native-client packages removed; firmware, plugin and checksums are retained.
+- Renamed to AI Passport Agent; currently supports OpenClaw, without claiming other integrations.
+- Added on-device speech detection to Ask and Call, reducing non-speech uploads and accidental sends.
+- Kept completed chats when no speech is detected; added bounded Call pre-roll and speech-confirmed interruption.
+- Refreshed the web studio, source links, bilingual guides and community images; existing pairing and settings remain compatible.
 
 ## Files and provenance
 
-- Source: https://github.com/vangie/ai-passport-openclaw
-- Release: https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.1
+- Source: https://github.com/vangie/ai-passport-agent
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.6.0
 - Firmware: the exact release's verified `FoloToy-AI-Passport-full.bin`, not an older
   local build. Validate the published receipt/checksums before preparing upload.
 - Cover: `00-cover.png`; gallery: `01-ask-and-call.png`, `02-web-studio.png`,
@@ -66,7 +73,7 @@ project. Images show actual interfaces with fictional demo data, not device phot
   use fictional Wi-Fi/assistant data and `wss://gateway.example`.
 - Rebuild with `node tools/community_materials.mjs` after preparing the browser
   dependencies. Output and separate UTF-8 publishing fields are under ignored
-  `build/community-market/v0.5.1/materials/`. The renderer does not upload anything.
+  `build/community-market/v0.6.0/materials/`. The renderer does not upload anything.
 - Exported copy removes source-only soft line breaks while retaining paragraphs,
   numbered steps and update bullets. The preview uses natural browser text wrapping.
 - Inspect the final four local PNGs and the metadata preview. Ask for author

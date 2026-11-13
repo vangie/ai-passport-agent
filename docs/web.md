@@ -2,7 +2,7 @@
 
 # Browser configuration studio
 
-Open the published studio at <https://ai-passport-openclaw.codelife.me/>.
+Open the published studio at <https://vangie.github.io/ai-passport-agent/>.
 
 The static website is the new browser-first configuration path. Existing
 macOS App and iOS App remain as source-only alternatives, without CI builds or
@@ -10,7 +10,7 @@ new Release packages. No account, database or configuration
 backend is needed; Passport remains the source of truth. Voice connects directly
 from Passport to OpenClaw, not through the browser or its hosting service.
 
-The compact header combines the existing project icon, AI Passport OpenClaw name and page title in
+The compact header combines the existing project icon, AI Passport Agent name and page title in
 one row, with language controls alongside. Narrow screens hide the repeated
 brand text rather than adding another title row. The same project icon is used
 for the browser tab.
@@ -73,7 +73,8 @@ cloudflared tunnel create ai-passport-web-dev
 cloudflared tunnel route dns ai-passport-web-dev passport-dev.example.com
 ```
 
-Create `~/.config/ai-passport-openclaw/web-tunnel.json` outside the repository:
+Create `~/.config/ai-passport-agent/web-tunnel.json` outside the repository.
+If absent, the previous `~/.config/ai-passport-openclaw/web-tunnel.json` is still read:
 
 ```json
 {

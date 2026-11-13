@@ -959,6 +959,14 @@ static void test_chat_history(void) {
     passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     expect(view.chat_count==PASSPORT_CHAT_TURNS && !strcmp(view.chat[0].question,"问题2"),"cancel at full capacity restores the oldest completed turn");
+    passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    expect(view.sending && view.chat_pending,"manual no-speech submission has an unfinished turn until capture is checked");
+    passport_finish_cancel(&view,"No speech detected. Please try again.");
+    expect(view.chat_count==PASSPORT_CHAT_TURNS && !view.chat_pending && !view.sending && !view.retry_send,
+        "no-speech rejection removes the pending turn without enabling upload retry");
+    expect(!strcmp(view.chat[0].question,"问题2") && view.screen==PASSPORT_SCREEN_HOME,
+        "no-speech rejection restores completed history and reachable home controls");
     view.screen=PASSPORT_SCREEN_TALK;
     int pages = passport_reply_pages(&view);
     expect(view.reply_page>=0 && view.reply_page<pages,"new turn opens on a valid recent page");

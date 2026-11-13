@@ -1,47 +1,44 @@
 [Simplified Chinese](notes.zh_CN.md) · **English**
 
-# AI Passport OpenClaw v0.5.1
+# AI Passport Agent v0.6.0
 
 ## Highlights
 
-- **Browser-first setup:** install/update firmware and configure Passport at
-  <https://ai-passport-openclaw.codelife.me/>. Desktop Chrome/Edge uses USB;
-  compatible Web Bluetooth browsers configure wirelessly. iPhone users can use
-  Bluefy for Bluetooth settings, not firmware flashing.
-- **One coherent configuration page:** saved Wi-Fi, assistant profiles and their
-  routes, language and volume; global Save/Discard, retained drafts after errors,
-  progressive Wi-Fi scanning and an agent-assisted OpenClaw setup prompt.
-- **Clear firmware updates:** Keep settings is on by default for compatible
-  updates; first installation/full replacement is an explicit destructive choice.
-  Firmware and dependencies are served from the website, not runtime GitHub
-  download redirects. Retired release identities remain recognizable.
-- **Bluetooth handover and screen refinements:** encrypted client takeover after
-  current commands finish, session-scoped replies, advertising recovery, distinct
-  connection icons, a full-width status row and compact aligned key labels.
-- **Lean releases:** firmware and the upgradeable OpenClaw plugin only. Native
-  client source is retained but is no longer built, packaged or promoted.
-- Fixed a ShellCheck portability failure in the Pages artifact audit. The v0.5.0
-  candidate was stopped before publication; its tag is retained, not rewritten.
+- **A new name, the same paired device.** AI Passport OpenClaw is now
+  **AI Passport Agent**, a wearable voice terminal for your personal agent.
+  **OpenClaw is the only supported backend in this release.**
+- **Less noise sent as speech.** Ask and Call now use on-device speech detection.
+  Ask discards recordings with no detected speech without clearing completed
+  chats. After detected speech, about two seconds of silence submits the question.
+- **Speech starts more naturally.** Call retains a short, bounded pre-roll and
+  requires speech confirmation for voice interruption. Button interruption and
+  mute remain available. Speech-like noise may still pass; very quiet or short
+  speech may be missed. This is not speaker verification.
+- **Browser-first setup.** Configure Wi-Fi, hotspots and OpenClaw, or update
+  firmware from the web studio. The studio has no application backend and writes
+  settings directly over USB/Bluetooth; conversations go to your configured services.
 
-## Install
+## Install and update
 
-Start with the [web studio](https://ai-passport-openclaw.codelife.me/) and the
-[quick start](../../README.md#get-started). Fresh installations/full replacement
-may reset settings; compatible application updates preserve them. Configuration
-saves never reflash firmware. A new network must be reachable during first save.
+Start at <https://vangie.github.io/ai-passport-agent/> and follow the
+[getting-started guide](../../README.md#get-started). The stable Pages link follows
+the active custom domain during the hostname transition.
 
-Manual downloads: `FoloToy-AI-Passport.bin` is application-only at `0x10000`;
-`FoloToy-AI-Passport-full.bin` is merged firmware at `0x0`. Do not interchange
-these offsets. The firmware tarball includes installation parameters. Install
-`ai-passport-openclaw-0.5.1.tgz` on the gateway host, not the configuration computer.
+For a compatible USB update, leave **Keep settings** enabled. A first installation
+or full replacement overwrites device configuration; see the
+[data policy](../development/engineering/firmware-layout.md#flashing-and-stored-data).
+Existing device identities, pairing, saved networks, wire protocol and the
+`ai-passport-openclaw` plugin ID are unchanged. No re-pairing is required merely
+because of the rename. Native apps remain source-only, not release downloads.
 
-## Integrity and compatibility
+The plugin package is `ai-passport-openclaw-0.6.0.tgz`; install it on the OpenClaw
+gateway host. The firmware archive is `ai-passport-agent-firmware.tar.gz`.
+Use `SHA256SUMS.txt` and `release-manifest.json` to check downloads and provenance.
 
-Seven release assets are checked before publication with a source-commit receipt,
-SHA-256 checksums and draft-upload/download verification. See `SHA256SUMS.txt`.
-No personal endpoints, Wi-Fi passwords, provider keys or device credentials are
-distributed. The website has no application backend; settings go to the device.
+## Validation and limitations
 
-OpenClaw 2026.10.5 remains the tested plugin baseline. Call requires a configured
-realtime voice provider; Ask can be used independently. Build, host and browser
-tests are not physical audio, battery, radio-coexistence or every-browser acceptance.
+This release is gated by host tests, a fresh firmware build, merged-image/layout
+checks, browser UI tests and plugin package inspection. The maintainer reports
+the speech-filtering firmware useful in device testing; this is not a guarantee
+for every microphone, noise source, voice provider or network. Call still needs
+a configured realtime voice service. Model/provider fees are separate.

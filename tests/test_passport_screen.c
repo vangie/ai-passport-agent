@@ -450,6 +450,11 @@ int main(int argc, char **argv) {
     assert(!strcmp(lv_label_get_text(s_status),"REPLYING"));
     strcpy(store.lang,"en");passport_view_init(&v);v.wifi_online=true;v.battery_soc=100;
     render("english-home",&v,&store);
+    strcpy(v.reply,"No speech detected. Please try again.");render("english-no-speech",&v,&store);
+    assert(strstr(lv_label_get_text(s_body),"No speech detected"));
+    strcpy(store.lang,"zh");strcpy(v.reply,"没有录音，请重新说话");render("no-speech",&v,&store);
+    assert(strstr(lv_label_get_text(s_body),"没有录音"));
+    v.reply[0]=0;strcpy(store.lang,"en");
     v.screen=PASSPORT_SCREEN_NETS;render("english-network",&v,&store);
     passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);render("english-network-detail",&v,&store);
     v.screen=PASSPORT_SCREEN_SETTINGS;render("english-assistants",&v,&store);

@@ -25,6 +25,7 @@
 			<string>ai.mirasim.passport.configuration</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>ai-passport-agent</string>
 				<string>ai-passport-openclaw</string>
 			</array>
 		</dict>

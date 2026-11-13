@@ -78,6 +78,22 @@ Store reusable music and sound-effect sources in `music/`.
 - Check Flash and internal-RAM cost before embedding audio; stream or chunk long recordings.
 - Do not commit media without redistribution permission.
 
+## Speech detection fixture
+
+[`audio/vad-speech.wav`](audio/vad-speech.wav) is the unchanged
+`tests/data/audio_tiny16.wav` fixture from
+[libfvad](https://github.com/dpirch/libfvad/tree/532ab666c20d3cfda38bca63abbb0f152706c369),
+pinned at `532ab666c20d3cfda38bca63abbb0f152706c369` alongside the WebRTC VAD
+core in `components/passport_vad`. It is 16 kHz, 16-bit mono PCM, 180,590 bytes;
+no conversion was applied. SHA-256:
+`551d3f0282c5d5e1e32e76da97bd3532c38e6f4bb02a32510caf562d7c06ae9c`.
+The upstream [BSD license](../components/passport_vad/LICENSE),
+[patent grant](../components/passport_vad/PATENTS) and
+[authors](../components/passport_vad/AUTHORS) are retained and included in firmware
+release notices. The fixture is used only by host tests, not embedded in firmware.
+Project-specific rate adaptation, confirmation, endpointing and live gating wrap
+the unchanged upstream core. See [speech filtering](../docs/configuration.md#speech-filtering).
+
 ## Battery profiles
 
 [`battery/wanli-500mah-profile2-xil40x-20261020.txt`](battery/wanli-500mah-profile2-xil40x-20261020.txt)

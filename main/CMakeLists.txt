@@ -29,10 +29,13 @@ idf_component_register(
          "../app/openclaw_frame.c"
     INCLUDE_DIRS "." "../app"
     REQUIRES bsp nvs_flash bt esp_event esp_netif esp_wifi esp_app_format esp_partition esp_pm
-             tcp_transport esp-tls mbedtls json passport_crypto passport_transport
+             tcp_transport esp-tls mbedtls json passport_crypto passport_transport passport_vad
 )
 
 set_source_files_properties(passport_gateway.c PROPERTIES COMPILE_OPTIONS "-Os")
+set_source_files_properties(passport_audio.c passport_clip.c PROPERTIES COMPILE_OPTIONS "-Os")
+set_source_files_properties(passport_screen.c PROPERTIES COMPILE_OPTIONS "-Os")
+set_source_files_properties("../app/passport_ui.c" PROPERTIES COMPILE_OPTIONS "-Os")
 set_source_files_properties(passport_app.c passport_link.c "../app/passport_ble_session.c" PROPERTIES COMPILE_OPTIONS "-Os")
 set_source_files_properties("../app/passport_usb.c" PROPERTIES COMPILE_OPTIONS "-Os")
 

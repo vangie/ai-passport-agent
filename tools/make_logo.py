@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从 assets/logo/source.jpg 生成 AI Passport OpenClaw 的图标。
+"""从 assets/logo/source.jpg 生成 AI Passport Agent 的图标。
 
 源图可以是满版的正方形，也可以自带黑色圆角。
 Mac 图标裁成 macOS 的圆角，圆角外透明；iPhone 会自己裁圆角，

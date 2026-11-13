@@ -26,7 +26,7 @@ def check_version(tag=None):
         if versions != [version]:
             raise ValueError(f'Plugin runtime version mismatch: {name}')
     for name in ['notes.md', 'notes.zh_CN.md']:
-        if f'# AI Passport OpenClaw v{version}' not in (ROOT / 'docs/release' / name).read_text().splitlines():
+        if f'# AI Passport Agent v{version}' not in (ROOT / 'docs/release' / name).read_text().splitlines():
             raise ValueError(f'Release notes version mismatch: {name}')
     for name in ['CHANGELOG.md', 'CHANGELOG.zh_CN.md']:
         if not re.search(rf'^## v{re.escape(version)} - \d{{4}}-\d{{2}}-\d{{2}}$',
@@ -36,7 +36,7 @@ def check_version(tag=None):
 
 
 def asset_names(version):
-    return {f'ai-passport-openclaw-{version}.tgz', 'ai-passport-openclaw-firmware.tar.gz',
+    return {f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
             'FoloToy-AI-Passport-full.bin',
             'FoloToy-AI-Passport.bin', 'LICENSE.txt'}
 
@@ -47,7 +47,7 @@ def prepare_assets(source, destination, tag, commit):
         raise ValueError('Release source commit must be a full Git SHA')
     inputs = {
         f'ai-passport-openclaw-{version}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{version}.tgz',
-        'ai-passport-openclaw-firmware.tar.gz': source / 'release-firmware/ai-passport-openclaw-firmware.tar.gz',
+        'ai-passport-agent-firmware.tar.gz': source / 'release-firmware/ai-passport-agent-firmware.tar.gz',
         'FoloToy-AI-Passport-full.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport-full.bin',
         'FoloToy-AI-Passport.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport.bin',
         'LICENSE.txt': ROOT / 'LICENSE',
@@ -143,13 +143,16 @@ def ios_source(destination):
             if name in {'README.md', 'README.zh_CN.md'}:
                 content = content.replace(b'(ios-install.md)', b'(README.md)').replace(
                     b'(ios-install.zh_CN.md)', b'(README.zh_CN.md)')
-            archive.writestr(f'ai-passport-openclaw-ios-source/{name}', content)
+            archive.writestr(f'ai-passport-agent-ios-source/{name}', content)
 
 
 def licenses(destination):
     sources = {'MIT.txt': 'LICENSE', 'Noto-SIL-OFL.txt': 'assets/fonts/OFL.txt',
                'Monocypher.txt': 'components/passport_crypto/LICENSE',
-               'ESP-WebSocket-Client.txt': 'components/passport_transport/LICENSE'}
+               'ESP-WebSocket-Client.txt': 'components/passport_transport/LICENSE',
+               'WebRTC-VAD.txt': 'components/passport_vad/LICENSE',
+               'WebRTC-VAD-PATENTS.txt': 'components/passport_vad/PATENTS',
+               'WebRTC-VAD-AUTHORS.txt': 'components/passport_vad/AUTHORS'}
     destination.mkdir(parents=True, exist_ok=True)
     for name, source in sources.items():
         shutil.copy2(ROOT / source, destination / name)

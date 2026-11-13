@@ -29,13 +29,14 @@ class WebPreviewTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.directory = Path(directory.name)
         self.config = self.directory / 'tunnel.json'
+        self.legacy_config = self.directory / 'legacy-tunnel.json'
         self.credentials = self.directory / 'credentials.json'
         self.credentials.write_text('{}')
         self.settings = {'tunnel': '00000000-0000-0000-0000-000000000000',
                          'hostname': 'passport-dev.example',
                          'credentials_file': str(self.credentials)}
         self.output = io.StringIO()
-        for target, value in [('CONFIG', self.config), ('STATE', self.directory / 'state.json'),
+        for target, value in [('CONFIG', self.config), ('LEGACY_CONFIG', self.legacy_config), ('STATE', self.directory / 'state.json'),
                               ('LOCK', self.directory / 'preview.lock'), ('BUILD_LOCK', self.directory / 'build.lock')]:
             replacement = patch.object(preview, target, value)
             replacement.start()
@@ -54,6 +55,23 @@ class WebPreviewTests(unittest.TestCase):
 
     def test_missing_config_selects_quick_tunnel(self):
         self.assertEqual(preview.tunnel_settings('http://127.0.0.1:4173'), ({}, None))
+
+    def test_legacy_config_is_used_when_new_path_is_missing(self):
+        self.legacy_config.write_text(json.dumps(self.settings))
+        configuration, url = preview.tunnel_settings('http://127.0.0.1:4173')
+        self.assertEqual(url, 'https://passport-dev.example')
+        self.assertEqual(configuration['credentials-file'], str(self.credentials.resolve()))
+
+    def test_new_config_takes_precedence_over_legacy_config(self):
+        self.write_config()
+        self.legacy_config.write_text('invalid legacy configuration')
+        self.assertEqual(preview.tunnel_settings('http://127.0.0.1:4173')[1], 'https://passport-dev.example')
+
+    def test_invalid_new_config_does_not_fall_back_to_legacy_config(self):
+        self.config.write_text('invalid configuration')
+        self.legacy_config.write_text(json.dumps(self.settings))
+        with self.assertRaises(ValueError):
+            preview.tunnel_settings('http://127.0.0.1:4173')
 
     def test_missing_explicit_config_does_not_fall_back_to_public_quick_tunnel(self):
         with patch.dict('os.environ', {'PASSPORT_WEB_TUNNEL_CONFIG': str(self.config)}):

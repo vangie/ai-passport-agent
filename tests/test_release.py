@@ -48,6 +48,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue((resources / 'build/firmware' / self.manifest['full_bin_sha256'] / 'manifest.json').is_file())
         self.assertTrue((resources / 'licenses/Noto-SIL-OFL.txt').is_file())
         self.assertTrue((resources / 'licenses/Monocypher.txt').is_file())
+        for notice in ['WebRTC-VAD.txt', 'WebRTC-VAD-PATENTS.txt', 'WebRTC-VAD-AUTHORS.txt']:
+            self.assertTrue((resources / 'licenses' / notice).is_file())
 
     def test_reject_tampering(self):
         (self.source / 'FoloToy-AI-Passport.bin').write_bytes(b'corrupt')
@@ -96,7 +98,7 @@ class ReleaseTests(unittest.TestCase):
                 release.subprocess, 'check_output', return_value='\0'.join(names).encode()):
             release.ios_source(destination)
         with zipfile.ZipFile(destination) as archive:
-            prefix = 'ai-passport-openclaw-ios-source/'
+            prefix = 'ai-passport-agent-ios-source/'
             self.assertEqual(set(archive.namelist()), {prefix + name for name in [
                 'ios/project.yml', 'ios/Passport/PassportApp.swift', 'ios/Passport/Info.plist',
                 'shared/PairPrompt.swift', 'shared/AppLocalization.swift', 'README.md', 'README.zh_CN.md', 'LICENSE',
@@ -192,7 +194,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_assets_reject_missing_empty_and_symlink(self):
         source, tag, commit = self.release_downloads()
-        path = source / 'release-firmware/ai-passport-openclaw-firmware.tar.gz'
+        path = source / 'release-firmware/ai-passport-agent-firmware.tar.gz'
         for invalid in ['missing', 'empty', 'symlink']:
             if path.exists():
                 path.unlink()
@@ -220,7 +222,7 @@ class ReleaseTests(unittest.TestCase):
     def test_release_assets_exclude_native_apps(self):
         version = self.release_identity()
         self.assertEqual(release.asset_names(version), {
-            f'ai-passport-openclaw-{version}.tgz', 'ai-passport-openclaw-firmware.tar.gz',
+            f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
             'FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'LICENSE.txt',
         })
 

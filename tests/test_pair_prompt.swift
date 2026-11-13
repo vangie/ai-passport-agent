@@ -11,7 +11,7 @@ import Foundation
             }
             previousStep = match.upperBound
         }
-        for requirement in ["https://github.com/vangie/ai-passport-openclaw", "SHA256SUMS.txt",
+        for requirement in ["https://github.com/vangie/ai-passport-agent", "SHA256SUMS.txt",
                             "openclaw plugins install --link --accept-capabilities \"$PWD\"",
                             "openclaw gateway call passport.status --json --params '{\"agentId\":\"passport\"}'",
                             "优先查找并复用", "创建持久入口", "/passport/v1", "网关保持回环监听",
@@ -63,6 +63,11 @@ import Foundation
                                                        ("password", "pass+word & ="), ("name", "家里")]))
         precondition(imported.setupCode == first && imported.gatewayURL == "wss://first.example")
         precondition(imported.ssid == "家里 Wi-Fi" && imported.password == "pass+word & =")
+        let legacyLink = link([("code", first)]).absoluteString
+            .replacingOccurrences(of: ConfigurationLink.scheme + ":", with: ConfigurationLink.legacyScheme + ":")
+        let legacyImported = try ConfigurationLink.parse(URL(string: legacyLink)!)
+        precondition(legacyImported.setupCode == first && legacyImported.gatewayURL == "wss://first.example")
+        precondition(ConfigurationLink.scheme == "ai-passport-agent")
         let codeOnly = try ConfigurationLink.parse(link([("code", second)]))
         precondition(codeOnly.ssid == nil && codeOnly.password == nil && codeOnly.name == nil)
         for bad in [link([("code", first), ("code", second)]),

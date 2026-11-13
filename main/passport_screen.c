@@ -631,7 +631,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                 text(s_status, value);
             } else text(s_status, tr(s, "对话", "VOICE"));
             text(s_headline, tr(s, "想聊点什么？", "Let's talk"));
-            bool local_error = strstr(v->reply,"失败") || strstr(v->reply,"不可用") || strstr(v->reply,"忙") || strstr(v->reply,"重试");
+            bool local_error = strstr(v->reply,"失败") || strstr(v->reply,"不可用") || strstr(v->reply,"忙") || strstr(v->reply,"重试") || strstr(v->reply,"没有录音") || strstr(v->reply,"No speech");
             text(s_body, v->network_state == PASSPORT_NETWORK_CONNECTING ?
                 passport_network_feedback(v->network_state, passport_lang_zh(s), v->wifi_online)
                 : local_error ? v->reply : v->retry_send ? tr(s, "录音已保留，可继续发送", "Your recording is ready to send.")

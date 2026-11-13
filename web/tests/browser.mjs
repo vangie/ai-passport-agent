@@ -417,9 +417,9 @@ try {
   assert.ok((await page.locator('header').boundingBox()).height <= 80);
   assert.ok((await page.locator('.connection').boundingBox()).y <= 104);
   assert.equal(await page.locator('.passport-art').count(), 0);
-  assert.equal(await page.locator('.brand').textContent(), 'AI Passport OpenClaw');
-  assert.equal(await page.title(), 'AI Passport OpenClaw');
-  assert.equal(await page.locator('.brand').getAttribute('aria-label'), 'AI Passport OpenClaw');
+  assert.equal(await page.locator('.brand').textContent(), 'AI Passport Agent');
+  assert.equal(await page.title(), 'AI Passport Agent');
+  assert.equal(await page.locator('.brand').getAttribute('aria-label'), 'AI Passport Agent');
   const logoBytes = await readFile('../assets/logo/logo.png');
   const logoDigest = createHash('sha256').update(logoBytes).digest('hex');
   const logoURL = await page.locator('.brand img').getAttribute('src');

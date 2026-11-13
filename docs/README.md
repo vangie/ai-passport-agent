@@ -2,7 +2,7 @@
 
 > This is retained upstream hardware/baseline documentation. For this product's
 > actual firmware, configuration app, plugin and releases, start at the
-> [AI Passport OpenClaw README](../README.md). Its `main` is a product branch,
+> [AI Passport Agent README](../README.md). Its `main` is a product branch,
 > not the unmodified hardware-test baseline described below.
 
 <h1 align="center">FoloToy AI PASSPORT</h1>

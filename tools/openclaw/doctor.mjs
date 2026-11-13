@@ -29,7 +29,7 @@ export async function checkCompatibility({config, getProvider, WebSocket, api, v
             } catch { finish(new Error('Native gateway challenge contract changed')); }
         });
     });
-    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.5.1',
+    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.6.0',
         protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH, upstreamProvider: upstreamId,
         checks: ['public-plugin-sdk', 'native-provider-contract', 'native-device-challenge'],
         credentials: 'checked by the running gateway, not exported to the doctor',

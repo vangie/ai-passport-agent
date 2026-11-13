@@ -46,7 +46,7 @@ import Foundation
         precondition(PairPrompt.text(for: ["en-US"]) == PairPrompt.englishText)
         precondition(PairPrompt.text(for: ["zh-Hans"]) == PairPrompt.chineseText)
         for text in [PairPrompt.chineseText, PairPrompt.englishText] {
-            for command in ["https://github.com/vangie/ai-passport-openclaw", "SHA256SUMS.txt",
+            for command in ["https://github.com/vangie/ai-passport-agent", "SHA256SUMS.txt",
                             "openclaw plugins install --link --accept-capabilities", "passport.status",
                             "node doctor.mjs", "/passport/v1", "gateway.auth.token",
                             "openclaw qr --json --no-ascii --limited --url", "gatewayUrl", "setupCode"] {

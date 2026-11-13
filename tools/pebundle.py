@@ -29,8 +29,8 @@ def main() -> int:
     (ROOT / "build" / "passport-flash.bin").write_bytes(flash)
     manifest = "\n".join([
         "[bundle]",
-        'id = "ai-passport-openclaw"',
-        'name = "AI Passport OpenClaw"',
+        'id = "ai-passport-agent"',
+        'name = "AI Passport Agent"',
         "",
         "[[file]]",
         'role = "flash"',

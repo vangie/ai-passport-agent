@@ -13,7 +13,7 @@ distribute a device re-signing kit; use the source workflow below.
 
 ## Install on your iPhone
 
-1. Clone or download the [repository](https://github.com/vangie/ai-passport-openclaw).
+1. Clone or download the [repository](https://github.com/vangie/ai-passport-agent).
    Keep `ios/` and `shared/` together; no private signing data is included.
 2. Install full Xcode with an iOS SDK and XcodeGen (`brew install xcodegen`).
    The app's minimum deployment target is iOS 17.0; your Xcode must support your
@@ -69,4 +69,4 @@ The simulator cannot configure a real Passport via BLE. There is no prebuilt
 Simulator download or complete-app CI build; use a physical iPhone for Bluetooth tests.
 
 Full setup, NFC tips, plugin and networking instructions are in the
-[project repository](https://github.com/vangie/ai-passport-openclaw).
+[project repository](https://github.com/vangie/ai-passport-agent).

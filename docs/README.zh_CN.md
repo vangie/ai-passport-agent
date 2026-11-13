@@ -1,6 +1,6 @@
 [English](/docs/README.md) · **简体中文**
 
-> 本文保留上游硬件／基线说明。本产品的固件、配置 App、插件及发行版请从 [AI Passport OpenClaw README](../README.zh_CN.md) 开始。这里的 `main` 是产品分支，不是下文描述的未修改硬件测试基线。
+> 本文保留上游硬件／基线说明。本产品的固件、配置 App、插件及发行版请从 [AI Passport Agent README](../README.zh_CN.md) 开始。这里的 `main` 是产品分支，不是下文描述的未修改硬件测试基线。
 
 <h1 align="center">FoloToy AI PASSPORT</h1>
 

@@ -62,7 +62,7 @@ jobs:
       - name: Package only distributable firmware
         run: |
           python3 tools/release.py firmware build/release/firmware
-          tar -czf build/release/ai-passport-openclaw-firmware.tar.gz -C build/release/firmware .
+          tar -czf build/release/ai-passport-agent-firmware.tar.gz -C build/release/firmware .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: release-firmware
@@ -117,7 +117,7 @@ jobs:
             gh release edit "$RELEASE_TAG" --notes-file build/release-notes.md
           else
             gh release create "$RELEASE_TAG" --verify-tag --draft \
-              --title "AI Passport OpenClaw $RELEASE_TAG" --notes-file build/release-notes.md
+              --title "AI Passport Agent $RELEASE_TAG" --notes-file build/release-notes.md
           fi
           gh release upload "$RELEASE_TAG" dist/* --clobber
           gh release download "$RELEASE_TAG" --dir build/release-verification

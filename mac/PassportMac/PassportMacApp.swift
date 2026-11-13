@@ -8,7 +8,7 @@ struct PassportMacApp: App {
     @StateObject private var incoming = ConfigurationInbox()
 
     var body: some Scene {
-        Window("AI Passport OpenClaw", id: "main") {
+        Window("AI Passport Agent", id: "main") {
             PassportMacView(link: link, wifi: wifi, incoming: incoming)
                 .onOpenURL { incoming.receive($0) }
                 .onAppear {

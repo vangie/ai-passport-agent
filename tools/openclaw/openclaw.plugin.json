@@ -1,6 +1,6 @@
 {
   "id": "ai-passport-openclaw",
-  "name": "AI Passport OpenClaw",
+  "name": "AI Passport Agent — OpenClaw",
   "description": "Bounded audio transport using native device authentication and Talk sessions",
   "categories": ["infrastructure"],
   "activation": {"onStartup": true},

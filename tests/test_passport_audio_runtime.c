@@ -40,6 +40,7 @@ BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore, TickType_t ticks);
 #include "../main/passport_audio.c"
 
 static int16_t fixture_sample;
+static FILE *fixture_speech;
 static bool stop_after_write;
 static bool fixture_alternating;
 static int64_t fixture_clock;
@@ -50,6 +51,9 @@ static bool test_playback_wakeup;
 static uint8_t wakeup_pcm[960];
 static unsigned playback_refill_ms, playback_stream_writes;
 static bool playback_stream;
+static unsigned fixture_resample_phase;
+static int16_t fixture_resample_sample;
+static size_t fixture_input_voiced, fixture_input_silent;
 
 BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore, TickType_t ticks) {
     if (playback_stream && semaphore == s_play_ready) {
@@ -89,6 +93,16 @@ esp_err_t bsp_audio_read(void *pcm, size_t bytes) {
         int16_t *samples = pcm;
         for (size_t index = 0; index < bytes / sizeof(*samples); index++)
             samples[index] = fixture_alternating && index % 2 ? -fixture_sample : fixture_sample;
+        if (fixture_speech && test_read_calls > 30) {
+            if (s_live_capture) {
+                for (size_t index=0;index<bytes/sizeof(*samples);index++) {
+                    if (fixture_resample_phase!=2 && fread(&fixture_resample_sample,sizeof(fixture_resample_sample),1,fixture_speech)!=1)
+                        fixture_resample_sample=0;
+                    samples[index]=fixture_resample_sample;
+                    fixture_resample_phase=(fixture_resample_phase+1)%3;
+                }
+            } else if (test_read_calls<=368) (void)fread(samples,1,bytes,fixture_speech);
+        }
     }
     return result;
 }
@@ -120,15 +134,34 @@ static void stop_live_playback(void) {
 static void submit_capture_fixture(void) {
     fixture_alternating=true;
     fixture_sample=test_read_calls>30 && test_read_calls<=50 ? 1000 : 40;
-    if (test_read_calls==180) s_stop=true;
+    if (test_read_calls==520) s_stop=true;
+}
+
+static void open_speech_fixture(void) {
+    fixture_speech=fopen("assets/audio/vad-speech.wav","rb");assert(fixture_speech);
+    unsigned char chunk[8];assert(fseek(fixture_speech,12,SEEK_SET)==0);
+    while(fread(chunk,1,8,fixture_speech)==8 && memcmp(chunk,"data",4)) {
+        unsigned bytes=chunk[4]|(unsigned)chunk[5]<<8|(unsigned)chunk[6]<<16|(unsigned)chunk[7]<<24;
+        assert(fseek(fixture_speech,bytes+(bytes&1),SEEK_CUR)==0);
+    }
+    assert(!memcmp(chunk,"data",4));
+    fixture_resample_phase=0;fixture_resample_sample=0;
 }
 
 static void test_submit_capture_worker(void) {
     test_auto_ack=false;test_task_count=0;
     fixture_read_ms=16;test_read_hook=submit_capture_fixture;test_read_calls=0;
+    open_speech_fixture();
     assert(passport_audio_capture()==ESP_OK && !passport_audio_submit_ready());
     test_run_worker(s_task);
     assert(s_submit_ready && !passport_audio_submit_ready());
+    assert(passport_audio_has_speech());
+    assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
+    fclose(fixture_speech);fixture_speech=NULL;
+    test_task_count=0;test_read_calls=0;
+    assert(passport_audio_capture()==ESP_OK);
+    test_run_worker(s_task);
+    assert(!s_submit_ready && !passport_audio_has_speech());
     assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
     test_task_count=0;test_read_calls=0;
     assert(passport_audio_start()==ESP_OK && !s_submit_ready);
@@ -138,39 +171,50 @@ static void test_submit_capture_worker(void) {
     fixture_alternating=false;fixture_sample=0;test_read_hook=NULL;test_read_calls=0;
 }
 
+static void drain_live_fixture(void) {
+    int16_t output[AUDIO_CHUNK];
+    size_t bytes;
+    do {
+        assert(passport_audio_live_pull(output,sizeof(output),&bytes)==ESP_OK);
+        for (size_t sample=0;sample<bytes/sizeof(output[0]);sample++) {
+            if (output[sample]) fixture_input_voiced++;
+            else fixture_input_silent++;
+        }
+    } while (bytes);
+    if (test_read_calls==800) s_stop=true;
+}
+
+static void test_live_speech_worker(void) {
+    for (unsigned mode=0;mode<3;mode++) {
+    test_task_count=0;test_read_calls=0;fixture_sample=0;fixture_alternating=false;
+    fixture_input_voiced=fixture_input_silent=0;
+    fixture_read_ms=11;test_read_hook=drain_live_fixture;
+    open_speech_fixture();
+    assert(passport_audio_live_start()==ESP_OK);
+    passport_audio_live_response(mode!=0);
+    passport_audio_live_mute(mode==2);
+    test_run_worker(s_task);
+    if (mode==2) assert(!s_vad->speech && !fixture_input_voiced);
+    else {
+        assert(s_vad->speech && !s_vad->active);
+        assert(fixture_input_voiced>50000 && fixture_input_silent>30000);
+    }
+    assert(passport_audio_live_take_interrupt()==(mode==1));
+    assert(!passport_audio_live_dropped() && !s_live_voice_dropped);
+    test_run_worker(s_play_task);
+    assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
+    fclose(fixture_speech);fixture_speech=NULL;
+    test_read_hook=NULL;fixture_read_ms=16;
+    passport_audio_live_mute(false);
+    }
+}
+
 static void input_fixture(int16_t *samples, int amplitude, int offset) {
     for (size_t index = 0; index < AUDIO_CHUNK; index++)
         samples[index] = (int16_t)(offset + (index % 2 ? amplitude : -amplitude));
 }
 
 static void test_ask_endpoint(void) {
-    passport_endpoint_t endpoint = {0};
-    for (unsigned window=0;window<750;window++)
-        assert(!passport_endpoint_feed(&endpoint,40,40));
-    assert(!endpoint.speech && !endpoint.ready);
-    endpoint=(passport_endpoint_t){0};
-    for (unsigned window=0;window<10;window++) assert(!passport_endpoint_feed(&endpoint,10000,40));
-    for (unsigned window=0;window<60;window++) assert(!passport_endpoint_feed(&endpoint,40,40));
-    assert(!endpoint.speech);
-    assert(!passport_endpoint_feed(&endpoint,3000,40));
-    for (unsigned window=0;window<60;window++) assert(!passport_endpoint_feed(&endpoint,40,40));
-    assert(!endpoint.speech);
-    for (unsigned window=0;window<6;window++) assert(!passport_endpoint_feed(&endpoint,1200,40));
-    assert(endpoint.speech);
-    for (unsigned window=0;window<25;window++) assert(!passport_endpoint_feed(&endpoint,40,40));
-    assert(!passport_endpoint_feed(&endpoint,1000,40));
-    for (unsigned window=0;window<49;window++) assert(!passport_endpoint_feed(&endpoint,40,40));
-    assert(passport_endpoint_feed(&endpoint,40,40));
-    assert(passport_endpoint_feed(&endpoint,1000,40));
-    for (unsigned turn=0;turn<4;turn++) {
-        endpoint=(passport_endpoint_t){0};
-        for (unsigned window=0;window<10;window++) assert(!passport_endpoint_feed(&endpoint,1000,40));
-        assert(!endpoint.speech && !endpoint.ready);
-        for (unsigned window=0;window<10;window++) assert(!passport_endpoint_feed(&endpoint,1000,40));
-        assert(endpoint.speech);
-        for (unsigned window=0;window<49;window++) assert(!passport_endpoint_feed(&endpoint,40,40));
-        assert(passport_endpoint_feed(&endpoint,40,40));
-    }
     atomic_store(&s_submit_ready,true);s_retain=true;s_live_capture=false;s_stop=false;s_finished=false;
     assert(passport_audio_submit_ready());
     s_live_capture=true;assert(!passport_audio_submit_ready());
@@ -183,6 +227,8 @@ static void test_ask_endpoint(void) {
 static void test_live_input_boundaries(void) {
     live_input_gate_t gate = {0};
     int16_t samples[AUDIO_CHUNK];
+    passport_vad_t detector;
+    assert(passport_vad_init(&detector,24000));s_vad=&detector;
     unsigned forwarded = 0;
     for (unsigned chunk = 0; chunk < 180; chunk++) {
         input_fixture(samples, 50, 600);
@@ -193,6 +239,7 @@ static void test_live_input_boundaries(void) {
         }
     }
     assert(forwarded == 180);
+    assert(!gate.voiced && !detector.speech);
     gate = (live_input_gate_t){0};
     input_fixture(samples, 166, 24);
     assert(live_input_prepare(&gate, samples, AUDIO_CHUNK, false) && samples[0] == -142);
@@ -220,6 +267,7 @@ static void test_live_input_boundaries(void) {
     input_fixture(samples, 32767, 0);
     assert(live_input_prepare(&gate, samples, AUDIO_CHUNK, false) && samples[0] == -32767);
     assert(s_input_rms >= 32766 && s_input_threshold >= 120 && s_input_threshold <= 360);
+    s_vad=NULL;
 }
 
 static void test_live_buffers(void) {
@@ -336,11 +384,71 @@ static void test_live_buffers(void) {
     fixture_sample=1000;fixture_alternating=true;
     test_read_calls=0;test_run_worker(s_task);
     passport_audio_diagnostics(&diag);
+    assert(diag.voice_dropped==0 && passport_audio_live_dropped()==3);
+    test_run_worker(s_play_task);
+    assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
+    assert(passport_audio_live_start()==ESP_OK);
+    s_input_head=s_input_tail+LIVE_INPUT_BYTES;
+    s_vad->active=true;s_vad->recent=UINT16_MAX;
+    test_read_calls=0;test_run_worker(s_task);
+    passport_audio_diagnostics(&diag);
     assert(diag.voice_dropped==3 && passport_audio_live_dropped()==3);
     test_run_worker(s_play_task);
     assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
     fixture_sample=0;fixture_alternating=false;
     test_read_hook=NULL;
+}
+
+static void test_live_noise_and_preroll(void) {
+    test_task_count=0;
+    assert(passport_audio_live_start()==ESP_OK);
+    fixture_sample=1200;fixture_alternating=true;
+    test_read_calls=0;test_read_hook=stop_after_three_chunks;
+    test_run_worker(s_task);
+    int16_t output[AUDIO_CHUNK * 3];
+    size_t bytes=0;
+    s_finished=false;
+    assert(passport_audio_live_pull(output,sizeof(output),&bytes)==ESP_OK && bytes==sizeof(output));
+    for (size_t sample=0;sample<sizeof(output)/sizeof(output[0]);sample++) assert(output[sample]==0);
+    s_finished=true;
+    test_run_worker(s_play_task);
+    assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK);
+    assert(passport_audio_live_start()==ESP_OK);
+    live_input_gate_t gate={0};
+    int16_t samples[AUDIO_CHUNK], decoded[AUDIO_CHUNK];
+    for (unsigned block=0;block<LIVE_PREROLL_BLOCKS+4;block++) {
+        for (unsigned sample=0;sample<AUDIO_CHUNK;sample++) samples[sample]=(int16_t)(block*100);
+        live_input_remember(&gate,samples);
+    }
+    assert(gate.history==LIVE_PREROLL_BLOCKS);
+    live_input_replay(&gate);
+    assert(!gate.history && s_input_head==LIVE_PREROLL_BLOCKS*sizeof(samples));
+    for (unsigned block=0;block<LIVE_PREROLL_BLOCKS;block++) {
+        assert(passport_audio_live_pull(decoded,sizeof(decoded),&bytes)==ESP_OK && bytes==sizeof(decoded));
+        for (unsigned sample=0;sample<AUDIO_CHUNK;sample++) assert(decoded[sample]==(int16_t)((block+4)*100));
+    }
+    live_input_remember(&gate,samples);
+    assert(!live_input_prepare(&gate,samples,AUDIO_CHUNK,true) && !gate.history);
+    for (unsigned block=0;block<4;block++) {
+        for (unsigned sample=0;sample<AUDIO_CHUNK;sample++) samples[sample]=(int16_t)(block*100);
+        live_input_remember(&gate,samples);
+    }
+    s_input_head=s_input_tail+LIVE_INPUT_BYTES-3*sizeof(samples);
+    live_input_replay(&gate);
+    assert(!gate.history && passport_audio_live_dropped()==2 && s_live_voice_dropped==2);
+    assert(s_input_head-s_input_tail==LIVE_INPUT_BYTES-sizeof(samples));
+    s_input_tail=s_input_head-2*sizeof(samples);
+    for (unsigned block=2;block<4;block++) {
+        assert(passport_audio_live_pull(decoded,sizeof(decoded),&bytes)==ESP_OK && bytes==sizeof(decoded));
+        assert(decoded[0]==(int16_t)(block*100));
+    }
+    live_input_remember(&gate,samples);
+    s_input_head=s_input_tail+LIVE_INPUT_BYTES;
+    live_input_replay(&gate);
+    assert(!gate.history && passport_audio_live_dropped()==3);
+    s_stop=true;test_run_worker(s_task);test_run_worker(s_play_task);
+    assert(passport_audio_stop()==ESP_OK && passport_audio_release()==ESP_OK && !s_vad && !s_preroll);
+    fixture_sample=0;fixture_alternating=false;test_read_hook=NULL;
 }
 
 static void test_synthetic_capture(void) {
@@ -649,6 +757,8 @@ int main(void) {
     test_submit_capture_worker();
     test_task_count=0;
     test_live_buffers();
+    test_live_noise_and_preroll();
+    test_live_speech_worker();
     test_live_interrupt();
     test_compressed_input_ring();
     test_synthetic_capture();

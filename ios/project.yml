@@ -27,6 +27,7 @@ targets:
           - CFBundleURLName: ai.mirasim.passport.configuration
             CFBundleTypeRole: Editor
             CFBundleURLSchemes:
+              - ai-passport-agent
               - ai-passport-openclaw
         UILaunchScreen: {}
         NSBluetoothAlwaysUsageDescription: Read and update Wi-Fi and OpenClaw settings on your AI Passport.

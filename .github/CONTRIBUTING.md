@@ -2,8 +2,8 @@ English | [简体中文](/.github/CONTRIBUTING.zh_CN.md)
 
 # Contributing
 
-Thank you for contributing to AI Passport OpenClaw — firmware, configuration
-apps, the OpenClaw plugin, documentation and feedback. This is an independent
+Thank you for contributing to AI Passport Agent — firmware, the web studio,
+the OpenClaw plugin, documentation and feedback. This is an independent
 product repository derived from FoloToy's hardware baseline.
 
 ## Before you start

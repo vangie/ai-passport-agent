@@ -732,6 +732,12 @@ void app_main(void) {
                     passport_set_status(&s_view, PASSPORT_LINK_FAILED, "录音失败");
                 } else if (s_audio_test_active) {
                     (void)passport_audio_release();
+                } else if (!passport_audio_has_speech()) {
+                    passport_gateway_drop_preconnect();
+                    (void)passport_audio_release();
+                    passport_clip_discard();
+                    (void)passport_finish_cancel(&s_view, passport_lang_zh(&s_store)
+                        ? "没有录音，请重新说话" : "No speech detected. Please try again.");
                 } else {
                     (void)passport_gateway_send(&s_store);
                 }

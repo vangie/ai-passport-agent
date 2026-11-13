@@ -32,7 +32,7 @@ test('actual bilingual submission copy has natural paragraphs and intact lists',
   for (const [suffix, headings] of [['', ['Description', 'Quick-start instructions', 'Update notes']], ['.zh_CN', ['简介', '使用方法', '更新日志']]]) {
     const document = await readFile(new URL(`../docs/release/community${suffix}.md`, import.meta.url), 'utf8');
     const description = extractCommunityCopy(document, headings[0]);
-    assert.equal(description.split('\n\n').length, 3);
+    assert.equal(description.split('\n\n').length, 4);
     assert.equal(description.replaceAll('\n\n', '').includes('\n'), false);
     const steps = extractCommunityCopy(document, headings[1]);
     assert.equal(steps.split('\n').length, 4);

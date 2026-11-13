@@ -12,6 +12,21 @@
 
 ## Unreleased
 
+## v0.6.0 - 2026-11-13
+
+- Renamed the project to AI Passport Agent, a wearable voice terminal for your
+  personal agent. OpenClaw remains the only supported backend in this release.
+- Added on-device speech detection for Ask and Call to reduce non-speech uploads
+  and accidental submissions. Ask keeps completed chats when a recording contains
+  no detected speech; quiet speech and speech-like noise can still be misclassified.
+- Added bounded Call pre-roll and speech-confirmed interruption without changing
+  button interruption, muting or the existing three-key controls.
+- Updated bilingual documentation, setup prompts, web branding and community
+  materials. Existing plugin IDs, device protocols, pairing and stored networks
+  stay compatible; native configuration links accept both old and new names.
+- Kept browser setup, firmware and the OpenClaw plugin as the release path;
+  included the speech detector's license, patent grant and author notices.
+
 ## v0.5.1 - 2026-11-12
 
 - Fixed the Pages audit's ShellCheck word-splitting failure. Candidate v0.5.0 was

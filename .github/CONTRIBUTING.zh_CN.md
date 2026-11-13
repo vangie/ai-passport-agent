@@ -2,7 +2,7 @@
 
 # 贡献指南
 
-感谢你为 AI Passport OpenClaw 贡献固件、配置 App、OpenClaw 插件、文档和反馈。本仓库是基于 FoloToy 硬件基线的独立产品仓库。
+感谢你为 AI Passport Agent 贡献固件、配置网页、OpenClaw 插件、文档和反馈。本仓库是基于 FoloToy 硬件基线的独立产品仓库。
 
 ## 开始之前
 

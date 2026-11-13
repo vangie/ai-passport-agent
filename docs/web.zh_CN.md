@@ -2,7 +2,7 @@
 
 # 浏览器配置台
 
-正式地址：<https://ai-passport-openclaw.codelife.me/>。
+正式地址：<https://vangie.github.io/ai-passport-agent/>。
 
 已验证的历史固件身份保留在 `web/release-builds.json`，不依赖旧 Release 下载是否仍然存在。
 
@@ -11,7 +11,7 @@
 不需要账户、数据库或配置后台，设备仍是配置的唯一数据源。
 语音由 Passport 直接交给 OpenClaw，不经过网页或网站托管服务。
 
-页头将项目既有图标、AI Passport OpenClaw 项目名和页面标题合并为一行，语言开关放在同一行。
+页头将项目既有图标、AI Passport Agent 项目名和页面标题合并为一行，语言开关放在同一行。
 窄屏隐藏重复的品牌文字，不再另占一行标题；浏览器标签页也使用同一项目图标。
 
 未连接时，「连接设备」与 USB／蓝牙按钮保持在同一行，窄屏也不折行。
@@ -56,7 +56,8 @@ cloudflared tunnel create ai-passport-web-dev
 cloudflared tunnel route dns ai-passport-web-dev passport-dev.example.com
 ```
 
-在仓库外创建 `~/.config/ai-passport-openclaw/web-tunnel.json`：
+在仓库外创建 `~/.config/ai-passport-agent/web-tunnel.json`。
+新路径不存在时，仍会读取旧的 `~/.config/ai-passport-openclaw/web-tunnel.json`：
 
 ```json
 {

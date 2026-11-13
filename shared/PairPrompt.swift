@@ -19,7 +19,7 @@ enum PairPrompt {
     我授权你按需安装本项目插件、补齐专属助手与模型配置、建立安全公网入口，并生成受限配对码。先检查，已有且正常的部分直接复用；重复执行不要重复安装插件、创建隧道或无故重启。修改前备份受影响配置并保留回退方法；仅在安装或配置确实需要时，通过现有服务管理方式重载或重启网关，并提前说明连接会短暂中断。不要自动升级 OpenClaw、修改核心安装文件、删除现有隧道或影响其他助手。购买服务、产生新费用、改动现有公网路由或删除资源前需另行确认。
 
     1. 检查并安装插件
-    项目唯一源码仓库：https://github.com/vangie/ai-passport-openclaw 。先阅读 README、tools/openclaw/README.zh_CN.md 和 docs/networking.zh_CN.md，按当前 OpenClaw 版本支持的 CLI 操作。插件 ID 为 ai-passport-openclaw。选择与设备固件协议兼容的正式 Release，安装前核对该 Release 的说明与 SHA256SUMS.txt；不要直接运行 main 分支或未经核验的远程安装脚本，也不要盲目追最新版本。
+    项目唯一源码仓库：https://github.com/vangie/ai-passport-agent 。先阅读 README、tools/openclaw/README.zh_CN.md 和 docs/networking.zh_CN.md，按当前 OpenClaw 版本支持的 CLI 操作。插件 ID 为 ai-passport-openclaw。选择与设备固件协议兼容的正式 Release，安装前核对该 Release 的说明与 SHA256SUMS.txt；不要直接运行 main 分支或未经核验的远程安装脚本，也不要盲目追最新版本。
     检查插件是否已安装、启用并加载；仅在未安装时下载该仓库正式 Release 的插件包，核验后解压到网关软件包以外的固定目录，按照该版本文档安装依赖，再在插件目录执行 openclaw plugins install --link --accept-capabilities "$PWD"。已有兼容插件直接复用；不兼容时先说明并保留旧版本，再做必要更新。Node 必须解析现有宿主的 openclaw/plugin-sdk，不要另装第二套网关。
 
     2. 检查助手与语音服务
@@ -47,7 +47,7 @@ enum PairPrompt {
     """
 
     static let englishText = """
-    Prepare and pair my AI Passport with my OpenClaw gateway. You can operate the gateway host. This is an independent community project, not a built-in OpenClaw feature. Repository: https://github.com/vangie/ai-passport-openclaw. Read the project's README, tools/openclaw/README.md and docs/networking.md first, and follow the installed version's supported configuration format and commands. Do not invent plugin configuration fields or gateway commands.
+    Prepare and pair my AI Passport with my OpenClaw gateway. You can operate the gateway host. This is an independent community project, not a built-in OpenClaw feature. Repository: https://github.com/vangie/ai-passport-agent. Read the project's README, tools/openclaw/README.md and docs/networking.md first, and follow the installed version's supported configuration format and commands. Do not invent plugin configuration fields or gateway commands.
 
     The goal is for Passport to connect directly to my OpenClaw over Wi-Fi. The web studio only configures it and does not relay audio. Do not assume that the plugin, a dedicated assistant or public access is already configured. Check what exists and prepare anything missing within your existing authorization and resources, then return pairing details. Keep normal question-and-answer mode (Ask) and realtime voice calls (Call) separate when reporting readiness.
 

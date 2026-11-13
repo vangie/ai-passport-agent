@@ -1,23 +1,29 @@
 <p align="right"><strong>简体中文</strong> · <a href="community.md">English</a></p>
 
-# 社区发布材料 · v0.5.1
+# 社区发布材料 · v0.6.0
 
 已准备供作者预览，**尚未提交审核**。简介、使用方法、更新日志分别填写。
-不复用已过期授权，不为更新而另建重复玩法；分类由服务端判断。
+更新已有玩法 2236 需要绑定该玩法的新 `update_once` 授权，`create_once` 不能用于更新。
+不为更新而另建重复玩法；分类由服务端判断。
 
 ## 标题
 
-AI Passport OpenClaw · 随身语音助手
+AI Passport Agent · 随身语音助手
 
 ## 简介
 
-你的 OpenClaw，轻量的随身语音入口。「提问」按键录音，回显转写和逐步呈现的文字回复，
-读完接着追问；「通话」直接说、听语音回复，配合滚动字幕，按屏幕提示静音、打断或结束。
+个人 Agent 的随身语音终端，当前支持 OpenClaw。「提问」向自己的助手问问题、交办任务，
+回显你的话和逐步呈现的文字回复，读完接着追问；「通话」直接说、听语音回复，
+配合滚动字幕，按屏幕提示静音、打断或结束。
+
+连接的是你自己的 Agent，而不只是一个通用聊天模型：提问使用专属 OpenClaw 助手，
+在其已授权的工具范围内办事。通话由实时语音服务应答，需要任务或上下文时可咨询 Agent，
+并非每句话都经过完整 Agent。端侧人声检测减少噪声误提交，但不识别说话者，也不能消除所有误触发。
 
 配置与刷机在浏览器完成：电脑 Chrome／Edge 通过 USB 安装和更新，兼容蓝牙浏览器修改 Wi-Fi、
 个人热点和助手连接；iPhone 可用 Bluefy。可将家中、办公室 Wi-Fi 和手机热点保存到设备，
 再从「设置 → Wi-Fi」选择已存网络，不必每次重新填写。网页没有应用后台、不中转对话。
-配置后设备通过 Wi-Fi 直连网关，不需要配置应用常驻。
+配置后设备通过 Wi-Fi 直连网关，手机不充当语音中继。
 
 需自备已运行、有可用模型的 OpenClaw。网页内复制提示词，交给能操作网关主机的 Agent，
 由它检查插件、专属助手与安全入口，再生成受限配对信息。公网接入可能需要自己的隧道资源与授权；
@@ -25,7 +31,7 @@ AI Passport OpenClaw · 随身语音助手
 
 ## 使用方法
 
-1. 电脑 Chrome／Edge 打开 https://ai-passport-openclaw.codelife.me/，USB 连接设备。
+1. 电脑 Chrome／Edge 打开 https://vangie.github.io/ai-passport-agent/，USB 连接设备。
    首次取消「保留配置」并安装确认；兼容更新可保留配置。
 2. 在 OpenClaw 区域复制提示词，交给能操作已运行网关的 Agent；完成插件与可达入口准备，
    将返回的地址、配对码填回网页。通话另需实时语音服务。
@@ -36,19 +42,19 @@ AI Passport OpenClaw · 随身语音助手
 
 ## 更新日志
 
-- 网页成为主入口，支持电脑 USB 刷机、蓝牙配置和 iPhone Bluefy。
-- 统一保存／撤销、渐进式 Wi-Fi 扫描、助手独立线路及同站点固件。
-- 改进加密蓝牙接管，优化连接状态和侧边按键提示。
-- 移除原生客户端发布包，保留固件、插件与完整性校验文件。
+- 更名为 AI Passport Agent，本版仍仅支持 OpenClaw，不宣传尚未实现的接入。
+- 提问与通话加入端侧人声检测，减少非语音上传和误发送。
+- 无人声时保留已有聊天；通话增加短时预录，语音打断结合人声确认。
+- 更新网页名称、源码链接、双语指南与社区配图，已有配对和配置保持兼容。
 
 ## 文件与来源
 
-- 源码：https://github.com/vangie/ai-passport-openclaw
-- 版本：https://github.com/vangie/ai-passport-openclaw/releases/tag/v0.5.1
+- 源码：https://github.com/vangie/ai-passport-agent
+- 版本：https://github.com/vangie/ai-passport-agent/releases/tag/v0.6.0
 - 固件使用该 Release 经验证的 `FoloToy-AI-Passport-full.bin`，不使用旧本地构建；先核对发布回执与哈希。
 - 封面 `00-cover.png`，附图 `01-ask-and-call.png`、`02-web-studio.png`、`03-mobile-setup.png`。
   均为 1152 × 1536 竖版，使用虚构 Wi-Fi／助手及 `wss://gateway.example`。
 - 准备网页依赖后运行 `node tools/community_materials.mjs` 可复现。输出与独立 UTF-8 提交字段放在
-  忽略目录 `build/community-market/v0.5.1/materials/`，脚本不上传。
+  忽略目录 `build/community-market/v0.6.0/materials/`，脚本不上传。
 - 导出文案时合并源码中的软换行，保留段落、编号步骤与更新条目；预览由浏览器自然折行。
 - 检查四张最终本地 PNG 与元数据预览，作者认可后才提交社区；GitHub 发布不等于社区审核通过。

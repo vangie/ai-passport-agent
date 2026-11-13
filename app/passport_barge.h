@@ -11,7 +11,6 @@ typedef struct {
     int64_t end, probe_at, cooldown;
     unsigned evidence, confirmed;
     bool probing;
-    int16_t onset[768];
 } passport_barge_t;
 
 static inline void passport_barge_reference(passport_barge_t *barge, const int16_t *pcm,
@@ -33,7 +32,7 @@ static inline int16_t passport_barge_sample(const passport_barge_t *barge, int64
 }
 
 static inline bool passport_barge_process(passport_barge_t *barge, const int16_t *pcm,
-                                       size_t count, int64_t now, bool playback, bool muted) {
+                                       size_t count, int64_t now, bool playback, bool muted, bool speech) {
     if (muted || !playback) {
         barge->probing = false; barge->evidence = barge->confirmed = 0;
         return false;
@@ -56,14 +55,12 @@ static inline bool passport_barge_process(passport_barge_t *barge, const int16_t
     if (barge->probing) {
         if (now - barge->probe_at < 80000) return false;
         barge->confirmed = voiced ? barge->confirmed + 1 : 0;
-        if (barge->confirmed && barge->confirmed <= 3)
-            memcpy(barge->onset + (barge->confirmed - 1) * 256, pcm, 512);
-        if (barge->confirmed >= 3) {
+        if (barge->confirmed >= 3 && speech) {
             barge->probing = false; barge->evidence = barge->confirmed = 0;
             barge->cooldown = now + 500000;
             return true;
         }
-        if (now - barge->probe_at >= 150000) {
+        if (now - barge->probe_at >= 350000) {
             barge->probing = false; barge->evidence = barge->confirmed = 0;
             barge->cooldown = now + 800000;
         }

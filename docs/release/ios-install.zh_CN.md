@@ -11,7 +11,7 @@ iOS App **仅保留源码**。新 Release 不再构建或打包，包括源码�
 
 ## 安装到自己的 iPhone
 
-1. 克隆或下载[仓库](https://github.com/vangie/ai-passport-openclaw)，
+1. 克隆或下载[仓库](https://github.com/vangie/ai-passport-agent)，
    保持 `ios/` 与 `shared/` 同在仓库中；不包含私人签名资料。
 2. 安装带 iOS SDK 的完整 Xcode 和 XcodeGen（`brew install xcodegen`）。
    App 最低支持 iOS 17.0；Xcode 也需要支持手机实际安装的 iOS 版本。
@@ -59,4 +59,4 @@ make sim-iphone
 测试蓝牙请使用真实 iPhone。
 
 完整配置、NFC 技巧、插件和网络接入说明见
-[项目仓库](https://github.com/vangie/ai-passport-openclaw)。
+[项目仓库](https://github.com/vangie/ai-passport-agent)。

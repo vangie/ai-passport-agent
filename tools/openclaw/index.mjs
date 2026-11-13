@@ -6,7 +6,7 @@ import {registerPassportTranscripts} from './passport-transcript.mjs';
 
 export default {
     id: 'ai-passport-openclaw',
-    name: 'AI Passport OpenClaw',
+    name: 'AI Passport Agent — OpenClaw',
     register(api) {
         const upstreamId = api.pluginConfig?.upstreamProvider ?? 'openai';
         const maxConnections = api.pluginConfig?.maxConnections ?? 4;
@@ -36,7 +36,7 @@ export default {
                 const providerConfig = provider.resolveConfig({cfg: config, rawConfig: {}, agentId, surface: 'gateway-relay'});
                 upstreamConfigured = provider.isConfigured({cfg: config, providerConfig, agentId});
             } catch {}
-            respond(true, {pluginVersion: '0.5.1', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
+            respond(true, {pluginVersion: '0.6.0', protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH,
                 upstreamProvider: upstreamId, upstreamAvailable: Boolean(upstream), upstreamConfigured,
                 providerRegistered: Boolean(getRealtimeVoiceProvider('passport-realtime', config)),
                 ...(transport?.diagnostics() ?? {connections: 0})});

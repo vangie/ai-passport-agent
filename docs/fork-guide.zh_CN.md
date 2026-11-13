@@ -4,7 +4,7 @@
 
 # Fork 工作流（Fork Guide）
 
-本文保留上游基线的 fork 约定，不适用于本独立产品仓库：这里的 `main` 保存 AI Passport OpenClaw 产品，上游变更经审查后手动集成，没有自动同步任务。
+本文保留上游基线的 fork 约定，不适用于本独立产品仓库：这里的 `main` 保存 AI Passport Agent 产品，上游变更经审查后手动集成，没有自动同步任务。
 
 ## 目录结构
 

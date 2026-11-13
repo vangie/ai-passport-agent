@@ -375,7 +375,7 @@ static cJSON *connect_frame(const char *nonce, int64_t timestamp, bool bootstrap
     cJSON_AddNumberToObject(params, "maxProtocol", 4);
     cJSON *client = cJSON_AddObjectToObject(params, "client");
     cJSON_AddStringToObject(client, "id", CLIENT_ID);
-    cJSON_AddStringToObject(client, "displayName", "AI Passport OpenClaw");
+    cJSON_AddStringToObject(client, "displayName", "AI Passport Agent");
     cJSON_AddStringToObject(client, "version", "0.2");
     cJSON_AddStringToObject(client, "platform", PLATFORM);
     cJSON_AddStringToObject(client, "deviceFamily", FAMILY);

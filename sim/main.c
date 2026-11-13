@@ -308,7 +308,7 @@ int main(void) {
         return 1;
     }
     SDL_Window *window = SDL_CreateWindow(
-        "ai-passport-openclaw", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        "AI Passport Agent", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         PASSPORT_LCD_W * SCALE, PASSPORT_LCD_H * SCALE, SDL_WINDOW_SHOWN);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     SDL_RenderSetLogicalSize(renderer, PASSPORT_LCD_W, PASSPORT_LCD_H);

@@ -70,6 +70,20 @@ Bundle ID，不连接维护者的设备，也不读取其 Wi-Fi 缓存。
 - 嵌入音频前评估 Flash 与内部 RAM 成本；长录音应流式或分块。
 - 无再分发许可不提交媒体文件。
 
+## 语音检测测试素材
+
+[`audio/vad-speech.wav`](audio/vad-speech.wav) 原样取自
+[libfvad](https://github.com/dpirch/libfvad/tree/532ab666c20d3cfda38bca63abbb0f152706c369)
+的 `tests/data/audio_tiny16.wav`，与 `components/passport_vad` 中的 WebRTC VAD
+核心一起固定在提交 `532ab666c20d3cfda38bca63abbb0f152706c369`。
+格式为 16 kHz、16 位、单声道 PCM，180,590 字节，未转换。SHA-256：
+`551d3f0282c5d5e1e32e76da97bd3532c38e6f4bb02a32510caf562d7c06ae9c`。
+保留上游 [BSD 许可证](../components/passport_vad/LICENSE)、
+[专利授权](../components/passport_vad/PATENTS) 和
+[作者名单](../components/passport_vad/AUTHORS)，固件发布包也包含这些声明。
+此素材仅用于主机测试，不嵌入固件。采样率适配、确认、停顿提交和通话过滤
+由项目包装层实现，上游核心不变。参见[语音过滤](../docs/configuration.zh_CN.md#语音过滤)。
+
 ## 电池参数（battery）
 
 [`battery/wanli-500mah-profile2-xil40x-20261020.txt`](battery/wanli-500mah-profile2-xil40x-20261020.txt)

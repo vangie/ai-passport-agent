@@ -15,13 +15,14 @@ if ! pgrep -f "$root/sim/config-sock" >/dev/null; then
 fi
 cd "$root/mac"
 # Release the running executable and USB connection before replacing its files.
+pkill -x "AI Passport Agent" 2>/dev/null || true
 pkill -x "AI Passport OpenClaw" 2>/dev/null || true
 xcodegen generate >/dev/null
 xcodebuild -project PassportMac.xcodeproj -scheme PassportMac -destination 'platform=macOS' \
   -derivedDataPath "$root/mac/build" DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}" \
   CODE_SIGNING_ALLOWED="${CODE_SIGNING_ALLOWED:-NO}" \
   build >/tmp/passport-mac-build.log
-app=$(find "$root/mac/build/Build/Products" -name 'AI Passport OpenClaw.app' -type d | head -1)
+app=$(find "$root/mac/build/Build/Products" -name 'AI Passport Agent.app' -type d | head -1)
 # Unsigned builds still contain linker signatures. Seal the whole local bundle
 # so Launch Services can verify resources after an incremental build.
 if [ "${CODE_SIGNING_ALLOWED:-NO}" = NO ]; then
@@ -29,4 +30,4 @@ if [ "${CODE_SIGNING_ALLOWED:-NO}" = NO ]; then
 fi
 codesign --verify --deep --strict "$app"
 open "$app"
-printf 'AI Passport OpenClaw 已打开，优先连接 USB 设备\n'
+printf 'AI Passport Agent 已打开，优先连接 USB 设备\n'

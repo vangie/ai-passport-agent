@@ -102,8 +102,15 @@ run_static_checks() {
         tests/test_passport_network.c app/passport_network.c app/passport_store.c app/passport_proxy.c \
         -o "${test_dir}/test_passport_network"
     "${test_dir}/test_passport_network"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Icomponents/passport_vad \
+        tests/test_passport_vad.c components/passport_vad/passport_vad.c \
+        components/passport_vad/src/vad/*.c components/passport_vad/src/signal_processing/*.c \
+        -o "${test_dir}/test_passport_vad"
+    "${test_dir}/test_passport_vad"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \
-        -Itests/demo_stubs -Imain -Iapp tests/test_passport_audio_runtime.c \
+        -Itests/demo_stubs -Imain -Iapp -Icomponents/passport_vad tests/test_passport_audio_runtime.c \
+        components/passport_vad/passport_vad.c components/passport_vad/src/vad/*.c \
+        components/passport_vad/src/signal_processing/*.c \
         "${gc_sections}" -o "${test_dir}/test_passport_audio_runtime"
     "${test_dir}/test_passport_audio_runtime"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp tests/test_passport_barge.c -o "${test_dir}/test_passport_barge"

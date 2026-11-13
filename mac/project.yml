@@ -28,13 +28,14 @@ targets:
           - CFBundleURLName: ai.mirasim.passport.configuration
             CFBundleTypeRole: Editor
             CFBundleURLSchemes:
+              - ai-passport-agent
               - ai-passport-openclaw
     settings:
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       PRODUCT_BUNDLE_IDENTIFIER: ai.mirasim.passport.mac
       GENERATE_INFOPLIST_FILE: YES
-      PRODUCT_NAME: AI Passport OpenClaw
-      INFOPLIST_KEY_CFBundleDisplayName: AI Passport OpenClaw
+      PRODUCT_NAME: AI Passport Agent
+      INFOPLIST_KEY_CFBundleDisplayName: AI Passport Agent
       INFOPLIST_KEY_NSLocationUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
       INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Allow Location access to see nearby Wi-Fi names and choose a network for AI Passport.
       MARKETING_VERSION: "0.4.2"

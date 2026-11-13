@@ -1,11 +1,11 @@
 <p align="right"><a href="README.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# AI Passport OpenClaw plugin
+# AI Passport Agent — OpenClaw plugin
 
 ## Project component and distribution
 
 This directory is the maintained OpenClaw plugin source for the
-`ai-passport-openclaw` open-source project, released under the same
+`ai-passport-agent` open-source project, released under the same
 [MIT license](LICENSE) as the firmware and configuration apps. It is maintained
 in this repository, not in a private host checkout or a fork of OpenClaw. Runtime
 installation remains separate because the plugin runs on the gateway computer,
@@ -184,9 +184,9 @@ tool distinctions. Other clients retain their provider/route. Global
 Install a durable copy outside the gateway package:
 
 ```sh
-cd /path/to/ai-passport-openclaw/tools/openclaw
+cd /path/to/ai-passport-agent/tools/openclaw
 npm ci --omit=peer --ignore-scripts
-openclaw plugins install --link --accept-capabilities /path/to/ai-passport-openclaw/tools/openclaw
+openclaw plugins install --link --accept-capabilities /path/to/ai-passport-agent/tools/openclaw
 node doctor.mjs
 openclaw gateway call passport.status --json --params '{"agentId":"passport"}'
 ```

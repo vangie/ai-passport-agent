@@ -2,7 +2,8 @@ import Foundation
 
 /// Links import form values only. They never run a test, flash firmware, or save a device.
 struct ConfigurationLink: Equatable {
-    static let scheme = "ai-passport-openclaw"
+    static let scheme = "ai-passport-agent"
+    static let legacyScheme = "ai-passport-openclaw"
     let gatewayURL: String?
     let setupCode: String?
     let ssid: String?
@@ -25,7 +26,7 @@ struct ConfigurationLink: Equatable {
     static func parse(_ url: URL) throws -> Self {
         guard url.absoluteString.utf8.count <= 16000,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              components.scheme?.lowercased() == scheme,
+              [scheme, legacyScheme].contains(components.scheme?.lowercased() ?? ""),
               components.host == "pair" || components.host == "configure",
               components.path.isEmpty || components.path == "/",
               components.user == nil, components.password == nil,

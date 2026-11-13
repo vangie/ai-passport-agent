@@ -2,7 +2,28 @@
 
 # Configuration and everyday use
 
-Use the [web studio](https://ai-passport-openclaw.codelife.me/). Desktop Chrome/Edge
+## Project name and compatibility
+
+AI Passport Agent is the product name; `vangie/ai-passport-agent` is its source
+repository. OpenClaw is the only supported agent backend today. Its plugin keeps
+the package/ID `ai-passport-openclaw`, including existing configuration entries
+and versioned `.tgz` packages; this is an integration name, not the product name.
+
+Existing USB/Bluetooth firmware still identifies itself as `ai-passport-openclaw`
+in `HELLO` messages. Keep this wire identifier, BLE service UUIDs, native bundle
+IDs, device identity, NVS storage and pairing credentials unchanged. The retained
+native clients generate `ai-passport-agent://` configuration links and still
+accept `ai-passport-openclaw://` links. Their existing Wi-Fi cache path is also
+unchanged. Renaming does not require reflashing or pairing again.
+
+The stable Pages URL follows the active custom domain during migration. Website
+hostname and community listing changes are separate from the repository rename; neither changes a
+user's gateway endpoint. Firmware archives use `ai-passport-agent-firmware.tar.gz`
+in future releases; already-published assets retain their original names.
+
+## Configuration tools
+
+Use the [web studio](https://vangie.github.io/ai-passport-agent/). Desktop Chrome/Edge
 supports USB configuration and firmware installation; compatible Web Bluetooth
 browsers support wireless settings. On iPhone, [get Bluefy from the App Store](https://apps.apple.com/app/bluefy-web-ble-browser/id1492822055)
 and open the configuration site inside it, not Safari/Chrome. The site's Bluetooth compatibility hint links directly to this listing.
@@ -58,6 +79,33 @@ must be reachable. A scan with no results still allows manual entry. Saving and
 testing run on Passport and do not switch the computer/phone to another Wi-Fi.
 The device connection check validates authentication/session access and realtime
 configuration, not model answers, audio quality or long-call reliability.
+
+## Speech filtering
+
+Ask and Call use lightweight on-device WebRTC voice activity detection, not just
+volume thresholds. Ask submits after confirmed speech followed by about two
+seconds of silence. Manually submitting a recording without detected speech
+discards that recording without sending it to the agent; completed chat history
+is preserved. Cancel and re-record controls are unchanged.
+
+Call sends silence instead of unconfirmed microphone noise and keeps up to
+171 ms of compressed pre-roll to retain the beginning of speech. Mute and
+playback protection clear pre-roll. Voice interruption also requires speech
+confirmation during its echo-checking probe; button interruption still works
+without speech. Buffer overflow drops the oldest pre-roll rather than replaying
+it out of order, and is counted in audio diagnostics.
+
+This is not speaker identification or a guarantee against false activation.
+Television, other speakers, music or strong speech-like noise can still pass;
+very short, quiet or distant speech can be missed. Current host fixtures cover
+speech at several levels, silence, DC, clicks, white noise, low-level filtered
+noise and mains hum. Loud filtered noise can still trigger detection. Physical
+microphone, noisy-room, soft-speech and interruption acceptance remain necessary.
+
+The detector uses about 948 bytes of heap only during capture. Call adds a
+2,144-byte compressed pre-roll but removes the previous 1,536-byte PCM onset
+buffer; Ask and Call do not allocate separate simultaneous detectors. Fixture
+audio is not included in the firmware. [Source and notices](../assets/README.md#speech-detection-fixture).
 
 ## Where settings live
 

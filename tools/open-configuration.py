@@ -55,9 +55,9 @@ def main():
             fields['ssid'] = args.ssid
         if args.name:
             fields['name'] = args.name
-        deep_link = 'ai-passport-openclaw://pair?' + urlencode(fields)
+        deep_link = 'ai-passport-agent://pair?' + urlencode(fields)
         subprocess.run(['/usr/bin/open', deep_link], check=True, capture_output=True)
-        print('Pairing configuration sent to AI Passport OpenClaw.')
+        print('Pairing configuration sent to AI Passport Agent.')
         return 0
     except (ValueError, subprocess.SubprocessError, OSError):
         print('Could not obtain or open the pairing configuration; no credentials were printed.', file=sys.stderr)

@@ -1,10 +1,10 @@
 <p align="right"><strong>简体中文</strong> · <a href="README.md">English</a></p>
 
-# AI Passport OpenClaw 插件
+# AI Passport Agent — OpenClaw 插件
 
 ## 项目组成与分发
 
-本目录是 `ai-passport-openclaw` 开源项目正式维护的 OpenClaw 插件源码，
+本目录是 `ai-passport-agent` 开源项目正式维护的 OpenClaw 插件源码，
 与固件和配置端沿用同一份 [MIT 许可证](LICENSE)。源码在本仓库维护，
 不是私人主机里的脚本，也不依赖 OpenClaw fork。插件运行在网关电脑上，
 固件运行在 Passport 上，所以安装位置不同，但属于同一个开源项目。
@@ -140,9 +140,9 @@ C3 使用独立、有界的收音／播放环形缓冲和少量扬声器参考�
 安装到网关软件包以外的固定位置：
 
 ```sh
-cd /path/to/ai-passport-openclaw/tools/openclaw
+cd /path/to/ai-passport-agent/tools/openclaw
 npm ci --omit=peer --ignore-scripts
-openclaw plugins install --link --accept-capabilities /path/to/ai-passport-openclaw/tools/openclaw
+openclaw plugins install --link --accept-capabilities /path/to/ai-passport-agent/tools/openclaw
 node doctor.mjs
 openclaw gateway call passport.status --json --params '{"agentId":"passport"}'
 ```

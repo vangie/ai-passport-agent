@@ -2,6 +2,8 @@
 """Keep Passport product names, storage and protocol identities consistent."""
 
 from pathlib import Path
+import json
+import plistlib
 import re
 import subprocess
 import unittest
@@ -13,6 +15,46 @@ SOURCE_ROOTS = {"app", "main", "components", "ios", "mac", "shared", "sim", "too
 
 
 class PassportNamingTests(unittest.TestCase):
+    def test_agent_brand_and_source_links(self):
+        for relative in ('README.md', 'README.zh_CN.md', 'web/index.html', 'web/src/main.js'):
+            with self.subTest(path=relative):
+                source = (ROOT / relative).read_text(encoding='utf-8')
+                self.assertIn('AI Passport Agent', source)
+                self.assertNotIn('AI Passport OpenClaw', source)
+        for relative in ('README.md', 'README.zh_CN.md', 'shared/PairPrompt.swift', 'web/src/main.js'):
+            with self.subTest(path=relative):
+                source = (ROOT / relative).read_text(encoding='utf-8')
+                self.assertIn('https://github.com/vangie/ai-passport-agent', source)
+                self.assertNotIn('https://github.com/vangie/ai-passport-openclaw', source)
+
+    def test_openclaw_plugin_identity_is_preserved(self):
+        package = json.loads((ROOT / 'tools/openclaw/package.json').read_text())
+        plugin = json.loads((ROOT / 'tools/openclaw/openclaw.plugin.json').read_text())
+        self.assertEqual(package['name'], 'ai-passport-openclaw')
+        self.assertEqual(plugin['id'], package['name'])
+        self.assertEqual(plugin['name'], 'AI Passport Agent — OpenClaw')
+        for relative in ('tools/openclaw/index.mjs', 'tools/openclaw/manage-plugin.py',
+                         'tools/openclaw/doctor.mjs'):
+            self.assertIn('ai-passport-openclaw', (ROOT / relative).read_text())
+
+    def test_existing_device_protocol_and_local_data_are_preserved(self):
+        for relative in ('app/passport_usb.c', 'web/src/protocol.js',
+                         'ios/Passport/ProvisioningProtocol.swift', 'mac/PassportMac/SerialPort.swift'):
+            with self.subTest(path=relative):
+                self.assertIn('ai-passport-openclaw', (ROOT / relative).read_text())
+        self.assertIn('.appendingPathComponent("AI Passport OpenClaw", isDirectory: true)',
+                      (ROOT / 'mac/PassportMac/WifiMemory.swift').read_text())
+
+    def test_native_clients_register_current_and_legacy_links(self):
+        for client, manifest in (('ios', 'Passport'), ('mac', 'PassportMac')):
+            with self.subTest(client=client):
+                info = plistlib.loads((ROOT / client / manifest / 'Info.plist').read_bytes())
+                schemes = info['CFBundleURLTypes'][0]['CFBundleURLSchemes']
+                self.assertEqual(schemes, ['ai-passport-agent', 'ai-passport-openclaw'])
+                project = (ROOT / client / 'project.yml').read_text()
+                for scheme in schemes:
+                    self.assertIn(f'- {scheme}', project)
+
     def test_source_names_and_references(self):
         result = subprocess.run(
             ["git", "ls-files", "--cached", "--others", "--exclude-standard"],

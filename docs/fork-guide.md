@@ -5,7 +5,7 @@
 # Fork Workflow
 
 This page preserves the upstream baseline's fork conventions. They do not govern
-this standalone product repository: here `main` contains AI Passport OpenClaw,
+this standalone product repository: here `main` contains AI Passport Agent,
 and upstream changes are reviewed manually. There is no automatic upstream sync.
 
 The upstream repository keeps `main` as the current FoloToy baseline. Fork-specific firmware belongs on `feature/*` branches so a fork can continuously synchronize its `main` without mixing product work into the baseline.

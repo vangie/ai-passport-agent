@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / 'build/web-preview.json'
 LOCK = ROOT / 'build/web-preview.lock'
 BUILD_LOCK = ROOT / 'build/web-build.lock'
-CONFIG = Path.home() / '.config/ai-passport-openclaw/web-tunnel.json'
+CONFIG = Path.home() / '.config/ai-passport-agent/web-tunnel.json'
+LEGACY_CONFIG = Path.home() / '.config/ai-passport-openclaw/web-tunnel.json'
 
 
 def save_state(state):
@@ -82,6 +83,8 @@ def publish(source, destination):
 def tunnel_settings(local_url):
     override = os.environ.get('PASSPORT_WEB_TUNNEL_CONFIG')
     path = Path(override).expanduser() if override else CONFIG
+    if not override and not path.exists():
+        path = LEGACY_CONFIG
     if not path.is_file():
         if override:
             raise ValueError('PASSPORT_WEB_TUNNEL_CONFIG does not point to a file')
