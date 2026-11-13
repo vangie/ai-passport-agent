@@ -2,8 +2,8 @@
 
 # v0.7.0 release readiness
 
-Formal release authorized on 2026-11-13. The evidence below records pre-release
-checks, not a publication receipt. See [release notes](notes.md) and
+Formal release authorized and completed on 2026-11-13. See the receipts below,
+[release notes](notes.md) and
 [community copy](community.md).
 
 ## Scope
@@ -11,6 +11,28 @@ checks, not a publication receipt. See [release notes](notes.md) and
 Shared firmware, browser configuration, OpenClaw plugin and the new external
 Hermes plugin. No native-app release. Position this as voice access to an existing
 personal agent; do not promise a universal backend or agent execution on every Call turn.
+
+## Publication receipts
+
+- Stable [v0.7.0](https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.0)
+  is published, not a draft/prerelease. Tag commit: `4a41111c0df58032c8499f96c650aaa49b847cec`.
+- [Release workflow](https://github.com/vangie/ai-passport-agent/actions/runs/43450624198)
+  passed every gate, verified all eight assets after upload, then published.
+  An independent download also passed `verify-assets` for the tag and commit.
+- Cloud build descriptor is `v0.7.0`; application size is 3,407,408 / 3,407,872 bytes.
+  Full-image SHA-256: `6634d1de807810ddb51c5cb836099eb4815361a92ef98939011b2f71e9a7420f`.
+  Embedded ELF SHA-256: `e84c9d89604f6679c28c9d19601798931040a04fbd36dfdcd35e57fc08193c19`.
+- [Production Pages deployment](https://github.com/vangie/ai-passport-agent/actions/runs/43451689831)
+  passed. Its app/full downloads match the verified release bytes and hashes;
+  the live manifest identifies the tag commit. The old setup domain still redirects.
+- Community play 2236 accepted revision **5548**, **pending review**. Readback
+  confirmed both titles, firmware hash and independent bilingual instructions/logs.
+  Public revision 5492 remained approved. The one-time authorization is consumed.
+- No device flash/reset or native-app build was performed as part of publication.
+
+The chronological pre-release evidence below is retained for debugging; earlier
+candidate hashes and pending-check notes are superseded by final acceptance and
+these receipts, not interchangeable with the cloud release image.
 
 ## Final acceptance
 
