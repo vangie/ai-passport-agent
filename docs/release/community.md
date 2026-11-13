@@ -2,8 +2,10 @@
 
 # Community submission · v0.6.0
 
-Prepared for author review; **not submitted**. Description, instructions and update
-notes are independent fields. Updating existing play 2236 requires a fresh
+Submitted on 2026-11-13 for existing play **2236**, revision **5485**; status at
+submission: **pending review, not publicly released**. The existing public revision
+5467 remains available while the update is reviewed. Description, instructions and
+update notes are independent fields. A later update requires a fresh
 `update_once` grant bound to that play; a `create_once` grant cannot update it.
 Do not create a duplicate play. Classification is assigned by the server.
 
@@ -76,5 +78,6 @@ project. Images show actual interfaces with fictional demo data, not device phot
   `build/community-market/v0.6.0/materials/`. The renderer does not upload anything.
 - Exported copy removes source-only soft line breaks while retaining paragraphs,
   numbered steps and update bullets. The preview uses natural browser text wrapping.
-- Inspect the final four local PNGs and the metadata preview. Ask for author
-  approval before community upload; GitHub publication does not imply community approval.
+- Inspect the final four local PNGs and the metadata preview before each upload.
+  An explicit official update grant authorizes its target without another approval
+  step; otherwise obtain author approval. GitHub publication does not imply community approval.
