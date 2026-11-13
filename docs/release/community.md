@@ -57,10 +57,10 @@ project. Images show actual interfaces with fictional demo data, not device phot
 
 ## Update notes
 
-- Renamed to AI Passport Agent; currently supports OpenClaw, without claiming other integrations.
+- Renamed to AI Passport Agent; currently supports OpenClaw and retains existing pairing and saved networks.
 - Added on-device speech detection to Ask and Call, reducing non-speech uploads and accidental sends.
 - Kept completed chats when no speech is detected; added bounded Call pre-roll and speech-confirmed interruption.
-- Refreshed the web studio, source links, bilingual guides and community images; existing pairing and settings remain compatible.
+- Refreshed the web studio, source links and bilingual quick start, with a new cover and configuration screenshots.
 
 ## Files and provenance
 
