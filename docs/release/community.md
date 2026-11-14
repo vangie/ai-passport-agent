@@ -2,13 +2,16 @@
 
 # Community submission · v0.7.1
 
-Update existing play **2236** only; never create a duplicate. Obtain a fresh grant and read
-`projects` / `publishedRevision`, comparing notes against the actual public revision.
-Stop on draft/pending or version conflicts; do not withdraw or overwrite.
-The v0.7.0 submission was revision 5548, pending at the time; that is not current-state evidence.
-This version has not been submitted yet. GitHub v0.7.1 is public, and its exact downloaded
-merged image passed publisher validation. The final cover and three optional images were
-visually inspected. The previous grant is unavailable; obtain new authorization before submission.
+Submitted on 2026-11-14 to existing play **2236** only, using its target-bound
+`update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
+revision **5548** was approved and public, with no draft or pending conflict.
+The response and readback identify revision **5603**, **pending review**; the approved
+revision remains public. This is not a claim that v0.7.1 is public in the community.
+GitHub v0.7.1's verified merged image, inspected final cover and three optional images
+were submitted, with separate bilingual descriptions, instructions and changelogs.
+The firmware hash and independent text fields were confirmed by readback.
+The grant is consumed. Future updates need fresh authorization and a current-state check;
+stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
 
 ## Title
 

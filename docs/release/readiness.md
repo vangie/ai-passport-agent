@@ -21,7 +21,7 @@ Publishing itself does not flash/restart the device or modify personal gateway m
 ## Previous release
 
 v0.7.0 tag is `4a41111c0df58032c8499f96c650aaa49b847cec` and its GitHub release is public.
-The last community submission to play 2236 was revision 5548, pending review at that time. Read current state rather than assuming approval.
+Before the v0.7.1 update, a fresh authorized read confirmed community revision 5548 was approved and public, with no newer draft or pending revision.
 Its one-time grant was consumed and cannot be reused.
 
 ## Current receipts
@@ -47,10 +47,14 @@ The v0.7.0 identity remains in the live historical-build catalog.
 
 The final 3:4 cover and all three optional posters were opened and inspected after rendering.
 Publisher 1.14.0 validated the exact downloaded merged firmware and cover.
-Community submission has not happened: the previous grant is unavailable, and `whoami`
-reports not authorized. Obtain fresh authorization before reading project 2236's current
-public revision and checking for pending/draft conflicts. No new community status is claimed.
+The user supplied a fresh one-time grant; `whoami` confirmed `scope: update_once`,
+`projectId: 2236`. The approved bilingual descriptions were preserved, instructions were
+updated for manual Bluetooth setup, and this release's changes were submitted separately.
+Submission returned revision **5603**, **pending review**, for existing play **2236**.
+A subsequent `projects` read confirmed the same submission result, firmware hash and
+independent bilingual instructions/changelog fields. Approved revision **5548** remains public;
+v0.7.1 is not yet public in the community. The grant is consumed; do not resubmit or reuse it.
 
 Build: PASS. Host tests: PASS. Device tests: NOT RUN for the tagged release.
 Unverified: tagged-artifact hardware acceptance, long calls, provider/network-dependent latency
-and recognition quality, and current private community review state.
+and recognition quality, and community approval of revision 5603.
