@@ -31,4 +31,23 @@ v0.7.0 标签为 `4a41111c0df58032c8499f96c650aaa49b847cec`，GitHub 正式版�
 本机 Hermes 协议测试中缺少原生 Hermes 导入的测试仍会跳过；不能据此宣称新一轮真实 Hermes 运行时验证。
 网页部署兼容旧固件附件名称，防止更名后的发布准备阶段无法读取 v0.7.0。
 
-准备中，尚不能视为已发布或已提交审核。完成后记录真实链接、来源提交、固件哈希与社区状态。
+GitHub v0.7.1 于 2026-11-14 09:01:59 UTC 正式公开：
+<https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.1>。
+不可变来源提交为 `555295fc84a0c7d9027dc838ff2f8c44773808e2`。
+[Release 流水线 43578218698](https://github.com/vangie/ai-passport-agent/actions/runs/43578218698)
+所有任务通过；下载的八个附件均通过来源、文件集合和校验和核对。
+完整镜像 SHA-256 为 `f946bb78be95503c4215685743a2ce8432be1207e57ff2d6608bd67f82c60451`，
+应用镜像为 `767feda404e2ec650a78960fa2c04eadf50e285b245befd702ceaa1f4a28079e`。
+设备构建标识为 `8be6be67b02a8882`。
+
+[Pages 流水线 43578592280](https://github.com/vangie/ai-passport-agent/actions/runs/43578592280)
+部署成功。在线 <https://ai-passport-agent.codelife.me/> 清单报告 v0.7.1 与相同来源提交，
+从网站同源下载的两份固件哈希与 Release 一致，历史构建目录仍保留 v0.7.0 识别信息。
+
+最终 3:4 封面和三张附图均已在渲染完成后逐张打开检查。
+发布助手 1.14.0 已校验实际下载的完整固件与封面。
+社区尚未提交：旧授权不可用，`whoami` 返回未授权。需新授权后查询玩法 2236 当前公开修订，
+检查待审／草稿冲突；不能据此声称新的社区审核状态。
+
+Build：PASS。Host tests：PASS。Device tests：正式标签版本 NOT RUN。
+Unverified：正式产物实机验收、长通话、受网络和服务商影响的延迟及识别效果，以及社区当前私有审核状态。

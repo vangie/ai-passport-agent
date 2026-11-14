@@ -6,7 +6,9 @@ Update existing play **2236** only; never create a duplicate. Obtain a fresh gra
 `projects` / `publishedRevision`, comparing notes against the actual public revision.
 Stop on draft/pending or version conflicts; do not withdraw or overwrite.
 The v0.7.0 submission was revision 5548, pending at the time; that is not current-state evidence.
-This version has not been submitted yet.
+This version has not been submitted yet. GitHub v0.7.1 is public, and its exact downloaded
+merged image passed publisher validation. The final cover and three optional images were
+visually inspected. The previous grant is unavailable; obtain new authorization before submission.
 
 ## Title
 
