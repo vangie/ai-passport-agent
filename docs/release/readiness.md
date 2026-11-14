@@ -34,10 +34,9 @@ Publishing itself does not flash/restart the device or modify personal gateway m
 
 ## Community
 
-Revision **5603** (v0.7.1) of community play **2236** was pending review when submitted; its current state was not read for this release.
-There is no fresh one-time grant, so v0.7.2 is **not submitted to the community**. A later submission needs a new grant and a read of
-the actual state first, and must stop on a draft, pending revision or version conflict.
-See [community submission](community.md), which still describes v0.7.1.
+After the user supplied a fresh one-time grant, `whoami` confirmed `scope: update_once`, `projectId: 2236`.
+A `projects` read before submitting showed revision **5603** (v0.7.1) approved and public, with no draft or pending conflict.
+See [community submission](community.md).
 
 ## Previous release
 
@@ -50,5 +49,27 @@ The local complete gate passed: repository and host tests, complete firmware bui
 The added host test fails on the previous logic and passes on the new logic.
 Four Hermes tests requiring unavailable native imports still skip locally.
 
+GitHub v0.7.2 was published on 2026-11-14 at 19:11:10 UTC:
+<https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.2>.
+Its immutable source commit is `40e3aedbb60259649d6792a41e210234bdce658c`; all four checks on main passed for that commit before tagging.
+[Release run 43630226505](https://github.com/vangie/ai-passport-agent/actions/runs/43630226505)
+passed every job; all eight downloaded assets passed provenance, filename and checksum verification.
+The merged image SHA-256 is `ed44c6cc5e6d5753a935672b67071f60bf602395df13f342269bcdadaa8bbd93`;
+the application SHA-256 is `78c600c2e7bb3c49148207d875148175f689e67f0700b37038afd451ba742c92`.
+Its device build identifier is `3b9d1c17852932fd`.
+
+[Pages run 43630713742](https://github.com/vangie/ai-passport-agent/actions/runs/43630713742)
+succeeded. The live <https://ai-passport-agent.codelife.me/> manifest reports v0.7.2 and
+the same source commit; both downloaded same-origin firmware hashes match Release.
+Identities for v0.7.1 and earlier remain in the live historical-build catalog.
+
+Publisher 1.14.0 validated the exact downloaded merged firmware and cover. The interface did not change, so the cover and
+three posters approved for v0.7.1 were reused and each was opened and inspected before submitting.
+The approved bilingual descriptions and instructions were preserved, and this release's changes were submitted separately.
+Submission returned revision **5643**, **pending review**, for existing play **2236**.
+A subsequent `projects` read confirmed the same submission result, firmware hash and independent bilingual
+description/instructions/changelog fields. Approved revision **5603** (v0.7.1) remains public;
+v0.7.2 is not yet public in the community. The grant is consumed; do not resubmit or reuse it.
+
 Build: PASS. Host tests: PASS. Device tests: local-candidate synthetic calls PASS; NOT RUN for the tagged release.
-Unverified: tagged-artifact hardware acceptance, a long real call with several speakers, and the community update.
+Unverified: tagged-artifact hardware acceptance, a long real call with several speakers, and community approval of revision 5643.

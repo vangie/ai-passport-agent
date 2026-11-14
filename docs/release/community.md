@@ -1,14 +1,15 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.7.1
+# Community submission · v0.7.2
 
-Submitted on 2026-11-14 to existing play **2236** only, using its target-bound
+Submitted on 2026-11-15 to existing play **2236** only, using its target-bound
 `update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
-revision **5548** was approved and public, with no draft or pending conflict.
-The response and readback identify revision **5603**, **pending review**; the approved
-revision remains public. This is not a claim that v0.7.1 is public in the community.
-GitHub v0.7.1's verified merged image, inspected final cover and three optional images
-were submitted, with separate bilingual descriptions, instructions and changelogs.
+revision **5603** (v0.7.1) was approved and public, with no draft or pending conflict.
+The response and readback identify revision **5643**, **pending review**; the approved
+revision remains public. This is not a claim that v0.7.2 is public in the community.
+GitHub v0.7.2's verified merged image was submitted. The interface did not change, so the
+cover and three optional images approved for v0.7.1 were reused after each was inspected.
+Descriptions and instructions are unchanged; the changelog is this release's own.
 The firmware hash and independent text fields were confirmed by readback.
 The grant is consumed. Future updates need fresh authorization and a current-state check;
 stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
@@ -46,20 +47,19 @@ Independent open-source community project. Images are actual UI renders with fic
 
 ## Update notes
 
-- Keep chat visible throughout follow-up questions and follow new replies to the latest content without moving readers reviewing history. Animate waiting feedback.
-- Improve connection/reconnection preparation, strengthen Ask noise filtering and fix longer recordings sometimes failing to send.
-- Expand call transcript space, simplify settings/home actions, add battery color levels and cover known missing characters.
-- Turn Bluetooth off by default while online to reserve resources; enable it in device Settings before setup. Preserve website recognition of older versions and clarify firmware download names.
+- Fix calls ending on their own: when people nearby kept talking and replies were interrupted repeatedly, Passport could mistake a rejected request for a lost voice service, stop listening and leave the call about 30 seconds later. The call now continues.
+- A call still ends with a reason when the voice service keeps failing or the gateway closes the session.
+- Hermes users should also update the Hermes plugin, which carries the same fix.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
-- Version: v0.7.1. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.1
+- Version: v0.7.2. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.2
 - Use the full-image hash in that release's `release-manifest.json`; upload the same file to the community, not a local candidate.
 - Preserve both approved titles from the paired documents. Do not change other plays.
 - Generate materials with `node tools/community_materials.mjs`; output:
-  `build/community-market/v0.7.1/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
+  `build/community-market/v0.7.2/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
 - All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
   description, instructions and update-note files before uploading the same files. Generation does not submit anything.
 - Before uploading, compare the live public revision and trim update notes accordingly. Submit only the inspected cover and verified release firmware.
