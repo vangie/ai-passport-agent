@@ -136,7 +136,7 @@ class PassportAdapter(BasePlatformAdapter):
                         capabilities = params.get("caps", [])
                         scopes = params["scopes"]
                         self.protocol.subscribers.setdefault(identity, set()).add(send)
-                        result = {"type": "hello-ok", "protocol": 3, "passportProtocol": 1, "backend": "hermes",
+                        result = {"type": "hello-ok", "protocol": 3, "passportProtocol": 1, "passportAsk": True, "backend": "hermes",
                                   "policy": {"maxPayload": MAX_FRAME_BYTES, "attachments": {"maxBytes": MAX_AUDIO_BYTES}},
                                   "auth": {"role": "operator", "scopes": params["scopes"], "deviceToken": token}}
                     elif not self.store.authorized(identity, token):

@@ -56,6 +56,52 @@ static void test_noise(unsigned rate) {
     }
 }
 
+/* Feed `ms` of the speech sample starting at `from_ms`, then silence. */
+static void burst(passport_vad_t *vad, const int16_t *pcm, size_t count, unsigned rate,
+                  unsigned from_ms, unsigned ms) {
+    size_t start = (size_t)from_ms * 16, end = start + (size_t)ms * 16;
+    for (size_t index = start; index < end && index < count; index++) {
+        passport_vad_process(vad, &pcm[index], 1);
+        if (rate == 24000 && index % 2) passport_vad_process(vad, &pcm[index], 1);
+    }
+}
+
+static void test_short_sounds(unsigned rate, const int16_t *pcm, size_t count) {
+    passport_vad_t vad;
+    /* The start-up thump and key click: voice-like audio in the first
+     * moments, then a silent room for longer than the auto-send pause. */
+    assert(passport_vad_init(&vad, rate));
+    burst(&vad, pcm, count, rate, 600, PASSPORT_VAD_SETTLE_MS - 20);
+    silence(&vad, 300);
+    printf("Short rate=%u start-up voice=%u longest=%u speech=%d\n", rate, vad.voice_frames, vad.longest_ms, vad.speech);
+    assert(!vad.speech && !vad.ready);
+    /* A cough or a knock: one voice-like burst shorter than a word. */
+    assert(passport_vad_init(&vad, rate));
+    silence(&vad, 60);
+    burst(&vad, pcm, count, rate, 600, 100);
+    silence(&vad, 300);
+    printf("Short rate=%u single burst voice=%u longest=%u speech=%d\n", rate, vad.voice_frames, vad.longest_ms, vad.speech);
+    assert(!vad.speech && !vad.ready);
+    /* Several such sounds spread out do not add up to speech either. */
+    assert(passport_vad_init(&vad, rate));
+    silence(&vad, 60);
+    for (unsigned repeat = 0; repeat < 6; repeat++) {
+        burst(&vad, pcm, count, rate, 600 + repeat * 150, 60);
+        silence(&vad, 80);
+    }
+    silence(&vad, 300);
+    printf("Short rate=%u scattered voice=%u longest=%u speech=%d\n", rate, vad.voice_frames, vad.longest_ms, vad.speech);
+    assert(!vad.speech && !vad.ready);
+    /* A short real word after the settling time still counts. */
+    assert(passport_vad_init(&vad, rate));
+    silence(&vad, 60);
+    burst(&vad, pcm, count, rate, 600, 450);
+    printf("Short rate=%u word voice=%u longest=%u spoken=%u speech=%d\n", rate, vad.voice_frames, vad.longest_ms, vad.spoken_ms, vad.speech);
+    assert(vad.speech);
+    silence(&vad, 210);
+    assert(vad.ready);
+}
+
 int main(void) {
     passport_vad_t vad;
     assert(!passport_vad_init(NULL, 16000));
@@ -82,6 +128,7 @@ int main(void) {
         assert(!vad.speech && !vad.ready);
         size_t count;
         int16_t *pcm = speech_samples(&count);
+        test_short_sounds(rate, pcm, count);
         for (unsigned gain = 1; gain <= 4; gain *= 2) {
             assert(passport_vad_init(&vad, rate));
             silence(&vad, 40);
@@ -90,7 +137,7 @@ int main(void) {
                 passport_vad_process(&vad, &value, 1);
                 if (rate == 24000 && index % 2) passport_vad_process(&vad, &value, 1);
             }
-            printf("VAD rate=%u gain=1/%u frames=%u voice=%u state=%d\n", rate, gain, vad.frames, vad.voice_frames, vad.speech);
+            printf("VAD rate=%u gain=1/%u frames=%u voice=%u longest=%u spoken=%u state=%d\n", rate, gain, vad.frames, vad.voice_frames, vad.longest_ms, vad.spoken_ms, vad.speech);
             assert(vad.speech);
             silence(&vad, 210);
             assert(vad.ready && !vad.active);
@@ -99,5 +146,5 @@ int main(void) {
         }
         free(pcm);
     }
-    printf("VAD state: %zu bytes; silence/DC/impulses, speech/quiet speech and both capture rates PASS\n", sizeof(vad));
+    printf("VAD state: %zu bytes; silence/DC/impulses, start-up and short sounds rejected, words and quiet speech accepted, both capture rates PASS\n", sizeof(vad));
 }

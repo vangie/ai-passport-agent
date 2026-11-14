@@ -9,6 +9,8 @@ static bool reject_subscription;
 static unsigned connections,closed,uploads,history,aborts,subscriptions,task_creations,pings,transcript_requests;
 static passport_agent_t selected;
 static bool hermes_backend;
+static bool native_missing, old_native, timing_fixture;
+static unsigned identity_reads;
 static unsigned token_saves;
 static const char *expected_live_language = "zh";
 static const char *events[256];
@@ -50,7 +52,7 @@ esp_err_t nvs_open(const char *name,int mode,nvs_handle_t *out) {
     assert(!strcmp(name,"passport_id") && mode==NVS_READWRITE);
     *out=1;return ESP_OK;
 }
-esp_err_t nvs_get_blob(nvs_handle_t handle,const char *name,void *out,size_t *size) { (void)handle;(void)name;memset(out,1,*size);return ESP_OK; }
+esp_err_t nvs_get_blob(nvs_handle_t handle,const char *name,void *out,size_t *size) { (void)handle;(void)name;identity_reads++;memset(out,1,*size);return ESP_OK; }
 esp_err_t nvs_set_blob(nvs_handle_t handle,const char *name,const void *data,size_t size) { (void)handle;(void)name;(void)data;(void)size;return ESP_OK; }
 esp_err_t nvs_commit(nvs_handle_t handle) { (void)handle;return ESP_OK; }
 void nvs_close(nvs_handle_t handle) { (void)handle; }
@@ -58,6 +60,8 @@ bool esp_sntp_enabled(void) { return true; }
 void esp_sntp_setoperatingmode(int mode) { (void)mode; }
 void esp_sntp_setservername(int index,const char *name) { (void)index;(void)name; }
 void esp_sntp_init(void) {}
+bool passport_clock_wait(void) { return !cancelled; }
+int passport_transport_ws_get_upgrade_request_status(esp_transport_handle_t handle) { (void)handle;return native_missing && s_talk_auth ? 404 : 0; }
 esp_err_t esp_crt_bundle_attach(void *conf) { (void)conf;return ESP_OK; }
 bool passport_wifi_is_online(void) { return online; }
 esp_err_t passport_wifi_gateway_performance(bool enabled) { (void)enabled;return ESP_OK; }
@@ -216,7 +220,8 @@ esp_err_t passport_transport_ws_set_headers(esp_transport_handle_t handle,const 
 int esp_transport_get_socket(esp_transport_handle_t handle) { (void)handle;return -1; }
 int esp_transport_connect(esp_transport_handle_t handle,const char *host,int port,int timeout) {
     (void)handle;(void)host;(void)port;(void)timeout;connections++;clear_events();
-    if (fail_connect) return -1;
+    if (timing_fixture) clock_us += 150000;
+    if (fail_connect || (native_missing && s_talk_auth)) return -1;
     event("{\"type\":\"event\",\"event\":\"connect.challenge\",\"payload\":{\"nonce\":\"fixture\",\"ts\":1700000000000}}");return 0;
 }
 int esp_transport_poll_read(esp_transport_handle_t handle,int timeout) {
@@ -262,6 +267,7 @@ int esp_transport_read(esp_transport_handle_t handle,char *out,int size,int time
     }
     const char *next_event=events[event_index%256];
     if (!next_event) { event_index++;return -1; }
+    if (timing_fixture && !event_offset && strstr(next_event,"\"type\":\"ready\"")) clock_us += 210000;
     if (deferred_playback && clock_us<playback_ready_at && strstr(next_event,"passport-a-")) received_during_playback=true;
     if (talk_recovery && !event_offset && !strcmp(next_event,"{\"event\":\"talk.event\",\"payload\":{\"relaySessionId\":\"live-1\",\"type\":\"ready\"}}") && s_state==PASSPORT_SEND_CONNECTING) {
         clock_us+=talk_event_delay;
@@ -295,16 +301,18 @@ int passport_transport_ws_send_raw(esp_transport_handle_t handle,int opcode,cons
     }
     cJSON *frame=cJSON_Parse(wire);assert(frame);
     const char *method=str(frame,"method");
-    if (!strcmp(method,"connect")) event(hermes_backend ?
-        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"backend\":\"hermes\",\"passportProtocol\":1,\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : talk_scope_denied ?
-        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"auth\":{\"scopes\":[\"operator.read\",\"operator.write\"]}}}" :
-        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}");
+    if (!strcmp(method,"connect")) event(old_native ?
+        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : hermes_backend ?
+        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"backend\":\"hermes\",\"passportProtocol\":1,\"passportAsk\":true,\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : talk_scope_denied ?
+        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"passportAsk\":true,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"scopes\":[\"operator.read\",\"operator.write\"]}}}" :
+        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"passportAsk\":true,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}");
     if (!strcmp(method,"sessions.messages.subscribe")) {
         subscriptions++;assert(!strcmp(str(cJSON_GetObjectItem(frame,"params"),"key"),s_session));
         event(reject_subscription ? "{\"type\":\"res\",\"id\":\"passport-subscribe\",\"ok\":false}" :
             "{\"type\":\"res\",\"id\":\"passport-subscribe\",\"ok\":true,\"payload\":{\"subscribed\":true}}");
     }
     if (!strcmp(method,"chat.send")) {
+        assert(s_device_id[0] && !strcmp(str(cJSON_GetObjectItem(frame,"params"),"sessionKey"),s_session));
         uploads++;assert(strstr(wire,clip_id));
         event("{\"type\":\"res\",\"id\":\"passport-send\",\"ok\":true,\"payload\":{\"runId\":\"fixture-run\"}}");
         if (disconnect_reply) { disconnect_reply=false;event(NULL); }
@@ -767,11 +775,15 @@ int main(void) {
     close_gateway(&socket,&parent);
     free(s_receive);s_receive=NULL;
     online=true;selected_route("wss://fixture.example");passport_gateway_maintain(true);
+    step(&service);
+    assert(service.ws && s_talk_auth);
+    unsigned warm_connections=connections;
     talk_wrong_owner=true;
     unsigned uploads_before_live=uploads;
     assert(passport_gateway_live(true)==ESP_OK);
     assert(passport_gateway_live(false)==ESP_ERR_INVALID_STATE);
     step(&service);
+    assert(connections==warm_connections);
     assert(s_state==PASSPORT_SEND_FAILED && live_starts==1 && live_pushes==1 && live_stops==1 && !live_response);
     assert(talk_marks==1 && uploads==uploads_before_live && !s_talk_auth && !service.ws);
     talk_bad_format=true;
@@ -795,7 +807,7 @@ int main(void) {
     assert(passport_gateway_live(true)==ESP_OK);step(&service);
     assert(s_state==PASSPORT_SEND_DONE && !strcmp(s_message,"通话已结束"));
     assert(!passport_gateway_active() && !live_response && live_stops==stops_before_completed+1);
-    assert(talk_closes==closes_before_completed && !service.ws);
+    assert(talk_closes==closes_before_completed && service.ws && s_talk_auth);
     talk_no_ready=true;
     assert(passport_gateway_live(true)==ESP_OK);step(&service);
     assert(s_state==PASSPORT_SEND_FAILED && live_stops==stops_before_completed+1);
@@ -924,7 +936,7 @@ int main(void) {
             assert(capture_dropped>0 && clock_us-before<7000000);
             assert(s_talk_retained.write_us>=3000000 && s_talk_retained.loops>0);
             char diagnostic[640];passport_gateway_timing_diagnostic(diagnostic,sizeof(diagnostic));
-            assert(strstr(diagnostic,"LIVE_TIME loops=") && strstr(diagnostic,"write_total_ms="));
+            assert(strstr(diagnostic,"LIVE_TIME gateway_ms=") && strstr(diagnostic,"loops=") && strstr(diagnostic,"write_total_ms="));
             append_write_delay=0;
             puts("Live sustained capture loss: bounded failure and timing diagnostics PASS");
         } else if (scenario>=6) {
@@ -1050,6 +1062,61 @@ int main(void) {
     call=cJSON_Parse("{\"callId\":\"control-1\",\"name\":\"openclaw_agent_control\",\"args\":{\"text\":\"取消任务\"}}");
     assert(talk_tool_call((void *)2,"live-1",call,&tool) && !tool.call[0]);cJSON_Delete(call);
     s_background=true;
+    passport_gateway_maintain(false);step(&service);assert(passport_gateway_quiescent());
+    selected_route("wss://cold.example");
+    s_device_id[0] = s_session[0] = 0;s_identity_ready=false;
+    timing_fixture=true;
+    assert(passport_gateway_abandon());
+    assert(passport_gateway_send(NULL)==ESP_OK);step(&service);
+    uint8_t expected_scope[32];reply_scope(expected_scope);
+    assert(s_state==PASSPORT_SEND_DONE && s_device_id[0] && !memcmp(s_reply.scope,expected_scope,32));
+    unsigned warm_count=connections,reads_before=identity_reads;
+    assert(service.ws && s_talk_auth && passport_gateway_abandon());
+    talk_completed=true;
+    for (unsigned attempt=0;attempt<2;attempt++) {
+        assert(passport_gateway_live(true)==ESP_OK);step(&service);
+        assert(s_state==PASSPORT_SEND_DONE && service.ws && connections==warm_count);
+        assert(identity_reads==reads_before && s_talk_retained.reused);
+        assert(!s_talk_retained.gateway_ms && s_talk_retained.provider_ms>=210 && s_talk_retained.ready_ms>=210);
+    }
+    passport_gateway_maintain(false);step(&service);
+    assert(passport_gateway_live(true)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_DONE && !s_talk_retained.reused && s_talk_retained.gateway_ms>=150);
+    assert(s_talk_retained.ready_ms>=s_talk_retained.gateway_ms+s_talk_retained.provider_ms);
+    talk_completed=false;timing_fixture=false;
+    passport_gateway_maintain(false);step(&service);
+    talk_scope_denied=true;
+    selected_route("wss://ask-only.example");
+    assert(passport_gateway_abandon() && passport_gateway_send(NULL)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_DONE && service.ws && !s_talk_allowed);
+    unsigned creates_without_scope=talk_creates;
+    assert(passport_gateway_abandon() && passport_gateway_live(true)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_FAILED && talk_creates==creates_without_scope);
+    talk_scope_denied=false;
+    passport_gateway_maintain(false);step(&service);
+    selected_route("wss://legacy.example");native_missing=true;
+    unsigned fallback_count=connections;
+    passport_gateway_maintain(true);step(&service);
+    assert(service.ws && service.legacy && !s_talk_auth && connections==fallback_count+2);
+    event(NULL);step(&service);clock_us+=2000000;step(&service);
+    assert(service.ws && service.legacy && connections==fallback_count+3);
+    native_missing=false;passport_gateway_maintain(false);step(&service);
+    selected_route("wss://old-plugin.example");old_native=true;
+    assert(passport_gateway_abandon() && passport_gateway_send(NULL)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_DONE && service.ws && service.legacy && !s_talk_auth);
+    talk_completed=true;
+    assert(passport_gateway_live(true)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_DONE && service.ws && s_talk_auth && !s_native_ask);
+    assert(passport_gateway_abandon() && passport_gateway_send(NULL)==ESP_OK);step(&service);
+    assert(s_state==PASSPORT_SEND_DONE && service.ws && service.legacy && !s_talk_auth);
+    talk_completed=false;old_native=false;
+    passport_gateway_maintain(false);step(&service);
+    selected_route("wss://transient.example");fail_connect=true;
+    unsigned failed_count=connections;
+    passport_gateway_maintain(true);step(&service);
+    assert(!service.ws && !service.legacy && connections==failed_count+1);
+    fail_connect=false;clock_us+=4000000;step(&service);
+    assert(service.ws && s_talk_auth && !service.legacy);
     passport_gateway_maintain(false);step(&service);assert(passport_gateway_quiescent());
     printf("Gateway runtime: reuse, route changes, BLE release, backoff, upload/reply recovery, cancellation and isolated live replies PASS\n");
 }

@@ -25,7 +25,7 @@ try {
   await mkdir(shots, { recursive: true });
   browser = await chromium.launch({ channel: 'chrome', args: ['--disable-gpu'] });
   const page = await browser.newPage({ viewport: { width: 1360, height: 1040 }, locale: 'zh-CN', deviceScaleFactor: 1 });
-  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: `v${version}`, commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'FoloToy-AI-Passport.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'FoloToy-AI-Passport-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: `v${version}`, channel: 'release' } } } }));
+  await page.route('**/firmware/manifest.json', route => route.fulfill({ json: { schema: 1, version: `v${version}`, commit: 'a'.repeat(40), buildId: 'abcdef1234567890', application: { file: 'agent-talk.bin', size: 3400000, sha256: 'a'.repeat(64), offset: 65536 }, full: { file: 'agent-talk-full.bin', size: 3465536, sha256: 'b'.repeat(64), offset: 0 }, knownBuilds: { abcdef1234567890: { version: `v${version}`, channel: 'release' } } } }));
   await page.goto('http://127.0.0.1:4189/');
   await page.evaluate(async () => {
     const { DemoTransport } = await import('/src/transports.js');

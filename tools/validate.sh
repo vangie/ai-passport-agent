@@ -5,7 +5,7 @@ mode="${1:---all}"
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
-    echo "Usage: $0 [--all|--static|--firmware]" >&2
+    echo "Usage: $0 [--all|--static|--firmware|--legacy]" >&2
 }
 
 run_static_checks() {
@@ -34,17 +34,6 @@ run_static_checks() {
     "${actionlint_bin}" -color .github/workflows/*.yml
 
     test_dir="$(mktemp -d /tmp/ai-passport-host-tests.XXXXXX)"
-    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
-        tests/test_ui_pixel_math.c main/ui_pixel_math.c \
-        -o "${test_dir}/test_ui_pixel_math"
-    "${test_dir}/test_ui_pixel_math"
-    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
-        tests/test_demo_navigation.c main/demo_navigation.c \
-        -o "${test_dir}/test_demo_navigation"
-    "${test_dir}/test_demo_navigation"
-    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
-        tests/test_key_guard.c -o "${test_dir}/test_key_guard"
-    "${test_dir}/test_key_guard"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
         tests/test_passport_power.c -o "${test_dir}/test_passport_power"
     "${test_dir}/test_passport_power"
@@ -86,13 +75,6 @@ run_static_checks() {
     if [[ "$(uname -s)" == Darwin ]]; then
         gc_sections=-Wl,-dead_strip
     fi
-    for demo in audio low_power ble wifi; do
-        "${CC:-cc}" -std=c11 -Wall -Wextra -Werror \
-            -ffunction-sections -fdata-sections -Itests/demo_stubs -Imain \
-            "tests/test_demo_${demo}_runtime.c" "${gc_sections}" \
-            -o "${test_dir}/test_demo_${demo}_runtime"
-        "${test_dir}/test_demo_${demo}_runtime"
-    done
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
         tests/test_passport.c app/passport_store.c app/passport_ui.c app/passport_usb.c \
         app/passport_pair.c app/passport_proxy.c app/openclaw_frame.c \
@@ -105,6 +87,12 @@ run_static_checks() {
         tests/test_passport_network.c app/passport_network.c app/passport_store.c app/passport_proxy.c \
         -o "${test_dir}/test_passport_network"
     "${test_dir}/test_passport_network"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp \
+        tests/test_passport_endpoint.c app/passport_endpoint.c -o "${test_dir}/test_passport_endpoint"
+    "${test_dir}/test_passport_endpoint"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/clock_stubs -Itests/gateway_stubs -Imain -Iapp \
+        tests/test_passport_clock.c -o "${test_dir}/test_passport_clock"
+    "${test_dir}/test_passport_clock"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Icomponents/passport_vad \
         tests/test_passport_vad.c components/passport_vad/passport_vad.c \
         components/passport_vad/src/vad/*.c components/passport_vad/src/signal_processing/*.c \
@@ -148,7 +136,7 @@ run_static_checks() {
     fi
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/gateway_stubs -Imain -Iapp \
         -Icomponents/passport_crypto -I"${json_dir}" tests/test_passport_gateway.c \
-        app/passport_reply.c app/passport_json.c components/passport_crypto/monocypher.c \
+        app/passport_endpoint.c app/passport_reply.c app/passport_json.c components/passport_crypto/monocypher.c \
         components/passport_crypto/monocypher-ed25519.c "${json_dir}/cJSON.c" \
         ${mbedtls_flags} -o "${test_dir}/test_passport_gateway"
     "${test_dir}/test_passport_gateway"
@@ -168,6 +156,41 @@ run_static_checks() {
         tests/test_passport_crypto.c components/passport_crypto/monocypher.c \
         components/passport_crypto/monocypher-ed25519.c -o "${test_dir}/test_passport_crypto"
     "${test_dir}/test_passport_crypto"
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_battery_profile.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_deep_sleep_contract.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_startup.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_takeover.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_gap.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_network_runtime.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_naming.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_check_repo.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_verify_firmware.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_archive_firmware.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_install_passport_skills.py
+    rm -rf "${test_dir}"
+    echo "Host tests: PASS"
+}
+
+run_legacy_checks() (
+    local test_dir gc_sections=-Wl,--gc-sections
+    test_dir="$(mktemp -d /tmp/ai-passport-legacy-tests.XXXXXX)"
+    trap 'rm -rf -- "${test_dir}"' EXIT
+    if [[ "$(uname -s)" == Darwin ]]; then gc_sections=-Wl,-dead_strip; fi
+    for unit in ui_pixel_math demo_navigation; do
+        "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+            "tests/test_${unit}.c" "main/${unit}.c" -o "${test_dir}/test_${unit}"
+        "${test_dir}/test_${unit}"
+    done
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
+        tests/test_key_guard.c -o "${test_dir}/test_key_guard"
+    "${test_dir}/test_key_guard"
+    for demo in audio low_power ble wifi; do
+        "${CC:-cc}" -std=c11 -Wall -Wextra -Werror \
+            -ffunction-sections -fdata-sections -Itests/demo_stubs -Imain \
+            "tests/test_demo_${demo}_runtime.c" "${gc_sections}" \
+            -o "${test_dir}/test_demo_${demo}_runtime"
+        "${test_dir}/test_demo_${demo}_runtime"
+    done
     if [[ "$(uname -s)" == Darwin ]] && command -v swiftc >/dev/null 2>&1; then
         swiftc tests/test_mac_usb.swift mac/PassportMac/ConfigConnection.swift \
             mac/PassportMac/SerialPort.swift mac/PassportMac/FirmwareUpdate.swift mac/PassportMac/DeviceControl.swift shared/ProxySettings.swift shared/AppLocalization.swift \
@@ -190,21 +213,8 @@ run_static_checks() {
             -o "${test_dir}/test_disclosure_cursor"
         "${test_dir}/test_disclosure_cursor"
     fi
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_battery_profile.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_deep_sleep_contract.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_key_wake_contract.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_startup.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_takeover.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_ble_gap.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_network_runtime.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_naming.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_check_repo.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_verify_firmware.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_archive_firmware.py
-    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_install_passport_skills.py
-    rm -rf "${test_dir}"
-    echo "Host tests: PASS"
-}
+    echo "Legacy demo/native App tests: PASS"
+)
 
 run_firmware_checks() (
     local validation_build_dir
@@ -221,14 +231,14 @@ run_firmware_checks() (
         idf.py -B "${validation_build_dir}" \
         -D "SDKCONFIG=${validation_build_dir}/sdkconfig" build
     idf.py -B "${validation_build_dir}" merge-bin \
-        -o "${validation_build_dir}/FoloToy-AI-Passport-full.bin"
+        -o "${validation_build_dir}/agent-talk-full.bin"
     python3 tools/verify_firmware.py "${validation_build_dir}"
     PYTHONDONTWRITEBYTECODE=1 python3 tools/archive_firmware.py create \
         "${validation_build_dir}" --archive-root "${repo_root}/build/firmware"
     mkdir -p "${repo_root}/build"
     install -m 0644 \
-        "${validation_build_dir}/FoloToy-AI-Passport-full.bin" \
-        "${repo_root}/build/FoloToy-AI-Passport-full.bin"
+        "${validation_build_dir}/agent-talk-full.bin" \
+        "${repo_root}/build/agent-talk-full.bin"
     echo "Firmware build: PASS"
 )
 
@@ -243,6 +253,9 @@ case "${mode}" in
         ;;
     --firmware)
         run_firmware_checks
+        ;;
+    --legacy)
+        run_legacy_checks
         ;;
     *)
         usage

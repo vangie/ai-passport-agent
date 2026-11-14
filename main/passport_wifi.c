@@ -1,5 +1,6 @@
 #include "passport.h"
 #include "passport_hotspot.h"
+#include "passport_clock.h"
 
 #include "esp_event.h"
 #include "esp_log.h"
@@ -62,6 +63,7 @@ static void on_wifi(void *arg, esp_event_base_t base, int32_t id, void *data) {
         xEventGroupSetBits(s_events, k_failed);
     }
     if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
+        passport_clock_start();
         s_online = true;
         xEventGroupSetBits(s_events, k_connected);
     }
@@ -136,6 +138,8 @@ static esp_err_t start_once(void) {
     if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
         return err;
     }
+    err = passport_clock_prepare();
+    if (err != ESP_OK) return err;
     bool initialized = false;
     bool wifi_handler = false;
     bool ip_handler = false;

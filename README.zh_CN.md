@@ -15,7 +15,7 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**v0.7.0：支持 OpenClaw 与 Hermes。** 按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
+**v0.7.1：连续追问更顺畅，连接更可靠。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
 项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
@@ -119,7 +119,7 @@ Passport ── Wi-Fi／WSS ──> OpenClaw 或 Hermes＋插件 ──> 你的�
 持有已配对设备就拥有它的配置权限。请限制 OpenClaw 专属 agent 工具，检查 Hermes 原生 Agent
 的工具授权策略；设备暂不能回答交互式工具审批。遗失后撤销授权。
 蓝牙使用 Just Works 加密配对，不代表所有权认证，也不防主动中间人攻击；
-请在可信环境配置，不需要时可在设备设置关闭。录音／通话期间会临时释放蓝牙内存，结束后恢复。
+请在可信环境配置。设备联网时蓝牙默认关闭，要配置时在设备「设置」里开启，用完可关闭。
 
 ## 碰一下，开启热点
 
@@ -136,7 +136,7 @@ iOS 自动化表现随系统版本变化，这不是设备认证。参见[NFC �
 
 ## 版本与开发
 
-v0.7.0 同时提供 `ai-passport-hermes-0.7.0.tar.gz`。
+v0.7.1 同时提供 `ai-passport-hermes-0.7.1.tar.gz`。
 原生 App 不参与构建或发布。
 
 Release 包含应用／完整固件、固件打包文件、OpenClaw 插件、`release-manifest.json`、

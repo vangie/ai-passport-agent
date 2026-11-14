@@ -29,9 +29,23 @@ void passport_vad_process(passport_vad_t *vad, const int16_t *pcm, size_t count)
         vad->filled = 0;
         bool voice = WebRtcVad_CalcVad8khz(&vad->core, vad->frame, 80) == 1;
         vad->frames++;
+        /* The classifier still sees the settling frames so its noise model
+         * adapts, but they cannot mark the recording as speech. */
+        bool settling = vad->elapsed_ms < PASSPORT_VAD_SETTLE_MS;
+        vad->elapsed_ms += 10;
+        if (settling) voice = false;
         vad->voice_frames += voice;
+        vad->run_ms = voice ? vad->run_ms + 10 : 0;
+        if (vad->run_ms > vad->longest_ms) vad->longest_ms = vad->run_ms;
+        /* Count voice only once a burst has lasted long enough, including
+         * the part of the burst that came before it qualified. */
+        if (vad->run_ms == PASSPORT_VAD_BURST_MS) vad->spoken_ms += PASSPORT_VAD_BURST_MS;
+        else if (vad->run_ms > PASSPORT_VAD_BURST_MS) vad->spoken_ms += 10;
         vad->recent = (uint16_t)((vad->recent << 1) | voice);
-        if (__builtin_popcount((unsigned)vad->recent) >= 8) vad->active = vad->speech = true;
+        /* `active` gates live audio and must open quickly; `speech` decides
+         * whether a question is worth sending and needs sustained voice. */
+        if (__builtin_popcount((unsigned)vad->recent) >= 8) vad->active = true;
+        if (vad->spoken_ms >= PASSPORT_VAD_SPEECH_MS) vad->speech = true;
         if (voice) vad->quiet_ms = 0;
         else if (vad->quiet_ms < 2000) vad->quiet_ms += 10;
         if (vad->quiet_ms >= 320) vad->active = false;

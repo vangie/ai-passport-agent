@@ -71,9 +71,9 @@ class WebFirmwareTests(unittest.TestCase):
     def archive(self, image, name='archive'):
         directory = self.root / 'build/firmware' / name
         directory.mkdir(parents=True)
-        (directory / 'FoloToy-AI-Passport.bin').write_bytes(image)
+        (directory / 'agent-talk.bin').write_bytes(image)
         receipt = {'app_elf_sha256': image[176:208].hex(), 'files': {
-            'FoloToy-AI-Passport.bin': {'size': len(image), 'sha256': hashlib.sha256(image).hexdigest()}}}
+            'agent-talk.bin': {'size': len(image), 'sha256': hashlib.sha256(image).hexdigest()}}}
         (directory / 'manifest.json').write_text(json.dumps(receipt))
         return directory
 
@@ -84,7 +84,7 @@ class WebFirmwareTests(unittest.TestCase):
         struct.pack_into('<HBBII', full, 0x8000, 0x50aa, 0, 0, 0x10000, 0x340000)
         struct.pack_into('<HBBII', full, 0x8020, 0x50aa, 1, 2, 0x350000, 0x10000)
         receipt = {'schema_version': 1, 'tag': tag, 'commit_sha': 'a' * 40, 'assets': {}}
-        for filename, data in [('FoloToy-AI-Passport.bin', image), ('FoloToy-AI-Passport-full.bin', full)]:
+        for filename, data in [('agent-talk.bin', image), ('agent-talk-full.bin', full)]:
             (directory / filename).write_bytes(data)
             receipt['assets'][filename] = {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
         (directory / 'release-manifest.json').write_text(json.dumps(receipt))
@@ -93,12 +93,12 @@ class WebFirmwareTests(unittest.TestCase):
     def test_local_catalog_identifies_development_without_replacing_firmware(self):
         image = self.image()
         self.archive(image)
-        (self.destination / 'FoloToy-AI-Passport.bin').write_bytes(b'official firmware')
+        (self.destination / 'agent-talk.bin').write_bytes(b'official firmware')
         web.stage_local_build_catalog()
         manifest = json.loads(self.manifest.read_text())
         self.assertEqual(manifest['knownBuilds'], {
             image[176:184].hex(): {'version': 'v1.2.3', 'channel': 'development'}})
-        self.assertEqual((self.destination / 'FoloToy-AI-Passport.bin').read_bytes(), b'official firmware')
+        self.assertEqual((self.destination / 'agent-talk.bin').read_bytes(), b'official firmware')
 
     def test_local_catalog_does_not_publish_arbitrary_descriptor_text(self):
         image = self.image('fixture-private-metadata')
@@ -110,7 +110,7 @@ class WebFirmwareTests(unittest.TestCase):
 
     def test_local_catalog_ignores_corrupt_and_stale_records(self):
         directory = self.archive(self.image())
-        (directory / 'FoloToy-AI-Passport.bin').write_bytes(b'corrupt')
+        (directory / 'agent-talk.bin').write_bytes(b'corrupt')
         self.manifest.write_text(json.dumps({'knownBuilds': {'old': {'version': '', 'channel': 'development'}}}))
         web.stage_local_build_catalog()
         self.assertEqual(json.loads(self.manifest.read_text())['knownBuilds'], {})
@@ -143,9 +143,40 @@ class WebFirmwareTests(unittest.TestCase):
         self.assertEqual(manifest['knownBuilds'], {'56' * 8: {'version': 'v1.2.2', 'channel': 'release'}})
         self.assertEqual(manifest['version'], 'v1.2.3')
 
+    def test_historical_manifest_can_use_noncanonical_asset_names(self):
+        directory = self.release(self.root / 'history/v1.2.1', 'v1.2.1', '56' * 32)
+        receipt_path = directory / 'release-manifest.json'
+        receipt = json.loads(receipt_path.read_text())
+        for old_name, new_name in [('agent-talk.bin', 'historical-application.bin'),
+                                   ('agent-talk-full.bin', 'historical-full.bin')]:
+            (directory / old_name).rename(directory / new_name)
+            receipt['assets'][new_name] = receipt['assets'].pop(old_name)
+        receipt_path.write_text(json.dumps(receipt))
+        self.assertEqual(web.release_identity(directory),
+                         ('56' * 8, {'version': 'v1.2.1', 'channel': 'release'}))
+
+    def test_current_staging_accepts_verified_previous_asset_names(self):
+        directory = self.release(self.root / 'release')
+        receipt_path = directory / 'release-manifest.json'
+        receipt = json.loads(receipt_path.read_text())
+        for old_name, new_name in [('agent-talk.bin', 'previous-application.bin'),
+                                   ('agent-talk-full.bin', 'previous-full.bin')]:
+            (directory / old_name).rename(directory / new_name)
+            receipt['assets'][new_name] = receipt['assets'].pop(old_name)
+        receipt_path.write_text(json.dumps(receipt))
+        with contextlib.redirect_stdout(io.StringIO()):
+            web.stage_firmware(directory)
+        manifest = json.loads(self.manifest.read_text())
+        self.assertEqual(manifest['version'], 'v1.2.3')
+        self.assertEqual(manifest['buildId'], '34' * 8)
+        self.assertEqual(manifest['application']['file'], 'agent-talk.bin')
+        self.assertEqual(manifest['full']['file'], 'agent-talk-full.bin')
+        self.assertTrue((self.manifest.parent / 'agent-talk.bin').is_file())
+        self.assertTrue((self.manifest.parent / 'agent-talk-full.bin').is_file())
+
     def test_release_history_rejects_corrupt_image(self):
         directory = self.release(self.root / 'release')
-        (directory / 'FoloToy-AI-Passport.bin').write_bytes(b'corrupt')
+        (directory / 'agent-talk.bin').write_bytes(b'corrupt')
         with self.assertRaisesRegex(ValueError, 'Invalid release identity image'):
             web.release_identity(directory)
 
@@ -173,14 +204,14 @@ class WebFirmwareTests(unittest.TestCase):
         directory = self.root / 'history/v1.2.1'
         directory.mkdir(parents=True)
         image = self.image('v1.2.1')
-        (directory / 'FoloToy-AI-Passport.bin').write_bytes(image)
+        (directory / 'legacy-application.bin').write_bytes(image)
         checksum = hashlib.sha256(image).hexdigest()
         path = directory / 'SHA256SUMS.txt'
-        path.write_text(f'{checksum}  FoloToy-AI-Passport.bin\n')
+        path.write_text(f'{checksum}  legacy-application.bin\n')
         self.assertEqual(web.release_identity(directory), (image[176:184].hex(), {'version': 'v1.2.1', 'channel': 'release'}))
-        path.write_text(f'{checksum}  ./FoloToy-AI-Passport.bin\n')
+        path.write_text(f'{checksum}  ./legacy-application.bin\n')
         self.assertEqual(web.release_identity(directory)[1]['version'], 'v1.2.1')
-        path.write_text(f'{"0" * 64}  FoloToy-AI-Passport.bin\n')
+        path.write_text(f'{"0" * 64}  legacy-application.bin\n')
         with self.assertRaisesRegex(ValueError, 'legacy release identity checksum'):
             web.release_identity(directory)
 

@@ -14,6 +14,17 @@
 
 No pending changes.
 
+## v0.7.1 - 2026-11-14
+
+- Optimize gateway connection, clock synchronization and reconnect paths, reusing available connections and TLS sessions to reduce repeated handshakes; latency still depends on the network and provider.
+- Filter recording-start noise and very short speech bursts in Ask, and do not send unconfirmed speech. Fix gateway frame limits rejecting longer recordings.
+- Keep the conversation visible during follow-up recording, sending and waiting. Follow new replies to the latest content without moving readers who manually paged back.
+- Animate waiting feedback, expand call transcript space, simplify assistant settings and duplicate labels, and balance the Ask/Call home actions.
+- Use green, amber and red battery levels for both icon and percentage. Extend punctuation/headline glyphs and render the unsupported laptop emoji as a monochrome keyboard symbol.
+- Disable Bluetooth by default while online to reserve connection memory. Enable it manually in device Settings for browser setup; offline devices still enable it automatically.
+- Reduce firmware size, extract shared endpoint logic and focus default tests on shipped paths. Rename firmware to `agent-talk.bin` / `agent-talk-full.bin` while retaining old-version recognition.
+- Add OpenClaw speech-transcription configuration diagnostics. Recognition models remain gateway configuration, not embedded or automatically changed by firmware.
+
 ## v0.7.0 - 2026-11-13
 
 - Keep Call reply audio intact during tentative voice-interruption checks, shared
@@ -135,7 +146,7 @@ upstream context, not as its release history.
 - Phase one of the AI development workflow: streamlined task-based context routing, unified local/CI validation, added PR checks and a template, and committed the dependency lock for reproducible builds.
 - PR review fixes: pinned GitHub Actions to full commit SHAs, split build/release jobs by least privilege, disabled persisted sync checkout credentials, added Feature Request and Usage Question forms, clarified private security-report fallback, and corrected stale README, CI-trigger, and branch descriptions.
 - Changed commit titles, PR titles, and PR bodies from Chinese-default to English; updated the Chinese punctuation rule so it no longer applies to PR descriptions.
-- Reworked `build-firmware.yml` to pass `SDKCONFIG_DEFAULTS=sdkconfig.defaults`, enable `partitions.csv`, preserve the 8 MB image header, merge a flashable `FoloToy-AI-Passport-full.bin`, publish only that artifact, and use Actions cache v5.
+- Reworked `build-firmware.yml` to pass `SDKCONFIG_DEFAULTS=sdkconfig.defaults`, enable `partitions.csv`, preserve the 8 MB image header, merge a flashable `agent-talk-full.bin`, publish only that artifact, and use Actions cache v5.
 - Integrated upstream PR #6 to resolve PR #4 conflicts: Wi-Fi, Bluetooth LE, radio lifecycle, and low-power demos; a 3 MB factory partition; build/menu/configuration updates; hardware-guide coverage; and bilingual capability tables.
 - Defined English imperative Conventional Commit formatting for both commits and PR titles.
 - Removed stale sync-workflow template comments and generalized an irrelevant Redis TTL rule to cache components.

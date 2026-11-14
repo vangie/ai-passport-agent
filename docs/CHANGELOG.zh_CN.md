@@ -12,6 +12,17 @@
 
 暂无待发布变更。
 
+## v0.7.1 - 2026-11-14
+
+- 优化网关连接、校时与重连路径，复用可用连接和 TLS 会话，减少重复握手；响应时间仍受网络与服务商影响。
+- 提问过滤录音起始噪声与过短的人声片段，未确认人声不发送；修复较长录音被网关传输大小限制拒绝的问题。
+- 连续追问时保留对话窗口，录音、发送和等待回复不再反复切页；新回复自动跟随到最新内容，主动翻页时保留阅读位置。
+- 等待回复加入动态提示，扩大通话文字区域，简化助手设置和重复标签，平衡首页提问／通话入口。
+- 电量图标和数字使用绿色、琥珀色、红色三档；补齐标点及固定文案字形，将不支持的笔记本 emoji 显示为单色键盘符号。
+- 联网后默认关闭蓝牙以释放连接内存，需要网页蓝牙配置时在设备设置手动开启；离线仍自动开启以便配网。
+- 减少固件体积、抽离公共连接逻辑并精简默认测试范围；固件文件统一命名为 `agent-talk.bin`／`agent-talk-full.bin`，保留旧版本识别。
+- OpenClaw 插件增加语音转写配置诊断；识别模型由网关配置，固件不内置或自动更换模型。
+
 ## v0.7.0 - 2026-11-13
 
 - OpenClaw 与 Hermes 通话的疑似语音打断检查不再丢弃回复音频，确认前继续排除回声。
@@ -99,7 +110,7 @@
 - AI 开发流程一期：精简按任务加载的上下文入口，统一本地/CI 验证脚本，新增 PR 自动构建与模板，并提交依赖锁文件以提高构建可复现性。
 - PR 审查修复：GitHub Actions 固定到完整 commit SHA，构建与发布 job 按最小权限拆分，同步 checkout 关闭凭证持久化；补充 Feature Request / Usage Question issue 表单；启用并修正私密安全报告兜底说明；清理 README 路径、CI 触发条件与历史分支描述漂移。
 - 语言规范变更：commit 标题、PR 标题与 body 由"默认中文"改为**使用英文**（`docs/contribution/commit-and-pr.md` 更新）；中文写作规范（全角标点）适用范围剔除 PR/MR 描述（`doc-conventions.md` 更新）。
-- CI 构建改造：`build-firmware.yml` 显式传入 `SDKCONFIG_DEFAULTS=sdkconfig.defaults` 再 `idf.py build`，由 defaults 启用自定义分区表（`CONFIG_PARTITION_TABLE_CUSTOM=y`，文件名为 `partitions.csv`）；`CONFIG_ESPTOOLPY_HEADER_FLASHSIZE_UPDATE` 改为 `n`，再用 `idf.py merge-bin -o build/FoloToy-AI-Passport-full.bin` 合并可直刷完整固件；产物精简为仅 full.bin；`actions/cache` 升级到 v5 以消除 GitHub Actions Node.js 20 弃用警告；CI 文档同步更新。
+- CI 构建改造：`build-firmware.yml` 显式传入 `SDKCONFIG_DEFAULTS=sdkconfig.defaults` 再 `idf.py build`，由 defaults 启用自定义分区表（`CONFIG_PARTITION_TABLE_CUSTOM=y`，文件名为 `partitions.csv`）；`CONFIG_ESPTOOLPY_HEADER_FLASHSIZE_UPDATE` 改为 `n`，再用 `idf.py merge-bin -o build/agent-talk-full.bin` 合并可直刷完整固件；产物精简为仅 full.bin；`actions/cache` 升级到 v5 以消除 GitHub Actions Node.js 20 弃用警告；CI 文档同步更新。
 - 合并上游 PR #6（wireless-low-power-demos）以解决 PR #4 冲突：引入无线/低功耗 demo（`main/demo_wifi.c`、`demo_ble.c`、`demo_radio.c`、`demo_low_power.c`）、`partitions.csv`（NVS/PHY/3 MB factory-app 分区）、`main/CMakeLists.txt`/`main.c`/`demo.h`/`sdkconfig.defaults` 更新；同步硬件指南的 Wi-Fi/BLE/低功耗章节；README 能力契约表补充 Wi-Fi/Bluetooth LE/Low power 三项（中英双语）。
 - 提交规范补充：`docs/contribution/commit-and-pr.md` 明确 PR 标题与 commit 标题使用相同的 Conventional Commit 格式和英文祈使句，不用名词短语当标题。
 - CI 与文档清理：`sync-main.yml` 移除 `test_mode` 残留模板注释；`docs/development/coding-conventions.md` 将「Redis TTL」条目泛化为「缓存组件」条目（当前固件无 TTL 约束需求，消除从模板带入的无关约定）。

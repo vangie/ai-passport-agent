@@ -14,8 +14,8 @@ def audit_site(directory, require_firmware=False):
     errors = []
     allowed = {'index.html', 'lobster.svg', 'setup-zh.txt', 'setup-en.txt',
                'setup-hermes-zh.txt', 'setup-hermes-en.txt',
-               'firmware/manifest.json', 'firmware/FoloToy-AI-Passport.bin',
-               'firmware/FoloToy-AI-Passport-full.bin'}
+               'firmware/manifest.json', 'firmware/agent-talk.bin',
+               'firmware/agent-talk-full.bin'}
     for path in sorted(directory.rglob('*')):
         name = path.relative_to(directory).as_posix()
         if path.is_symlink():
@@ -49,7 +49,7 @@ def audit_site(directory, require_firmware=False):
             manifest = json.loads(manifest_path.read_text())
             if any(record.get('channel') != 'release' for record in manifest.get('knownBuilds', {}).values()):
                 errors.append('firmware/manifest.json: local development catalog')
-            for kind, filename in [('application', 'FoloToy-AI-Passport.bin'), ('full', 'FoloToy-AI-Passport-full.bin')]:
+            for kind, filename in [('application', 'agent-talk.bin'), ('full', 'agent-talk-full.bin')]:
                 entry = manifest[kind]
                 data = (directory / 'firmware' / filename).read_bytes()
                 if entry['file'] != filename or len(data) != entry['size'] or hashlib.sha256(data).hexdigest() != entry['sha256']:

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FULL = ROOT / "build" / "FoloToy-AI-Passport-full.bin"
+FULL = ROOT / "build" / "agent-talk-full.bin"
 OUT = ROOT / "build" / "passport.pebundle"
 
 
@@ -21,7 +21,7 @@ def main() -> int:
     try:
         verify_archive(archive)
         flash_path = archive / FULL.name
-        elf_path = archive / "FoloToy-AI-Passport.elf"
+        elf_path = archive / "agent-talk.elf"
         flash, elf = flash_path.read_bytes(), elf_path.read_bytes()
     except (OSError, ValueError) as error:
         print(f"没有匹配的固件和 ELF：{error}", file=sys.stderr)

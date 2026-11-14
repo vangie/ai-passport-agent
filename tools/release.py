@@ -53,8 +53,8 @@ def check_version(tag=None):
 def asset_names(version):
     return {f'ai-passport-openclaw-{version}.tgz', f'ai-passport-hermes-{version}.tar.gz',
             'ai-passport-agent-firmware.tar.gz',
-            'FoloToy-AI-Passport-full.bin',
-            'FoloToy-AI-Passport.bin', 'LICENSE.txt'}
+            'agent-talk-full.bin',
+            'agent-talk.bin', 'LICENSE.txt'}
 
 
 def prepare_assets(source, destination, tag, commit):
@@ -65,8 +65,8 @@ def prepare_assets(source, destination, tag, commit):
         f'ai-passport-openclaw-{version}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{version}.tgz',
         f'ai-passport-hermes-{version}.tar.gz': source / 'release-hermes' / f'ai-passport-hermes-{version}.tar.gz',
         'ai-passport-agent-firmware.tar.gz': source / 'release-firmware/ai-passport-agent-firmware.tar.gz',
-        'FoloToy-AI-Passport-full.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport-full.bin',
-        'FoloToy-AI-Passport.bin': source / 'release-firmware/firmware/FoloToy-AI-Passport.bin',
+        'agent-talk-full.bin': source / 'release-firmware/firmware/agent-talk-full.bin',
+        'agent-talk.bin': source / 'release-firmware/firmware/agent-talk.bin',
         'LICENSE.txt': ROOT / 'LICENSE',
     }
     for name, path in inputs.items():
@@ -203,12 +203,12 @@ def hermes_package(destination):
 
 
 def firmware(destination):
-    full = ROOT / 'build/FoloToy-AI-Passport-full.bin'
+    full = ROOT / 'build/agent-talk-full.bin'
     full_hash = hashlib.sha256(full.read_bytes()).hexdigest()
     archive = ROOT / 'build/firmware' / full_hash
     subprocess.run(['python3', str(ROOT / 'tools/archive_firmware.py'), 'verify', str(archive)], check=True)
     destination.mkdir(parents=True, exist_ok=True)
-    for name in ['FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'manifest.json', 'flash_args',
+    for name in ['agent-talk-full.bin', 'agent-talk.bin', 'manifest.json', 'flash_args',
                  'bootloader/bootloader.bin', 'partition_table/partition-table.bin']:
         target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -221,9 +221,9 @@ def mac_resources(application, source):
     if (manifest.get('schema_version') != 1 or manifest.get('target') != 'esp32c3'
             or manifest.get('flash_size_bytes') != 8 * 1024 * 1024
             or not re.fullmatch(r'[0-9a-f]{64}', manifest.get('full_bin_sha256', ''))
-            or manifest.get('image_offsets', {}).get('FoloToy-AI-Passport.bin') != 0x10000):
+            or manifest.get('image_offsets', {}).get('agent-talk.bin') != 0x10000):
         raise ValueError('Unsupported firmware release manifest')
-    required = {'FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'flash_args',
+    required = {'agent-talk-full.bin', 'agent-talk.bin', 'flash_args',
                 'bootloader/bootloader.bin', 'partition_table/partition-table.bin'}
     if not required.issubset(manifest['files']):
         raise ValueError('Incomplete firmware release manifest')
@@ -239,8 +239,8 @@ def mac_resources(application, source):
         data = path.read_bytes()
         if len(data) != record['size'] or hashlib.sha256(data).hexdigest() != record['sha256']:
             raise ValueError('Firmware release checksum mismatch')
-    full = (source / 'FoloToy-AI-Passport-full.bin').read_bytes()
-    app = (source / 'FoloToy-AI-Passport.bin').read_bytes()
+    full = (source / 'agent-talk-full.bin').read_bytes()
+    app = (source / 'agent-talk.bin').read_bytes()
     if (hashlib.sha256(full).hexdigest() != manifest['full_bin_sha256']
             or not app or app[0] != 0xe9 or len(app) + 0x10000 > 0x350000
             or full[0x10000:0x10000 + len(app)] != app):
@@ -249,8 +249,8 @@ def mac_resources(application, source):
     archive = destination / 'build/firmware' / manifest['full_bin_sha256']
     archive.mkdir(parents=True)
     shutil.copy2(source / 'manifest.json', archive / 'manifest.json')
-    shutil.copy2(source / 'FoloToy-AI-Passport.bin', archive / 'FoloToy-AI-Passport.bin')
-    shutil.copy2(source / 'FoloToy-AI-Passport-full.bin', destination / 'build/FoloToy-AI-Passport-full.bin')
+    shutil.copy2(source / 'agent-talk.bin', archive / 'agent-talk.bin')
+    shutil.copy2(source / 'agent-talk-full.bin', destination / 'build/agent-talk-full.bin')
     (destination / 'tools').mkdir()
     shutil.copy2(ROOT / 'tools/flash-app.sh', destination / 'tools/flash-app.sh')
     licenses(destination / 'licenses')

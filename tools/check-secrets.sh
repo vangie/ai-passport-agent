@@ -22,7 +22,10 @@ curl --fail --silent --show-error --location --retry 3 \
 printf '%s  %s\n' "$checksum" "$directory/gitleaks.tar.gz" | shasum -a 256 -c -
 tar -xzf "$directory/gitleaks.tar.gz" -C "$directory" gitleaks
 mkdir "$directory/source"
-git ls-files --cached --others --exclude-standard -z | tar --null -T - -cf - | tar -xf - -C "$directory/source"
+git ls-files --cached --others --exclude-standard -z |
+    while IFS= read -r -d '' path; do
+        if [[ -e "$path" || -L "$path" ]]; then printf '%s\0' "$path"; fi
+    done | tar --null -T - -cf - | tar -xf - -C "$directory/source"
 if ! "$directory/gitleaks" dir "$directory/source" --redact --no-banner \
     --report-format json --report-path "$directory/report.json"; then
     python3 - "$directory/report.json" "$directory/source/" <<'PY'

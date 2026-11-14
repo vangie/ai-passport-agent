@@ -262,6 +262,10 @@ static void audio_diagnostic_reply(const char *prefix) {
              (unsigned long)audio.read_gap_ms, (unsigned long)audio.clipped_total,
              (unsigned long)audio.input_high_water);
     passport_link_diagnostic_reply(line);
+    snprintf(line, sizeof(line), "VAD frames=%lu voice=%lu longest_ms=%lu speech=%d",
+             (unsigned long)audio.vad_frames, (unsigned long)audio.vad_voice,
+             (unsigned long)audio.vad_longest_ms, passport_audio_has_speech());
+    passport_link_diagnostic_reply(line);
     passport_gateway_diagnostic(line, sizeof(line));
     passport_link_diagnostic_reply(line);
     passport_gateway_timing_diagnostic(line, sizeof(line));

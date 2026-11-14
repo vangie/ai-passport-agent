@@ -29,6 +29,7 @@ static SemaphoreHandle_t s_lock;
 static atomic_bool s_stop;
 static atomic_bool s_finished;
 static atomic_bool s_submit_ready;
+static atomic_uint s_vad_frames, s_vad_voice, s_vad_longest_ms;
 static atomic_bool s_has_speech;
 static passport_vad_t *s_vad;
 static atomic_int s_error;
@@ -473,6 +474,9 @@ static void audio_task(void *arg) {
             passport_vad_process(s_vad, samples, AUDIO_CHUNK);
             atomic_store(&s_has_speech, s_vad->speech);
             if (s_vad->ready) atomic_store(&s_submit_ready, true);
+            atomic_store(&s_vad_frames, s_vad->frames);
+            atomic_store(&s_vad_voice, s_vad->voice_frames);
+            atomic_store(&s_vad_longest_ms, s_vad->longest_ms);
         }
         if (s_retain) {
             err = passport_clip_append(samples, sizeof(samples));
@@ -761,6 +765,7 @@ void passport_audio_diagnostics(passport_audio_diagnostics_t *out) {
         .echo_chunks = s_echo_chunks, .input_clipped = s_input_clipped,
         .play_stalls = s_play_stalls, .play_gap_ms = s_play_gap_ms,
         .voice_interrupts = s_voice_interrupts, .button_interrupts = s_button_interrupts,
+        .vad_frames = s_vad_frames, .vad_voice = s_vad_voice, .vad_longest_ms = s_vad_longest_ms,
     };
 }
 

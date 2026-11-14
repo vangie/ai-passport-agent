@@ -386,6 +386,7 @@ class HermesAdapterTests(unittest.IsolatedAsyncioTestCase):
                             await websocket.send_json({"type": "req", "id": "connect", "method": "connect", "params": params})
                             hello = await websocket.receive_json()
                             self.assertTrue(hello["ok"])
+                            self.assertTrue(hello["payload"]["passportAsk"])
                             token = hello["payload"]["auth"]["deviceToken"]
                             await websocket.send_json({"type": "req", "id": "foreign", "method": "chat.history", "params": {
                                 "sessionKey": "agent:passport:passport-another-device"}})

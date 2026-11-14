@@ -13,7 +13,7 @@
 > 导出或另行保存。详见[烧录与已存数据](firmware-layout.zh_CN.md#烧录与已存数据)。
 
 > 固件编译优先运行 `./tools/validate.sh --firmware`。空白设备初始化或有意完整
-> 刷新时，把验证通过的 `build/FoloToy-AI-Passport-full.bin` 从 `0x0` 写入；
+> 刷新时，把验证通过的 `build/agent-talk-full.bin` 从 `0x0` 写入；
 > 合并镜像可能重置 NVS，需要保留已有 NVS 状态时使用分段 `idf.py flash`。
 > `idf.py build` 和
 > `idf.py flash` 只作为增量开发命令，不作为默认交付方式。
@@ -78,7 +78,7 @@ Microsoft Defender 可使用其
 
 仓库提交 `dependencies.lock` 以固定 ESP-IDF Managed Components 的解析结果。修改 `idf_component.yml` 后必须使用 ESP-IDF 5.5.3 重新生成锁文件、review 版本变化并与 manifest 一起提交；普通构建不应产生未提交的锁文件差异。
 
-固件门禁使用全新的临时构建目录，并从仓库 `sdkconfig.defaults` 生成隔离的 `sdkconfig`。它不会读取或覆盖开发者根目录的 `sdkconfig`。清理临时构建前，先归档已验证固件及匹配的调试产物，再把已验证合并镜像复制到 `build/FoloToy-AI-Passport-full.bin`。门禁同时验证[当前配置的固件布局](firmware-layout.zh_CN.md)：从 `flash_args` 读取镜像偏移，检查分区表 MD5、边界和不重叠，并确认应用从所配置的 app 分区起点开始且未超出分区。允许用户自定义分区布局。
+固件门禁使用全新的临时构建目录，并从仓库 `sdkconfig.defaults` 生成隔离的 `sdkconfig`。它不会读取或覆盖开发者根目录的 `sdkconfig`。清理临时构建前，先归档已验证固件及匹配的调试产物，再把已验证合并镜像复制到 `build/agent-talk-full.bin`。门禁同时验证[当前配置的固件布局](firmware-layout.zh_CN.md)：从 `flash_args` 读取镜像偏移，检查分区表 MD5、边界和不重叠，并确认应用从所配置的 app 分区起点开始且未超出分区。允许用户自定义分区布局。
 
 ### 保留匹配的崩溃调试产物
 
@@ -110,7 +110,7 @@ python3 tools/archive_firmware.py verify <archive-directory>
 匹配镜像，应在审核内容后另行保留。把 `flash_args` 当作数据，不作为 shell
 脚本执行。
 
-验证失败可能仍保留旧 `build/FoloToy-AI-Passport-full.bin` 和历史归档，
+验证失败可能仍保留旧 `build/agent-talk-full.bin` 和历史归档，
 不能将它们当成本轮失败构建的新产物。交接时给出实际成功归档路径和完整
 镜像哈希；哈希一致不代表硬件通过验收，也不能证明发布者可信。
 
@@ -119,16 +119,22 @@ python3 tools/archive_firmware.py verify <archive-directory>
 调试包；runner 删除时，本地归档也会消失。扩大留存／上传范围前须明确审核
 内容和访问权限。构建／归档命令不会烧录设备。
 
-当前基线含一个可独立运行的纯逻辑测试：
+可独立运行的纯逻辑测试示例：
 
 ```bash
-cc -std=c11 -Wall -Wextra -Werror -Imain \
-  tests/test_ui_pixel_math.c main/ui_pixel_math.c \
-  -o /tmp/test_ui_pixel_math
-/tmp/test_ui_pixel_math
+cc -std=c11 -Wall -Wextra -Werror -Iapp \
+  tests/test_passport_endpoint.c app/passport_endpoint.c \
+  -o /tmp/test_passport_endpoint
+/tmp/test_passport_endpoint
 ```
 
-静态门禁还将真实 BSP 和 demo 实现与轻量平台桩编译在一起，故障注入覆盖任务退出交接与停止重试、录音失败、Wi-Fi/BLE 启动回滚、按键分配与 ADC 错误、LVGL 初始化锁与重试、codec 打开/休眠/唤醒恢复。只需主机 C 编译器和 Python，不依赖 ESP-IDF 或已下载的 Managed Components。这些测试不代表真实时序、电气行为或设备兼容性；固件门禁会使用锁定依赖进行编译。
+静态门禁还将真实 BSP 和产品实现与轻量平台桩编译在一起，故障注入覆盖任务退出交接与停止重试、录音失败、Wi-Fi/BLE 启动回滚、按键分配与 ADC 错误、LVGL 初始化锁与重试、codec 打开/休眠/唤醒恢复。只需主机 C 编译器和 Python，不依赖 ESP-IDF 或已下载的 Managed Components。这些测试不代表真实时序、电气行为或设备兼容性；固件门禁会使用锁定依赖进行编译。
+
+默认门禁覆盖实际发布的固件、Web 配置和 Agent 适配器。保留的 demo 和 macOS/iOS
+App 测试改用 `./tools/validate.sh --legacy` 单独执行，修改这些保留代码时应运行；
+它们不再阻塞固件/Web 发布。删除了只检查旧入口源码的按键唤醒测试和 demo 专属
+关机顺序断言，它们未覆盖产品入口。BSP 休眠检查以及电源、无线、音频、网关取消
+和故障注入等运行时测试仍在默认门禁中。
 
 Hermes 协议测试还需要 `cryptography>=45,<51` 和 `aiohttp>=3.12,<4`。请安装到临时虚拟环境，
 不要修改 ESP-IDF 管理的 Python；静态或完整门禁通过以下变量选择解释器：
@@ -148,12 +154,35 @@ CI 会准备相同的隔离依赖。未安装 Hermes 时会跳过原生适配器
 ```bash
 ./tools/validate.sh --static    # 仓库一致性、workflow、文档链接、敏感信息、host tests
 ./tools/validate.sh --firmware  # ESP-IDF build、merge-bin、偏移与当前布局校验
+./tools/validate.sh --legacy    # 仅运行保留的 demo 和原生 App 检查
 ./tools/validate.sh             # 完整验证
 ```
 
 完整验证要求预先激活 ESP-IDF 5.5.3。CI 与本地使用同一脚本；若 CI 和本地行为不同，应先修复脚本或环境，而不是维护两份命令。
 
+### 体积与通话首连
+
+跟踪的默认配置统一按体积优化，不再逐文件覆盖编译选项。产品分区表与中文字形
+覆盖保持不变。干净构建对比中，包含连接和诊断调整后的应用从 3,407,408 字节
+降至 3,228,768 字节（减少 178,640 字节），未改变的应用分区剩余 179,104 字节。
+具体构建身份以归档清单为准。
+
+Wi-Fi 取得 IP 后即异步校时，不依赖是否开启蓝牙配置。TLS 仍等待有效时间并校验
+证书。提问和通话可复用已认证的 `/passport/v1` 连接；通话由远端正常结束后不再
+无条件关闭连接。只有明确不支持原生端点或未声明 `passportAsk` 能力才回退到旧版
+提问入口，临时网络失败不会误判成旧网关。新版适配器声明此能力，并支持有界的
+完整长度录音上传；旧适配器保留原有提问路径和原生通话功能，升级网关适配器后
+才能复用连接。地址、凭据或代理变化会使连接失效。默认蓝牙待机策略仍为保护
+内存释放连接，不保证蓝牙配置期间存在热连接。
+
+后台维护只建立网关连接，不提前创建可能计费的实时模型会话。`LIVE_TIME` 记录
+`gateway_ms`（包含调度和资源释放）、`provider_ms`、`audio_start_ms`、`ready_ms`
+（按键到可以说话）和 `reused`。已有日志进一步细分身份、校时、传输、challenge
+和认证阶段，全部使用单调计时，不记录消息载荷或密钥。请在相同 Wi-Fi 下分别
+比较两种后端的冷、热启动；主机模拟时序只验证计时和复用逻辑，不代表真实延迟
+或语音质量。
+
 涉及物理外设的改动必须在真机运行硬件指南验收清单，并把“编译通过”与“硬件验证通过”分开记录。
 
-社区只能上传验证通过的 `build/FoloToy-AI-Passport-full.bin`，不得上传应用单镜像
-`build/FoloToy-AI-Passport.bin`，后者不包含完整且经校验的固件布局。
+社区只能上传验证通过的 `build/agent-talk-full.bin`，不得上传应用单镜像
+`build/agent-talk.bin`，后者不包含完整且经校验的固件布局。

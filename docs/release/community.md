@@ -1,13 +1,12 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.7.0
+# Community submission · v0.7.1
 
-Submitted to existing play **2236** on 2026-11-13 using its target-bound update grant.
-The API returned revision **5548**, **pending review**; a readback confirmed the
-firmware hash and both independent instructions/changelog fields. Public revision
-**5492** remained approved. This is not a claim that v0.7.0 is public in the community.
-Before a later update, obtain a fresh grant and read `projects` / `publishedRevision`.
-Stop on draft/pending or version conflicts; do not withdraw or create a duplicate.
+Update existing play **2236** only; never create a duplicate. Obtain a fresh grant and read
+`projects` / `publishedRevision`, comparing notes against the actual public revision.
+Stop on draft/pending or version conflicts; do not withdraw or overwrite.
+The v0.7.0 submission was revision 5548, pending at the time; that is not current-state evidence.
+This version has not been submitted yet.
 
 ## Title
 
@@ -35,35 +34,27 @@ Independent open-source community project. Images are actual UI renders with fic
 
 ## Quick-start instructions
 
-1. In computer Chrome/Edge, open https://ai-passport-agent.codelife.me/, connect USB and update firmware.
-   For a first install, uncheck Keep settings and confirm; compatible updates may retain it.
-2. Select OpenClaw or Hermes under Add assistant. Send its setup prompt to an agent on your gateway host;
-   paste the returned address and pairing code into the page. Call also needs realtime voice configuration.
-3. Scan for reachable 2.4 GHz Wi-Fi, enter its password and Save configuration. The Wi-Fi icon confirms connection.
-   Correct failures and retry without reflashing; regenerate expired pairing codes. For iPhone hotspots enable Allow Others
-   to Join and Maximize Compatibility; keep that settings page open if discovery fails.
-4. Ask: press to record, then press again or pause to send; follow up after the reply. Call: wait for Listening,
-   speak and use displayed keys to mute, interrupt or end. Switch saved networks in Settings → Wi-Fi;
-   add networks through USB or Bluetooth in the web studio (Bluefy on iPhone).
+1. Have a working OpenClaw or Hermes installation. Open https://ai-passport-agent.codelife.me/ in desktop Chrome/Edge, connect USB and update firmware. Uncheck Keep settings for first installation; retain it for compatible updates.
+2. Choose your backend under Add assistant. Give its prompt to an agent on the gateway host and paste back its address and pairing code; Call also needs realtime voice setup. Scan 2.4 GHz Wi-Fi, enter its password and Save configuration. A Wi-Fi icon confirms connection; correct failures and retry, or regenerate expired pairing codes.
+3. Ask: press to record, then press again or pause to send; follow up after the reply. Call: wait for Listening, speak and use displayed keys to mute, interrupt or end.
+4. Switch saved networks in Settings → Wi-Fi. Add networks using web USB/Bluetooth; enable Bluetooth in device Settings first. On iPhone use Bluefy. Enable Allow Others to Join and Maximize Compatibility for hotspots; keep the hotspot settings page open if discovery fails.
 
 ## Update notes
 
-- Add Hermes alongside OpenClaw: Ask reaches the native personal agent and keeps a conversation per device; Call can delegate tasks.
-- Select the backend when adding an assistant; use matching bilingual setup prompts for installation and pairing.
-- Show the authenticated backend's icon separately from the assistant name; inset icons away from rounded screen corners.
-- Supply an external Hermes plugin that survives ordinary core upgrades, with versioned packaging and clearer setup guides. Fix replies cut short, false reconnecting states and incomplete redraws when entering Call.
+- Keep chat visible throughout follow-up questions and follow new replies to the latest content without moving readers reviewing history. Animate waiting feedback.
+- Improve connection/reconnection preparation, strengthen Ask noise filtering and fix longer recordings sometimes failing to send.
+- Expand call transcript space, simplify settings/home actions, add battery color levels and cover known missing characters.
+- Turn Bluetooth off by default while online to reserve resources; enable it in device Settings before setup. Preserve website recognition of older versions and clarify firmware download names.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
-- Version: v0.7.0. Use only the verified assets from its completed GitHub release.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.0
-- Published full image SHA-256: `6634d1de807810ddb51c5cb836099eb4815361a92ef98939011b2f71e9a7420f`.
-  GitHub, the production setup website and community revision 5548 use identical firmware.
+- Version: v0.7.1. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.1
+- Use the full-image hash in that release's `release-manifest.json`; upload the same file to the community, not a local candidate.
 - Preserve both approved titles from the paired documents. Do not change other plays.
 - Generate materials with `node tools/community_materials.mjs`; output:
-  `build/community-market/v0.7.0/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
+  `build/community-market/v0.7.1/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
 - All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
   description, instructions and update-note files before uploading the same files. Generation does not submit anything.
-- This submission used the inspected cover and three optional posters, with the published full image.
-  The one-time grant is consumed; never reuse it for another release.
+- Before uploading, compare the live public revision and trim update notes accordingly. Submit only the inspected cover and verified release firmware.

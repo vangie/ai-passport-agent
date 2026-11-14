@@ -171,15 +171,12 @@ static int chat_pages(const passport_view_t *view, int wanted, char *out, size_t
     if (metadata) memset(metadata, 0, sizeof(*metadata) * PASSPORT_REPLY_ROWS);
     if (latest) *latest = 0;
     for (int turn = 0; turn < view->chat_count; turn++) {
-        bool first = true;
         for (int role = 0; role < 2; role++) {
             const char *body = role ? view->chat[turn].answer : view->chat[turn].question;
             if (!*body) continue;
             char caption[PASSPORT_NAME_MAX + 8];
             chat_caption(view, role != 0, caption, sizeof(caption));
             if (rows && rows + 3 > PASSPORT_REPLY_ROWS) { page++; rows = 0; }
-            if (first && turn + 1 == view->chat_count && latest) *latest = page;
-            first = false;
             if (rows) {
                 chat_row(page, wanted, rows, "", "", out, cap, &used, metadata, role != 0, false);
                 rows++;
@@ -199,6 +196,7 @@ static int chat_pages(const passport_view_t *view, int wanted, char *out, size_t
             }
         }
     }
+    if (latest) *latest = page;
     return page + 1;
 }
 
@@ -268,9 +266,14 @@ void passport_chat_update(passport_view_t *view, const char *answer) {
     if (!view->chat_pending || !view->chat_count) return;
     passport_chat_turn_t *turn = &view->chat[view->chat_count - 1];
     bool first_content = !turn->question[0] && !turn->answer[0];
+    int previous_latest = 0;
+    (void)chat_pages(view, -1, NULL, 0, &previous_latest, NULL);
+    bool follow_latest = view->reply_page >= previous_latest;
     if (view->heard[0]) copy_cap(turn->question, sizeof(turn->question), view->heard);
     if (answer && *answer) copy_cap(turn->answer, sizeof(turn->answer), answer);
-    if (first_content) (void)chat_pages(view, -1, NULL, 0, &view->reply_page, NULL);
+    int latest = 0;
+    (void)chat_pages(view, -1, NULL, 0, &latest, NULL);
+    if (first_content || follow_latest) view->reply_page = latest;
 }
 
 int passport_reply_pages(const passport_view_t *view) {
@@ -389,8 +392,9 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
         case PASSPORT_SCREEN_SETTINGS:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_NEXT_AGENT : btn == PASSPORT_BTN_OK ? PASSPORT_ACT_BACK
                 : s->agent_count && v->cursor >= 0 && (size_t)v->cursor < s->agent_count &&
-                  v->cursor != s->active_agent ? PASSPORT_ACT_SELECT_AGENT : PASSPORT_ACT_CONFIGURE;
-            key.enabled = btn == PASSPORT_BTN_UP ? s->agent_count > 1 : btn == PASSPORT_BTN_OK || !busy;
+                  v->cursor != s->active_agent ? PASSPORT_ACT_SELECT_AGENT : PASSPORT_ACT_NONE;
+            key.enabled = btn == PASSPORT_BTN_UP ? s->agent_count > 1
+                : btn == PASSPORT_BTN_OK || (key.action != PASSPORT_ACT_NONE && !busy);
             break;
         case PASSPORT_SCREEN_ADD:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_ENABLE_CONFIG
@@ -514,7 +518,8 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
         case PASSPORT_ACT_SEND:
         case PASSPORT_ACT_RETRY:
             v->recording = false; v->sending = true;
-            v->screen = PASSPORT_SCREEN_PROGRESS;
+            v->screen = v->chat_visible && v->chat_pending && v->chat_count > 1
+                ? PASSPORT_SCREEN_TALK : PASSPORT_SCREEN_PROGRESS;
             break;
         case PASSPORT_ACT_NEXT_NETWORK:
             v->cursor = (v->cursor + 1) % (int)(s->count + 1);

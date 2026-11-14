@@ -32,9 +32,47 @@ def prepare():
         shutil.copy2(WEB / f'prompts/hermes-{language}.txt', public / f'setup-hermes-{language}.txt')
 
 
+def is_application_image(image):
+    return (len(image) >= 288 and image[0] == 0xe9 and image[12:14] == b'\x05\x00'
+            and image[32:36] == b'\x32\x54\xcd\xab')
+
+
+def application_image_from_release(source, receipt=None):
+    candidates = []
+    if receipt is not None:
+        assets = receipt.get('assets', {})
+        for name, record in assets.items():
+            path = source / name
+            if path.suffix != '.bin' or not path.is_file():
+                continue
+            image = path.read_bytes()
+            if (len(image) == record.get('size')
+                    and hashlib.sha256(image).hexdigest() == record.get('sha256')
+                    and is_application_image(image)):
+                candidates.append(image)
+        if len(candidates) != 1:
+            raise ValueError('Invalid release identity image')
+        return candidates[0]
+
+    checksums = (source / 'SHA256SUMS.txt').read_text()
+    for line in checksums.splitlines():
+        match = re.fullmatch(r'([a-f0-9]{64})  (?:\./)?(.+)', line)
+        if not match:
+            continue
+        digest, name = match.groups()
+        path = source / name
+        if (not path.is_file() or not path.resolve().is_relative_to(source.resolve())
+                or hashlib.sha256(path.read_bytes()).hexdigest() != digest):
+            continue
+        image = path.read_bytes()
+        if is_application_image(image):
+            candidates.append(image)
+    if len(candidates) != 1:
+        raise ValueError('Invalid legacy release identity checksum')
+    return candidates[0]
+
+
 def release_identity(source):
-    image = (source / 'FoloToy-AI-Passport.bin').read_bytes()
-    digest = hashlib.sha256(image).hexdigest()
     receipt_path = source / 'release-manifest.json'
     if receipt_path.is_file():
         receipt = json.loads(receipt_path.read_text())
@@ -43,17 +81,13 @@ def release_identity(source):
                 or not re.fullmatch(r'v\d+\.\d+\.\d+', tag)
                 or not re.fullmatch(r'[a-f0-9]{40}', receipt.get('commit_sha', ''))):
             raise ValueError('Unsupported release identity receipt')
-        record = receipt['assets']['FoloToy-AI-Passport.bin']
-        if len(image) != record['size'] or digest != record['sha256']:
-            raise ValueError('Invalid release identity image')
+        image = application_image_from_release(source, receipt)
     else:
         tag = source.name
-        checksums = (source / 'SHA256SUMS.txt').read_text()
-        matches = re.findall(r'^([a-f0-9]{64})  (?:\./)?FoloToy-AI-Passport\.bin$', checksums, re.M)
-        if not re.fullmatch(r'v\d+\.\d+\.\d+', tag) or matches != [digest]:
+        if not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
             raise ValueError('Invalid legacy release identity checksum')
-    if (len(image) < 288 or image[0] != 0xe9 or image[12:14] != b'\x05\x00'
-            or image[32:36] != b'\x32\x54\xcd\xab'):
+        image = application_image_from_release(source)
+    if not is_application_image(image):
         raise ValueError('Invalid release identity image')
     return image[176:184].hex(), {'version': tag, 'channel': 'release'}
 
@@ -66,7 +100,20 @@ def stage_firmware(source, history=None):
     destination.mkdir(parents=True, exist_ok=True)
     manifest = {'schema': 1, 'version': receipt['tag'], 'commit': receipt['commit_sha']}
     images = []
-    for kind, filename, offset in [('application', 'FoloToy-AI-Passport.bin', 0x10000), ('full', 'FoloToy-AI-Passport-full.bin', 0)]:
+    for kind, filename, offset in [('application', 'agent-talk.bin', 0x10000), ('full', 'agent-talk-full.bin', 0)]:
+        if filename not in receipt['assets']:
+            candidates = []
+            for name in receipt['assets']:
+                candidate = source / name
+                if candidate.suffix != '.bin' or not candidate.is_file():
+                    continue
+                data = candidate.read_bytes()
+                application = data if kind == 'application' else data[0x10000:]
+                if is_application_image(application):
+                    candidates.append(name)
+            if len(candidates) != 1:
+                raise ValueError('Ambiguous or missing release firmware image')
+            filename = candidates[0]
         expected = receipt['assets'][filename]
         data = (source / filename).read_bytes()
         digest = hashlib.sha256(data).hexdigest()
@@ -84,8 +131,9 @@ def stage_firmware(source, history=None):
             entries = [struct.unpack_from('<HBBII', data, address) for address in range(0x8000, 0x8c00, 32)]
             if (0x50aa, 0, 0, 0x10000, 0x340000) not in entries or not any(entry[0] == 0x50aa and entry[3:] == (0x350000, 0x10000) for entry in entries):
                 raise ValueError('Unexpected Passport partition layout')
-        images.append(filename)
-        manifest[kind] = {'file': filename, 'offset': offset, 'size': len(data), 'sha256': digest}
+        published_name = 'agent-talk.bin' if kind == 'application' else 'agent-talk-full.bin'
+        images.append((filename, published_name))
+        manifest[kind] = {'file': published_name, 'offset': offset, 'size': len(data), 'sha256': digest}
     catalog = ROOT / 'web/release-builds.json'
     manifest['knownBuilds'] = json.loads(catalog.read_text()) if catalog.is_file() else {}
     for build_id, identity in manifest['knownBuilds'].items():
@@ -103,8 +151,8 @@ def stage_firmware(source, history=None):
             if previous and previous != identity:
                 raise ValueError('Conflicting release build identities')
             manifest['knownBuilds'][build_id] = identity
-    for filename in images:
-        shutil.copy2(source / filename, destination / filename)
+    for filename, published_name in images:
+        shutil.copy2(source / filename, destination / published_name)
     (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f"Staged {receipt['tag']}: same-origin firmware, no Release redirect at runtime")
 
@@ -119,8 +167,8 @@ def stage_local_build_catalog():
     for receipt_path in sorted((ROOT / 'build/firmware').glob('*/manifest.json')):
         try:
             receipt = json.loads(receipt_path.read_text())
-            record = receipt['files']['FoloToy-AI-Passport.bin']
-            image = (receipt_path.parent / 'FoloToy-AI-Passport.bin').read_bytes()
+            record = receipt['files']['agent-talk.bin']
+            image = (receipt_path.parent / 'agent-talk.bin').read_bytes()
             if (len(image) < 288 or len(image) != record['size']
                     or hashlib.sha256(image).hexdigest() != record['sha256']
                     or image[0] != 0xe9 or image[12:14] != b'\x05\x00'

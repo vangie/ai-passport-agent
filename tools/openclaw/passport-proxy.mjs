@@ -2,7 +2,7 @@ import {isIP} from 'node:net';
 import {createPassportRelayOutput} from './passport-relay.mjs';
 import {PASSPORT_PATH, PASSPORT_PROTOCOL, PASSPORT_PROVIDER} from './passport-plugin.mjs';
 
-const MAX_FRAME_BYTES = 256 * 1024;
+const MAX_FRAME_BYTES = 660000;
 const MAX_PENDING_BYTES = 512 * 1024;
 const MAX_PENDING_REQUESTS = 64;
 
@@ -103,7 +103,11 @@ export function createPassportConnection({sendUpstream, sendClient, close, now, 
                 connectId = undefined;
                 if (!frame.ok) { emit(frame); return stop('Native gateway device authentication failed'); }
                 phase = 'ready';
-                frame = {...frame, payload: {...frame.payload, passportProtocol: PASSPORT_PROTOCOL}};
+                const upstreamLimit = frame.payload?.policy?.maxPayload;
+                const maxPayload = Number.isSafeInteger(upstreamLimit) && upstreamLimit > 0 ?
+                    Math.min(upstreamLimit, MAX_FRAME_BYTES) : MAX_FRAME_BYTES;
+                frame = {...frame, payload: {...frame.payload, passportProtocol: PASSPORT_PROTOCOL, passportAsk: true,
+                    policy: {...frame.payload?.policy, maxPayload}}};
             }
             const request = frame.type === 'res' ? requests.get(frame.id) : undefined;
             const method = request?.method;

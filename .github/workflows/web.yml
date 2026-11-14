@@ -56,13 +56,13 @@ jobs:
           if [ -z "$tag" ]; then tag="$(gh release view --json tagName --jq .tagName)"; fi
           mkdir -p build/web-release
           gh release download "$tag" --dir build/web-release \
-            --pattern release-manifest.json --pattern FoloToy-AI-Passport.bin --pattern FoloToy-AI-Passport-full.bin
+            --pattern release-manifest.json --pattern '*.bin'
           gh release list --exclude-drafts --exclude-pre-releases --limit 12 --json tagName --jq '.[].tagName' > build/web-release-tags.txt
           while IFS= read -r previous; do
             if [[ ! "$previous" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then continue; fi
             mkdir -p "build/web-history/$previous"
             gh release download "$previous" --dir "build/web-history/$previous" \
-              --pattern release-manifest.json --pattern SHA256SUMS.txt --pattern FoloToy-AI-Passport.bin
+              --pattern release-manifest.json --pattern SHA256SUMS.txt --pattern '*.bin'
           done < build/web-release-tags.txt
           python3 tools/web.py firmware --from-release build/web-release --release-history build/web-history
       - run: npm run build --prefix web

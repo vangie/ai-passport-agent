@@ -23,14 +23,14 @@ class ReleaseTests(unittest.TestCase):
         self.source = self.root / 'firmware'
         self.source.mkdir()
         app = bytes([0xe9]) + bytes(511)
-        files = {'FoloToy-AI-Passport.bin': app,
-                 'FoloToy-AI-Passport-full.bin': bytes(0x10000) + app,
+        files = {'agent-talk.bin': app,
+                 'agent-talk-full.bin': bytes(0x10000) + app,
                  'flash_args': b'fixture', 'bootloader/bootloader.bin': b'boot',
                  'partition_table/partition-table.bin': b'partition'}
         self.manifest = {'schema_version': 1, 'target': 'esp32c3',
                          'flash_size_bytes': 8 * 1024 * 1024,
-                         'full_bin_sha256': hashlib.sha256(files['FoloToy-AI-Passport-full.bin']).hexdigest(),
-                         'image_offsets': {'FoloToy-AI-Passport.bin': 0x10000}, 'files': {}}
+                         'full_bin_sha256': hashlib.sha256(files['agent-talk-full.bin']).hexdigest(),
+                         'image_offsets': {'agent-talk.bin': 0x10000}, 'files': {}}
         for name, data in files.items():
             path = self.source / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,7 +54,7 @@ class ReleaseTests(unittest.TestCase):
             self.assertTrue((resources / 'licenses' / notice).is_file())
 
     def test_reject_tampering(self):
-        (self.source / 'FoloToy-AI-Passport.bin').write_bytes(b'corrupt')
+        (self.source / 'agent-talk.bin').write_bytes(b'corrupt')
         with self.assertRaises(ValueError):
             release.mac_resources(self.root / 'Passport.app', self.source)
 
@@ -194,7 +194,7 @@ class ReleaseTests(unittest.TestCase):
                 release.prepare_assets(source, destination, tag, commit)
             with self.assertRaises(ValueError):
                 release.verify_assets(destination, tag, 'b' * 40)
-            (destination / 'FoloToy-AI-Passport.bin').write_text('tampered')
+            (destination / 'agent-talk.bin').write_text('tampered')
             with self.assertRaises(ValueError):
                 release.verify_assets(destination, tag, commit)
 
@@ -230,7 +230,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(release.asset_names(version), {
             f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
             f'ai-passport-hermes-{version}.tar.gz',
-            'FoloToy-AI-Passport-full.bin', 'FoloToy-AI-Passport.bin', 'LICENSE.txt',
+            'agent-talk-full.bin', 'agent-talk.bin', 'LICENSE.txt',
         })
 
     def test_hermes_package_is_allowlisted_and_reproducible(self):

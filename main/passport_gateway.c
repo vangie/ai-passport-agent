@@ -3,6 +3,8 @@
 #include "passport_clip.h"
 #include "passport_audio.h"
 #include "passport_json.h"
+#include "passport_endpoint.h"
+#include "passport_clock.h"
 #include "passport_memory.h"
 #include "passport_reply.h"
 #include "passport_tls.h"
@@ -13,7 +15,6 @@
 #else
 #include "esp_crt_bundle.h"
 #include "esp_random.h"
-#include "esp_sntp.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "lwip/netdb.h"
@@ -74,10 +75,14 @@ static atomic_bool s_go, s_preconnect;
 enum { GATEWAY_LIVE = 4, GATEWAY_LIVE_TEST = 5, GATEWAY_CHECK = 6 };
 static atomic_int s_operation;
 static bool s_talk_auth;
+static bool s_talk_allowed;
+static bool s_native_ask;
+static bool s_call_active;
 static bool s_aborting;
 static struct { char run_id[PASSPORT_RUN_ID_MAX]; uint8_t scope[32]; bool valid; } s_deferred_abort;
 static size_t s_max_payload, s_max_attachment;
 static bool s_connect_retryable;
+static bool s_native_unsupported;
 static bool s_rx_timed_out;
 static bool s_reply_interrupted;
 /* Keep upload memory static and small. A C3 can have enough total heap but no
@@ -85,6 +90,7 @@ static bool s_reply_interrupted;
 static uint8_t s_upload_samples[960];
 static passport_json_filter_t *s_receive;
 static int64_t s_recording_stopped_us;
+static int64_t s_operation_started_us;
 typedef struct {
     const char *step;
     const char *transport;
@@ -97,6 +103,8 @@ typedef struct {
     uint32_t during_response, during_consult;
     uint32_t silence_appends, wire_bytes, ima;
     uint64_t receive_us, prepare_us, write_us;
+    uint32_t gateway_ms, provider_ms, audio_start_ms, ready_ms;
+    bool reused;
 } talk_trace_t;
 static talk_trace_t s_talk_trace, s_talk_retained;
 
@@ -120,7 +128,9 @@ void passport_gateway_timing_diagnostic(char *out, size_t cap) {
     portEXIT_CRITICAL(&s_guard);
     uint64_t measured = trace.receive_us + trace.prepare_us + trace.write_us;
     uint64_t elapsed = (uint64_t)trace.elapsed_ms * 1000;
-    snprintf(out, cap, "LIVE_TIME loops=%lu empty=%lu window_waits=%lu receive_waits=%lu loop_gap_ms=%lu dropped=%lu receive_total_ms=%llu prepare_total_ms=%llu write_total_ms=%llu other_ms=%llu response_appends=%lu consult_appends=%lu silence_appends=%lu wire_bytes=%lu",
+    snprintf(out, cap, "LIVE_TIME gateway_ms=%lu provider_ms=%lu audio_start_ms=%lu ready_ms=%lu reused=%d loops=%lu empty=%lu window_waits=%lu receive_waits=%lu loop_gap_ms=%lu dropped=%lu receive_total_ms=%llu prepare_total_ms=%llu write_total_ms=%llu other_ms=%llu response_appends=%lu consult_appends=%lu silence_appends=%lu wire_bytes=%lu",
+        (unsigned long)trace.gateway_ms, (unsigned long)trace.provider_ms,
+        (unsigned long)trace.audio_start_ms, (unsigned long)trace.ready_ms, trace.reused,
         (unsigned long)trace.loops, (unsigned long)trace.empty,
         (unsigned long)trace.window_waits, (unsigned long)trace.receive_waits,
         (unsigned long)trace.loop_gap_ms, (unsigned long)trace.dropped,
@@ -209,8 +219,8 @@ static bool send_fragment(esp_transport_handle_t ws, int opcode, const char *dat
     if (passport_tls_cancelled() && !s_aborting) return false;
     passport_tls_set_writing(true);
     if (passport_tls_cancelled() && !s_aborting) { passport_tls_set_writing(false);return false; }
-    int written = passport_transport_ws_send_raw(ws, opcode, data, (int)len, s_aborting ? 250 : s_talk_auth ? 1500 : 30000);
-    if (s_talk_auth && written != (int)len) s_talk_trace.result = written;
+    int written = passport_transport_ws_send_raw(ws, opcode, data, (int)len, s_aborting ? 250 : s_call_active ? 1500 : 30000);
+    if (s_call_active && written != (int)len) s_talk_trace.result = written;
     passport_tls_set_writing(false);
     if (written != (int)len) ESP_LOGW("passport_gateway", "write failed opcode=%d expected=%u actual=%d", opcode, (unsigned)len, written);
     return written == (int)len;
@@ -246,7 +256,7 @@ static cJSON *receive_json(esp_transport_handle_t ws, int budget_ms, bool hello_
         if (activity>s_last_rx_us) s_last_rx_us=activity;
         if (passport_tls_cancelled() && !s_aborting) return NULL;
         if (n < 0) {
-            if (s_talk_auth) s_talk_trace.result = n;
+            if (s_call_active) s_talk_trace.result = n;
             ESP_LOGW("passport_gateway", "receive failed bytes=%u after=%lldms", (unsigned)received_bytes, (long long)((esp_timer_get_time()-receive_start)/1000)); return NULL;
         }
         int opcode = passport_transport_ws_get_read_opcode(ws) & 0x0f;
@@ -290,46 +300,6 @@ static cJSON *receive_json(esp_transport_handle_t ws, int budget_ms, bool hello_
     if (received_bytes) ESP_LOGD("passport_timing", "rx_partial bytes=%u", (unsigned)received_bytes);
     s_rx_timed_out = true;
     return NULL;
-}
-
-typedef struct { char host[96], path[192]; int port; bool tls; } endpoint_t;
-static bool endpoint(const char *url, endpoint_t *out) {
-    if (strpbrk(url, "\r\n\t ")) return false;
-    memset(out, 0, sizeof(*out));
-    out->tls = strncmp(url, "wss://", 6) == 0;
-    if (!out->tls && strncmp(url, "ws://", 5)) return false;
-    const char *p = url + (out->tls ? 6 : 5);
-    const char *end = strpbrk(p, "/:?#");
-    if (!end) end = p + strlen(p);
-    size_t n = end - p;
-    if (!n || n >= sizeof(out->host) || memchr(p, '@', n)) return false;
-    memcpy(out->host, p, n);
-    out->port = out->tls ? 443 : 80;
-    if (*end == ':') {
-        char *after;
-        long port = strtol(end + 1, &after, 10);
-        if (port < 1 || port > 65535 || (*after && *after != '/')) return false;
-        out->port = (int)port; end = after;
-    }
-    if (*end == '#' || *end == '?') return false;
-    snprintf(out->path, sizeof(out->path), "%s", *end ? end : "/");
-    return true;
-}
-
-/* TLS needs a real clock. Try a domestic server first; Cloudflare's NTP
- * does not answer on some mainland networks, and the build allows only as
- * many servers as CONFIG_LWIP_SNTP_MAX_SERVERS. */
-static bool sync_time(void) {
-    if (time(NULL) > 1700000000) return true;
-    if (!esp_sntp_enabled()) {
-        esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-        esp_sntp_setservername(0, "ntp.aliyun.com");
-        esp_sntp_setservername(1, "pool.ntp.org");
-        esp_sntp_setservername(2, "time.cloudflare.com");
-        esp_sntp_init();
-    }
-    for (int i = 0; i < 100 && time(NULL) <= 1700000000 && !passport_tls_cancelled(); i++) vTaskDelay(pdMS_TO_TICKS(100));
-    return time(NULL) > 1700000000;
 }
 
 static void auth_error(const cJSON *frame) {
@@ -405,25 +375,20 @@ static cJSON *connect_frame(const char *nonce, int64_t timestamp, bool bootstrap
 static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_t *parent) {
     int64_t connect_start = esp_timer_get_time(), phase_start;
     s_connect_retryable = false;
+    s_native_unsupported = false;
+    s_talk_allowed = false;
+    s_native_ask = false;
+    if (!identity()) { state(PASSPORT_SEND_FAILED, "设备身份保存失败"); return NULL; }
+    timing("identity", connect_start);
     passport_json_filter_init(s_receive);
-    endpoint_t target;
-    if (!endpoint(s_agent.url, &target)) { state(PASSPORT_SEND_FAILED, "网关地址无效"); return NULL; }
-    if (s_talk_auth) {
-        size_t length = strlen(target.path);
-        while (length && target.path[length - 1] == '/') length--;
-        if (length < 12 || strncmp(target.path + length - 12, "/passport/v1", 12)) {
-            if (length + sizeof("/passport/v1") > sizeof(target.path)) {
-                state(PASSPORT_SEND_FAILED, "网关地址无效"); return NULL;
-            }
-            memcpy(target.path + length, "/passport/v1", sizeof("/passport/v1"));
-        } else target.path[length] = 0;
-    }
+    passport_endpoint_t target;
+    if (!passport_endpoint_parse(s_agent.url, s_talk_auth, &target)) { state(PASSPORT_SEND_FAILED, "网关地址无效"); return NULL; }
     phase_start = esp_timer_get_time();
     /* DNS belongs to the transport; do not perform a second blocking lookup. */
     if (passport_tls_cancelled()) return NULL;
     timing("endpoint", phase_start);
     phase_start = esp_timer_get_time();
-    if (target.tls && !sync_time()) { state(PASSPORT_SEND_FAILED, "时间同步失败，请重试"); return NULL; }
+    if (target.tls && !passport_clock_wait()) { state(PASSPORT_SEND_FAILED, "时间同步失败，请重试"); return NULL; }
     timing("clock_sync", phase_start);
     *parent = target.tls ? esp_transport_ssl_init() : esp_transport_tcp_init();
     if (!*parent) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return NULL; }
@@ -449,6 +414,9 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     s_connect_retryable = true;
     phase_start = esp_timer_get_time();
     if (esp_transport_connect(ws, target.host, target.port, 20000) < 0) {
+        int status = passport_transport_ws_get_upgrade_request_status(ws);
+        s_native_unsupported = s_talk_auth && (status == 404 || status == 405 || status == 426);
+        if (s_native_unsupported) s_connect_retryable = false;
         timing("transport_failed", phase_start);
         const char *proxy_error=passport_tls_proxy_error();
         if (proxy_error) s_connect_retryable=false;
@@ -490,8 +458,15 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     snprintf(s_agent.kind, sizeof(s_agent.kind), "%s", kind);
     const cJSON *passport_protocol = cJSON_GetObjectItemCaseSensitive(payload, "passportProtocol");
     if (s_talk_auth && (!cJSON_IsNumber(passport_protocol) || passport_protocol->valueint != 1)) {
+        s_native_unsupported = true;
         cJSON_Delete(hello);
         state(PASSPORT_SEND_FAILED, "网关不支持实时语音，请升级插件"); goto fail;
+    }
+    s_native_ask = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(payload, "passportAsk"));
+    if (s_talk_auth && !s_call_active && !s_native_ask) {
+        s_native_unsupported = true;
+        cJSON_Delete(hello);
+        goto fail;
     }
     const cJSON *policy = cJSON_GetObjectItemCaseSensitive(payload, "policy");
     const cJSON *max_payload = cJSON_GetObjectItemCaseSensitive(policy, "maxPayload");
@@ -501,13 +476,9 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     s_max_attachment = cJSON_IsNumber(max_bytes) && max_bytes->valuedouble > 0 ? (size_t)max_bytes->valuedouble : 20 * 1024 * 1024;
     const cJSON *auth = cJSON_GetObjectItemCaseSensitive(payload, "auth");
     if (s_talk_auth) {
-        bool granted = false;
         const cJSON *scope;
         cJSON_ArrayForEach(scope, cJSON_GetObjectItemCaseSensitive(auth, "scopes")) {
-            if (cJSON_IsString(scope) && (!strcmp(scope->valuestring,"operator.talk") || !strcmp(scope->valuestring,"operator.admin"))) granted = true;
-        }
-        if (!granted) {
-            cJSON_Delete(hello); state(PASSPORT_SEND_FAILED,"请在网关为此设备授权 operator.talk"); goto fail;
+            if (cJSON_IsString(scope) && (!strcmp(scope->valuestring,"operator.talk") || !strcmp(scope->valuestring,"operator.admin"))) s_talk_allowed = true;
         }
     }
     const char *token = str(auth, "deviceToken");
@@ -565,6 +536,12 @@ static esp_transport_handle_t open_gateway_retry(bool bootstrap,
         }
         esp_transport_handle_t ws = open_gateway(bootstrap, parent);
         if (ws) return ws;
+        if (s_native_unsupported && !s_call_active && !passport_tls_cancelled()) {
+            if (*parent) { esp_transport_destroy(*parent); *parent = NULL; }
+            s_talk_auth = false;
+            ws = open_gateway(bootstrap, parent);
+            if (ws) return ws;
+        }
         if (*parent) {
             esp_transport_destroy(*parent);
             *parent = NULL;
@@ -1108,7 +1085,7 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
     int64_t test_started = 0;
     uint32_t previous_dropped = 0;
     unsigned loss_windows = 0;
-    s_talk_trace = (talk_trace_t){ .step = "create" };
+    s_talk_trace.step = "create";
     cJSON *frame = talk_request("passport-talk-create", "talk.session.create", NULL);
     cJSON *params = cJSON_GetObjectItemCaseSensitive(frame, "params");
     cJSON_AddStringToObject(params, "mode", "realtime");
@@ -1203,6 +1180,8 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
             } else if (now > mark_deadline) break;
         }
         if (ready && !audio_started) {
+            s_talk_trace.provider_ms = (uint32_t)((esp_timer_get_time() - started) / 1000);
+            int64_t audio_started_us = esp_timer_get_time();
             s_talk_trace.step = "capture-start";
             esp_err_t audio_error = compact_ima ? passport_audio_live_ima_start(synthetic) :
                 synthetic ? passport_audio_live_test_start() : passport_audio_live_start();
@@ -1210,7 +1189,10 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
             audio_started = true;
             test_started = now;
             passport_memory_report("live_ready");
+            s_talk_trace.audio_start_ms = (uint32_t)((esp_timer_get_time() - audio_started_us) / 1000);
+            s_talk_trace.ready_ms = (uint32_t)((esp_timer_get_time() - s_operation_started_us) / 1000);
             timing("talk_ready", started);
+            timing("call_to_listening", s_operation_started_us);
             state(PASSPORT_SEND_LISTENING, "可以直接说话，停顿后自动回复");
         }
         if (ready && speaking && audio_done && passport_audio_live_drained()) {
@@ -1647,9 +1629,8 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
     const bool resume_only = mode == 3;
     const bool talk = mode == GATEWAY_LIVE || mode == GATEWAY_LIVE_TEST;
     esp_transport_handle_t parent = *transport, ws = *connection;
-    int64_t identity_start = esp_timer_get_time();
-    if (!identity()) { state(PASSPORT_SEND_FAILED, "设备身份保存失败"); goto done; }
-    timing("identity", identity_start);
+    if (talk) s_talk_trace = (talk_trace_t){ .step = "gateway", .reused = ws != NULL };
+    if (!s_device_id[0] && !identity()) { state(PASSPORT_SEND_FAILED, "设备身份保存失败"); goto done; }
     snprintf(s_token, sizeof(s_token), "%s", s_agent.device_token);
     /* Paired: connect now and stream the clip while it is recorded.
      * Not paired yet: wait for the recording, then pair as usual. */
@@ -1692,7 +1673,12 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
     }
     if (!ws) ws = open_gateway_retry(false, &parent);
     if (!ws) goto done;
-    if (talk) { (void)talk_operation(ws, mode == GATEWAY_LIVE_TEST); goto done; }
+    if (talk) {
+        s_talk_trace.gateway_ms = (uint32_t)((esp_timer_get_time() - s_operation_started_us) / 1000);
+        if (!s_talk_allowed) state(PASSPORT_SEND_FAILED,"请在网关为此设备授权 operator.talk");
+        else (void)talk_operation(ws, mode == GATEWAY_LIVE_TEST);
+        goto done;
+    }
     if (mode == GATEWAY_CHECK) { check_capabilities(ws); goto done; }
     if (probe) {
         if (history_probe) {
@@ -1756,6 +1742,11 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
         if (atomic_load(&s_go) && s_recording_stopped_us) timing("stop_to_reply", s_recording_stopped_us);
     }
 done:
+    if (talk) {
+        portENTER_CRITICAL(&s_guard);
+        s_talk_retained = s_talk_trace;
+        portEXIT_CRITICAL(&s_guard);
+    }
     if (passport_tls_cancelled() && ws && !probe && !talk && atomic_load(&s_authenticated) &&
         s_reply.acknowledged && !s_reply.complete && passport_tls_cancel_can_write()) {
         if (abort_run(ws,s_reply.run_id)) s_reply.complete=true;
@@ -1784,19 +1775,28 @@ typedef struct {
     esp_transport_handle_t ws,parent;
     int64_t retry_at,last_ping;
     unsigned failures;
+    bool legacy;
 } gateway_service_t;
 
 static void service_step(gateway_service_t *service) {
     esp_transport_handle_t ws=service->ws,parent=service->parent;
     int64_t retry_at=service->retry_at,last_ping=service->last_ping;
     unsigned failures=service->failures;
+    bool legacy=service->legacy;
     int mode=atomic_exchange(&s_command,-1);
     if (mode>=0) {
         s_background=false;
         bool talk = mode == GATEWAY_LIVE || mode == GATEWAY_LIVE_TEST;
+        s_call_active = talk;
         vTaskPrioritySet(NULL, talk ? 5 : 3);
-        if (passport_tls_cancelled() || !same_route(&s_agent,&s_requested_agent) || s_talk_auth != talk) close_gateway(&ws,&parent);
-        s_talk_auth = talk;
+        bool route_changed = !same_route(&s_agent,&s_requested_agent);
+        if (route_changed) legacy = false;
+        if (!talk && !route_changed && ws && s_talk_auth && !s_native_ask) {
+            close_gateway(&ws,&parent);
+            legacy = true;
+        }
+        if (passport_tls_cancelled() || route_changed || (talk && !s_talk_auth)) close_gateway(&ws,&parent);
+        if (!ws) s_talk_auth = talk || (!legacy && s_requested_agent.device_token[0]);
         s_agent=s_requested_agent;
         passport_tls_set_proxy(&s_agent.proxy);
         begin_connection();
@@ -1809,10 +1809,11 @@ static void service_step(gateway_service_t *service) {
         } else {
             if (!s_reply.acknowledged) { s_live[0]=0;s_live_seq=0; }
             send_operation(mode,&ws,&parent);
+            if (ws) legacy = !s_talk_auth;
         }
         vTaskPrioritySet(NULL, 3);
+        s_call_active = false;
         s_background=true;
-        if (s_talk_auth) { close_gateway(&ws,&parent); s_talk_auth = false; }
         failures=0;retry_at=esp_timer_get_time()+1000000;last_ping=esp_timer_get_time();
         atomic_store(&s_busy,false);
         goto done;
@@ -1829,7 +1830,7 @@ static void service_step(gateway_service_t *service) {
         goto done;
     }
     if (!same_route(&s_agent,&selected)) {
-        close_gateway(&ws,&parent);s_agent=selected;retry_at=0;failures=0;
+        close_gateway(&ws,&parent);s_agent=selected;retry_at=0;failures=0;legacy=false;
     }
     if (passport_tls_cancelled()) close_gateway(&ws,&parent);
     if (!ws && esp_timer_get_time()>=retry_at) {
@@ -1837,13 +1838,21 @@ static void service_step(gateway_service_t *service) {
         if (!atomic_load(&s_enabled)) goto done;
         if (!s_receive) s_receive=calloc(1,sizeof(*s_receive));
         passport_tls_control_begin();passport_tls_set_proxy(&s_agent.proxy);
+        (void)passport_wifi_gateway_performance(true);
+        s_talk_auth = !legacy;
         if (!atomic_load(&s_enabled)) passport_tls_request_cancel(false);
-        if (s_receive && identity()) {
+        if (s_receive) {
             snprintf(s_token,sizeof(s_token),"%s",s_agent.device_token);
             ws=open_gateway(false,&parent);
+            if (!ws && s_native_unsupported && !passport_tls_cancelled()) {
+                close_gateway(&ws,&parent);
+                s_talk_auth=false;legacy=true;
+                ws=open_gateway(false,&parent);
+            }
         }
         crypto_wipe(s_secret,sizeof(s_secret));s_identity_ready=false;
         crypto_wipe(s_token,sizeof(s_token));
+        (void)passport_wifi_gateway_performance(false);
         if (!ws) {
             close_gateway(&ws,&parent);
             if (failures<5) failures++;
@@ -1867,7 +1876,8 @@ static void service_step(gateway_service_t *service) {
         }
     }
 done:
-    *service=(gateway_service_t){ws,parent,retry_at,last_ping,failures};
+    if (!ws) s_talk_auth = s_talk_allowed = false;
+    *service=(gateway_service_t){ws,parent,retry_at,last_ping,failures,legacy};
 }
 
 static void send_worker(void *arg) {
@@ -1899,6 +1909,7 @@ static esp_err_t start_send_ex(int mode, bool preconnect) {
     bool probe=mode==1 || mode==2 || mode==GATEWAY_CHECK;
     bool resume=mode==3;
     if (atomic_load(&s_busy)) return ESP_ERR_INVALID_STATE;
+    s_operation_started_us = esp_timer_get_time();
     if (!passport_wifi_is_online()) { state(PASSPORT_SEND_FAILED, "未联网，请重试"); return ESP_FAIL; }
     if (!probe && !resume && mode != GATEWAY_LIVE && mode != GATEWAY_LIVE_TEST && !preconnect && !passport_clip_size()) { state(PASSPORT_SEND_FAILED, "没有录音，请重新说话"); return ESP_FAIL; }
     atomic_store(&s_preconnect, preconnect);

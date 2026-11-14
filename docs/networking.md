@@ -16,10 +16,17 @@ use reserved placeholders, not a working shared service.
 | SakuraFrp or another TCP tunnel | `wss://assigned-host:assigned-port` | Regional routing; TLS still required |
 | Private VPN | Private gateway address | Device/router must actually participate in the VPN |
 
-An HTTPS proxy or supported Shadowsocks route is an optional outbound path from
-the device, not gateway authentication. Set it per assistant only when needed.
+A Shadowsocks route is an optional outbound path from the device, not gateway
+authentication. Set it per assistant only when needed. The firmware supports
+one cipher, `aes-256-cfb`; the server must be configured with the same one.
 Use direct routing to a reliable regional endpoint when possible. Never disable
 certificate checks, expose an unauthenticated gateway, or publish credentials.
+
+The first connection after power-on performs a full TLS handshake, which takes
+about three to four seconds on this chip. Later connections to the same gateway
+resume that TLS session and skip the key exchange and certificate check. The
+session is kept in RAM only, is offered for up to 12 hours, and a gateway that
+no longer accepts it gets a full handshake instead.
 
 The apps' **Copy Prompt** can ask an agent on the gateway host to install a
 missing plugin and establish a missing public ingress using authorized resources.

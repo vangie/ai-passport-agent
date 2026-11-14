@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-app=${2:-"$root/build/FoloToy-AI-Passport.bin"}
+app=${2:-"$root/build/agent-talk.bin"}
 expected_hash=${3:-}
 port=${1:-}
 if [[ -z "$port" || ! -f "$app" || -z "$expected_hash" ]]; then

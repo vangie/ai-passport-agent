@@ -56,6 +56,7 @@ int esp_transport_poll_read(esp_transport_handle_t handle, int timeout);
 int passport_transport_ws_get_read_opcode(esp_transport_handle_t handle);
 int64_t passport_transport_ws_last_receive_us(esp_transport_handle_t handle);
 const char *passport_transport_ws_failure(esp_transport_handle_t handle);
+int passport_transport_ws_get_upgrade_request_status(esp_transport_handle_t handle);
 int passport_transport_ws_send_raw(esp_transport_handle_t handle, int opcode, const char *data, int size, int timeout);
 int esp_transport_close(esp_transport_handle_t handle);
 int esp_transport_destroy(esp_transport_handle_t handle);

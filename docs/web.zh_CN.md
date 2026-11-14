@@ -197,8 +197,8 @@ python3 tools/web.py firmware --from-release RELEASE文件目录
 make web
 ```
 
-目录需含 `release-manifest.json`、`FoloToy-AI-Passport.bin` 和
-`FoloToy-AI-Passport-full.bin`。生成副本被 Git 忽略。
+目录需含 `release-manifest.json`、`agent-talk.bin` 和
+`agent-talk-full.bin`。生成副本被 Git 忽略。
 缺少固件时仍可构建配置页，但不能使用内置固件刷机。
 网页仅安装内置的本项目发布版；自定义固件留给开发者通过命令行写入。
 普通更新保留配置；首次安装或恢复时，取消勾选「保留配置」，再点击「安装固件」，

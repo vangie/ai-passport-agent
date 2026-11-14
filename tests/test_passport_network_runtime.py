@@ -319,80 +319,82 @@ static int passport_audio_release(void) { return audio_release_result; }
 BLUETOOTH_CONTROLLER_TEST = r"""
 int main(void) {
     (void)esp_wifi_get_config;
+    /* A saved network that has not connected yet: wait out the grace
+     * period, then turn Bluetooth on so the device can be set up. */
     s_store.count=1; now=5000000;
     maintain_bluetooth_mode();
     assert(!active && !starts);
     now=10000000;
     maintain_bluetooth_mode();
     assert(active && starts==1 && !stops);
+    /* Still offline much later: it stays on, there is no expiry. */
     now=200000000;
     maintain_bluetooth_mode();
     assert(active && !stops && !s_ble_config_requested);
+    /* Wi-Fi comes up with nobody connected: Bluetooth hands the memory
+     * back so the gateway can hold a connection. */
     s_online=true; now=400000000;
     maintain_bluetooth_mode();
-    assert(active && !stops && !s_ble_config_requested);
-    configuring=true;
-    s_online=false;
+    assert(!active && stops==1 && !s_ble_config_requested);
+    /* Online, it stays off however long the device runs. */
+    now=800000000;
     maintain_bluetooth_mode();
-    assert(active && !stops);
-    pending=true;
-    close_bluetooth_config();
-    maintain_bluetooth_mode();
-    assert(active && !stops && !s_ble_config_suppressed);
-    pending=false;
-    close_bluetooth_config();
-    maintain_bluetooth_mode();
-    assert(!active && stops==1 && s_ble_config_suppressed && !s_ble_config_requested);
-    configuring=false; now=800000000;
-    maintain_bluetooth_mode();
-    assert(!active && stops==1);
+    assert(!active && starts==1 && stops==1);
+    /* Turned on in Settings: on, and it stays on while online. */
     request_bluetooth_config(); maintain_bluetooth_mode();
     assert(active && starts==2);
     now=1000000000;
     maintain_bluetooth_mode();
     assert(active && stops==1 && s_ble_config_requested);
-    s_ble_config_requested=false;
+    /* A setup client is connected and saving: Off is refused until the
+     * save finishes, then honoured. */
+    configuring=true; pending=true;
+    close_bluetooth_config();
+    maintain_bluetooth_mode();
+    assert(active && stops==1 && !s_ble_config_suppressed);
+    /* The save is done and the client has disconnected. */
+    pending=false; configuring=false;
+    close_bluetooth_config();
+    maintain_bluetooth_mode();
+    assert(!active && stops==2 && s_ble_config_suppressed && !s_ble_config_requested);
+    maintain_bluetooth_mode();
+    assert(!active && starts==2);
+    /* On again, then recording, sending and the gateway each take the
+     * memory; Bluetooth returns only when all of them have let go. */
+    request_bluetooth_config(); maintain_bluetooth_mode();
+    assert(active && starts==3);
     s_view.recording=true;
     maintain_bluetooth_mode();
-    assert(!active && stops==2);
+    assert(!active && stops==3);
     s_view.recording=false; s_view.sending=true;
     maintain_bluetooth_mode();
-    assert(!active && starts==2);
+    assert(!active && starts==3);
     s_view.sending=false; gateway_active=true;
     maintain_bluetooth_mode();
-    assert(!active && starts==2);
+    assert(!active && starts==3);
     gateway_active=false; gateway_resources=true;
     maintain_bluetooth_mode();
-    assert(!active && starts==2);
+    assert(!active && starts==3);
     gateway_resources=false;
     maintain_bluetooth_mode();
-    assert(active && starts==3);
+    assert(active && starts==4);
+    /* A failed stop or start is retried after a pause, not in a loop. */
     s_view.recording=true; pause_result=1;
     maintain_bluetooth_mode();
-    assert(active && stops==3);
+    assert(active && stops==4);
     now+=1000000; pause_result=0;
     maintain_bluetooth_mode();
-    assert(!active && stops==4);
+    assert(!active && stops==5);
     s_view.recording=false; audio_release_result=1;
     maintain_bluetooth_mode();
-    assert(!active && starts==3);
+    assert(!active && starts==4);
     now+=1000000; audio_release_result=0; resume_result=1;
     maintain_bluetooth_mode();
-    assert(!active && starts==4);
+    assert(!active && starts==5);
     now+=1000000; resume_result=0;
     maintain_bluetooth_mode();
-    assert(active && starts==5);
-    s_ble_config_suppressed=true; s_online=true;
-    maintain_bluetooth_mode();
-    assert(!active && stops==5);
-    s_view.recording=true;
-    maintain_bluetooth_mode();
-    s_view.recording=false;
-    maintain_bluetooth_mode();
-    assert(!active && starts==5);
-    request_bluetooth_config();
-    maintain_bluetooth_mode();
     assert(active && starts==6);
+    /* Switching networks from the device never toggles Bluetooth. */
     s_view.network_state=PASSPORT_NETWORK_CONNECTING;
     maintain_bluetooth_mode();
     assert(active && starts==6 && stops==5);
@@ -400,7 +402,13 @@ int main(void) {
     close_bluetooth_config();
     maintain_bluetooth_mode();
     assert(!active && stops==6);
-    s_online=false; s_store.count=0; s_boot_us=now;
+    /* Turned off by hand, then the device loses every network: it stays
+     * off, because the user said so. A fresh start with nothing saved
+     * turns it on again. */
+    s_online=false;
+    maintain_bluetooth_mode();
+    assert(!active && starts==6);
+    s_store.count=0; s_boot_us=now;
     s_ble_config_suppressed=false;
     maintain_bluetooth_mode();
     assert(active && starts==7);
@@ -411,7 +419,7 @@ int main(void) {
     request_bluetooth_config();
     maintain_bluetooth_mode();
     assert(active && starts==8);
-    puts("Bluetooth default-on standby, no expiry, manual override, save protection, audio release, gateway cleanup and failure retries PASS");
+    puts("Bluetooth manual when online, automatic when offline, no expiry, save protection, audio release, gateway cleanup and failure retries PASS");
 }
 """
 

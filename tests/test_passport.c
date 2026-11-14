@@ -117,7 +117,11 @@ static void test_navigation(void) {
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
     expect(v.screen == PASSPORT_SCREEN_SETTINGS, "down opens assistants");
-    expect(passport_key_binding(&v,&store,PASSPORT_BTN_DOWN).action == PASSPORT_ACT_CONFIGURE, "active assistant exposes setup");
+    expect(passport_key_binding(&v,&store,PASSPORT_BTN_DOWN).action == PASSPORT_ACT_NONE &&
+           !passport_key_binding(&v,&store,PASSPORT_BTN_DOWN).enabled,
+           "the assistant in use offers no second action");
+    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK) == PASSPORT_ACT_NONE &&
+           v.screen == PASSPORT_SCREEN_SETTINGS, "pressing it changes nothing");
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK) == PASSPORT_ACT_SELECT_AGENT, "candidate emits selection action");
     expect(store.active_agent == 0, "owner must persist agent selection");
@@ -197,13 +201,22 @@ static void test_navigation(void) {
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
     expect(!passport_key_binding(&v,&store,PASSPORT_BTN_UP).enabled,"empty assistant list disables cycling");
-    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_CONFIGURE,"empty assistant page can open setup");
+    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_NONE &&
+           v.screen==PASSPORT_SCREEN_SETTINGS,"empty assistant page has only Back");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    expect(v.screen==PASSPORT_SCREEN_HOME,"empty configuration can always return home");
+    /* The network pages still lead to Bluetooth setup, with a way to close it. */
+    v.screen=PASSPORT_SCREEN_NETS;v.cursor=0;
+    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_ADD_NETWORK &&
+           v.screen==PASSPORT_SCREEN_ADD,"an empty network list opens setup");
     v.bluetooth_ready=true;
     expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_CLOSE_CONFIG,"setup has a visible close action");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
-    expect(v.screen==PASSPORT_SCREEN_HOME,"empty configuration can always return home");
+    expect(v.screen==PASSPORT_SCREEN_HOME,"setup returns home through its parents");
+    v.bluetooth_ready=false;
 }
 
 static void test_network_navigation(void) {
@@ -900,7 +913,11 @@ static void test_continue_conversation(void) {
                "second OK sends the new recording, never a previous retry");
         passport_finish_send(&view,true,false,"这是当前回复。\n1\n2\n3\n4\n5\n6\n7\n8\n下一页");
         expect(view.screen==PASSPORT_SCREEN_TALK && !view.sending,"completed turn opens reply");
-        if (turn%2) passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
+        if (turn%2) {
+            view.reply_page = 0;
+            expect(passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_NEXT_PAGE,
+                   "down navigates from an older reply page");
+        }
         expect(passport_key_binding(&view,&store,PASSPORT_BTN_OK).action==PASSPORT_ACT_CONTINUE,
                "continue is available on every reply page");
         expect(!strcmp(passport_action_label(PASSPORT_ACT_CONTINUE,true),"继续"),"continue has a visible Chinese caption");
@@ -953,6 +970,8 @@ static void test_chat_history(void) {
     expect(view.chat_count==2 && !strcmp(view.chat[0].question,"林冲是谁？"),"continue preserves the previous question");
     strcpy(view.heard,"他的绰号呢？");
     passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    expect(view.screen==PASSPORT_SCREEN_TALK && view.sending,
+           "a follow-up keeps the conversation visible while it is sent");
     passport_chat_update(&view,"豹子");
     passport_finish_send(&view,false,true,"发送失败");
     expect(!strcmp(view.chat[1].answer,"豹子"),"error status never becomes an assistant message");
@@ -998,6 +1017,8 @@ static void test_chat_history(void) {
     passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     memset(view.heard,'W',sizeof(view.heard)-1);view.heard[sizeof(view.heard)-1]=0;
     passport_chat_update(&view,NULL);
+    int latest = passport_reply_pages(&view) - 1;
+    expect(latest > 0 && view.reply_page==latest,"long question opens on its final chat page");
     view.reply_page=0;
     passport_chat_update(&view,"streamed text");
     expect(view.reply_page==0,"streaming never jumps away from a manually selected page");

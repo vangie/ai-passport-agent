@@ -25,8 +25,8 @@ class WebPublicTests(unittest.TestCase):
         image[0x9000] = stored
         image[0x10000:0x10000 + len(payload)] = payload
         manifest = {'knownBuilds': {}}
-        for kind, filename, data in [('application', 'FoloToy-AI-Passport.bin', image[0x10000:]),
-                                     ('full', 'FoloToy-AI-Passport-full.bin', image)]:
+        for kind, filename, data in [('application', 'agent-talk.bin', image[0x10000:]),
+                                     ('full', 'agent-talk-full.bin', image)]:
             (directory / filename).write_bytes(data)
             manifest[kind] = {'file': filename, 'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
         (directory / 'manifest.json').write_text(json.dumps(manifest))
@@ -71,7 +71,7 @@ class WebPublicTests(unittest.TestCase):
     def test_rejects_missing_firmware_tampering_and_local_catalog(self):
         self.assertTrue(audit_site(self.root, True))
         self.firmware()
-        (self.root / 'firmware/FoloToy-AI-Passport.bin').write_bytes(b'changed')
+        (self.root / 'firmware/agent-talk.bin').write_bytes(b'changed')
         self.assertTrue(audit_site(self.root, True))
         self.firmware()
         path = self.root / 'firmware/manifest.json'

@@ -260,8 +260,8 @@ python3 tools/web.py firmware --from-release PATH_TO_RELEASE_FILES
 make web
 ```
 
-The directory must contain `release-manifest.json`, `FoloToy-AI-Passport.bin`
-and `FoloToy-AI-Passport-full.bin`. These generated copies are ignored by Git.
+The directory must contain `release-manifest.json`, `agent-talk.bin`
+and `agent-talk-full.bin`. These generated copies are ignored by Git.
 The build succeeds without them, but bundled flashing is then unavailable.
 The website installs only its bundled project release; custom images remain a
 command-line developer workflow. Normal updates preserve settings. For first

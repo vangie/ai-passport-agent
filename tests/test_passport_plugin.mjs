@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createPassportProvider, PASSPORT_PROVIDER, PASSPORT_END_CALL} from '../tools/openclaw/passport-plugin.mjs';
-import {createPassportConnection, forwardedAddress, gatewayTarget} from '../tools/openclaw/passport-proxy.mjs';
+import {createPassportConnection, createPassportTransport, forwardedAddress, gatewayTarget} from '../tools/openclaw/passport-proxy.mjs';
 import {createPassportTranscripts, registerPassportTranscripts} from '../tools/openclaw/passport-transcript.mjs';
 
 let transcriptClock = 0;
@@ -292,3 +292,34 @@ gap.connection.upstream({type: 'event', event: 'tick', seq: 1});
 gap.connection.upstream({type: 'event', event: 'tick', seq: 3});
 assert.equal(gap.failures.length, 1);
 console.log('Passport plugin: native provider, retained device proof/scopes, ownership, compact lifecycle, bounded requests and fail-closed compatibility PASS');
+
+let serverOptions;
+class TransportServer {
+    constructor(options) { serverOptions = options; }
+    close() {}
+}
+const transport = createPassportTransport({WebSocketServer: TransportServer, config: {}});
+const maximumAudio = Buffer.alloc(480058).toString('base64');
+const question = {type: 'req', id: 'long-question', method: 'chat.send',
+    params: {sessionKey: transcriptSession, attachments: [{type: 'audio', content: maximumAudio}]}};
+assert.ok(Buffer.byteLength(JSON.stringify(question)) < serverOptions.maxPayload);
+assert.equal(serverOptions.maxPayload, 660000);
+transport.stop();
+for (const limit of [undefined, 100000, 2000000]) {
+    const current = fixture();
+    current.connection.upstream({type: 'event', event: 'connect.challenge', payload: {}});
+    current.connection.client(structuredClone(signedConnect));
+    current.connection.upstream({type: 'res', id: signedConnect.id, ok: true, payload: {
+        policy: {maxPayload: limit, attachments: {maxBytes: 480058}}, auth: {scopes: ['operator.read', 'operator.write']}}});
+    const granted = current.client.at(-1).payload;
+    assert.equal(granted.passportAsk, true);
+    assert.equal(granted.policy.maxPayload, limit === 100000 ? 100000 : 660000);
+    assert.equal(granted.policy.attachments.maxBytes, 480058);
+    if (limit !== 100000) {
+        current.connection.client(question);
+        assert.equal(current.upstream.at(-1).params.attachments[0].content, maximumAudio);
+    }
+    assert.equal(current.failures.length, 0);
+    current.connection.stop('finished');
+}
+console.log('Passport shared transport: bounded full-length Ask uploads and upstream policy limits PASS');

@@ -35,6 +35,9 @@ static int64_t s_proxy_deadline;
 static const char *s_proxy_error;
 
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
+/* How long a session is offered again. The server decides whether it still
+ * accepts it; a refused one silently becomes a full handshake. */
+#define PASSPORT_TLS_SESSION_LIFETIME_US (12LL*3600*1000000)
 static esp_tls_client_session_t *s_session;
 static esp_tls_t *s_session_connection;
 static char s_session_host[96], s_session_name[96];
@@ -53,7 +56,7 @@ static bool session_matches(const char *host,int length,int port,const esp_tls_c
     return s_session && s_session_port==port &&
         strlen(s_session_host)==(size_t)length && !memcmp(s_session_host,host,(size_t)length) &&
         !strcmp(s_session_name,name) && s_session_bundle==cfg->crt_bundle_attach &&
-        esp_timer_get_time()-s_session_saved<600000000;
+        esp_timer_get_time()-s_session_saved<PASSPORT_TLS_SESSION_LIFETIME_US;
 }
 
 static bool session_eligible(const char *host,int length,const esp_tls_cfg_t *cfg) {
@@ -309,6 +312,9 @@ int __wrap_esp_tls_conn_new_sync(const char *host,int hostlen,int port,
     if (!ticket) session_clear();
     if (cacheable) asynchronous.client_session=ticket ? s_session : NULL;
     ESP_LOGI("passport_tls","session_offer=%d",ticket);
+    /* The handshake copies the offered session, so the cached one stays
+     * valid for the next connection. Dropping it here made every second
+     * connection pay for a full key exchange and certificate check. */
 #endif
     const char *connect_host=host;
     int connect_length=hostlen,connect_port=port;
@@ -332,18 +338,15 @@ int __wrap_esp_tls_conn_new_sync(const char *host,int hostlen,int port,
             previous_phase=(int)phase;
         }
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
-        if (phase==ESP_TLS_HANDSHAKE || phase==ESP_TLS_DONE) {
-            asynchronous.client_session=NULL;
-            if (ticket) session_clear();
-        }
+        if (phase==ESP_TLS_HANDSHAKE || phase==ESP_TLS_DONE) asynchronous.client_session=NULL;
 #endif
         if (passport_tls_cancelled() || result<0) break;
         if (result==1) {
             int flags=fcntl(fd,F_GETFL,0);
             if (flags<0 || fcntl(fd,F_SETFL,flags & ~O_NONBLOCK)<0) break;
             mbedtls_ssl_context *ssl=esp_tls_get_ssl_context(tls);
-            if (ssl) ESP_LOGI("passport_tls","version=%s cipher=%s elapsed=%lldms",mbedtls_ssl_get_version(ssl),
-                       mbedtls_ssl_get_ciphersuite(ssl),(long long)((esp_timer_get_time()-start)/1000));
+            if (ssl) ESP_LOGI("passport_tls","version=%s cipher=%s resumed=%d elapsed=%lldms",mbedtls_ssl_get_version(ssl),
+                       mbedtls_ssl_get_ciphersuite(ssl),ticket,(long long)((esp_timer_get_time()-start)/1000));
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
             if (cacheable) {
                 memcpy(s_session_host,host,(size_t)hostlen);s_session_host[hostlen]=0;
@@ -371,9 +374,13 @@ int __wrap_esp_tls_conn_destroy(esp_tls_t *tls) {
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
     if (tls && tls==s_session_connection) {
         s_session_connection=NULL;
-        session_clear();
-        esp_tls_client_session_t *saved=passport_tls_cancelled() ? NULL : esp_tls_get_client_session(tls);
+        /* Only a completed handshake gets here, so its session is valid
+         * however the connection ends. The idle connection is normally
+         * closed by a cancel when Bluetooth takes the memory back; skipping
+         * the export then left the next call with a full handshake. */
+        esp_tls_client_session_t *saved=esp_tls_get_client_session(tls);
         if (saved) {
+            session_clear();
             s_session=saved;s_session_saved=esp_timer_get_time();
             ESP_LOGI("passport_tls","session_cached=1");
         }

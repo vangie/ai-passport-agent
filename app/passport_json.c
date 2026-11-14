@@ -29,7 +29,7 @@ static bool wanted(const passport_json_filter_t *f) {
         "final", "byteLength", "markName", "talkEvent", "turnId", "textMode", "transcriptId", "playbackSequence",
         "callId", "name", "args", "question", "context", "responseStyle", "agentSessionKey",
         "mode", "forced", "provider", "model", "phase", "passportSilence", "passportIma", "passportProtocol",
-        "upstreamAvailable", "upstreamConfigured", "providerRegistered", "backend"
+        "upstreamAvailable", "upstreamConfigured", "providerRegistered", "backend", "passportAsk"
     };
     const char *const *keys = f->depth == 1 ? root : nested;
     size_t count = f->depth == 1 ? sizeof(root)/sizeof(root[0]) : sizeof(nested)/sizeof(nested[0]);

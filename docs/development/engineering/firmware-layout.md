@@ -53,7 +53,7 @@ images must fit entirely inside a configured partition; an offset inside that
 partition is allowed. Merely declaring a resource partition does not require a
 preloaded image, but listing an image in `flash_args` makes it mandatory.
 
-For initial installation, use `build/FoloToy-AI-Passport-full.bin` at `0x0`.
+For initial installation, use `build/agent-talk-full.bin` at `0x0`.
 The similarly named app-only image does not contain a bootloader or partition
 table; release packages include it explicitly for compatible updates at `0x10000`.
 

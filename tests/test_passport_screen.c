@@ -62,15 +62,24 @@ static bool chat_contains(const char *text_value) {
 
 static void check_choice_rows(size_t count, size_t first, size_t selected) {
     for (size_t row=0;row<PASSPORT_REPLY_ROWS;row++) {
-        bool show=row<5 && first+row<count;
+        bool show=row<LIST_VISIBLE && first+row<count;
         lv_obj_t *item=s_chat_rows[row];
         assert(lv_obj_has_flag(item,LV_OBJ_FLAG_HIDDEN)==!show);
         if (!show) continue;
         bool focused=first+row==selected;
-        assert(lv_obj_get_x(item)==20 && lv_obj_get_y(item)==132+(int)row*24);
+        assert(lv_obj_get_x(item)==LIST_LEFT && lv_obj_get_y(item)==LIST_TOP+(int)row*LIST_PITCH);
         assert(lv_obj_get_style_text_align(item,0)==LV_TEXT_ALIGN_LEFT);
-        assert(lv_obj_get_style_bg_opa(item,0)==(focused?LV_OPA_COVER:LV_OPA_TRANSP));
-        assert(!strncmp(lv_label_get_text(item),focused?"> ":"  ",2));
+        /* One shared bar marks the focus; no row draws its own background
+         * and no row text carries a cursor character. */
+        assert(lv_obj_get_style_bg_opa(item,0)==LV_OPA_TRANSP);
+        assert(lv_label_get_text(item)[0]!='>' && lv_label_get_text(item)[0]!=' ');
+        if (focused) {
+            assert(!lv_obj_has_flag(s_focus,LV_OBJ_FLAG_HIDDEN));
+            assert(lv_obj_get_y(s_focus)<=lv_obj_get_y(item) &&
+                   lv_obj_get_y(s_focus)+lv_obj_get_height(s_focus)>=lv_obj_get_y(item)+lv_obj_get_height(item));
+        }
+        /* Rows stay inside the card. */
+        assert(lv_obj_get_y(item)+lv_obj_get_height(item)<=293);
     }
 }
 
@@ -144,7 +153,8 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
             assert(ink_right>=ink_left && ink_left>=4 && padding_right>=4 && ink_top>=4 && padding_bottom>=4);
             assert(abs(ink_left-padding_right)<=2 && abs(ink_top-padding_bottom)<=2);
             if (v->screen==PASSPORT_SCREEN_HOME && passport_lang_zh(store))
-                assert(ink_left==5 && padding_right==5 && ink_top==5 && padding_bottom==5);
+                assert(ink_left>=4 && padding_right>=4 && ink_top>=4 && padding_bottom>=4 &&
+                       abs(ink_left-padding_right)<=1 && abs(ink_top-padding_bottom)<=1);
         }
     }
     assert(lv_obj_get_x(s_wifi) == (v->bluetooth_ready ? 134 : 148));
@@ -186,12 +196,19 @@ static void render(const char *name, passport_view_t *v, passport_store_t *store
     assert(lv_obj_get_style_shadow_width(s_battery,0)==0);
     assert(lv_obj_get_style_shadow_width(s_battery_fill,0)==0);
     assert(lv_obj_get_style_shadow_width(s_battery_tip,0)==0);
-    assert(lv_color_eq(lv_obj_get_style_bg_color(s_battery_fill,0),lv_color_hex(battery_soc<0 ? FAINT : battery_soc<=20 ? AMBER : MINT)));
+    /* Three charge states plus unknown, shared by fill, outline and number. */
+    uint32_t battery_color=battery_soc<0 ? FAINT : battery_soc<=BATTERY_CRITICAL ? RED : battery_soc<=BATTERY_LOW ? AMBER : MINT;
+    bool battery_warn=battery_soc>=0 && battery_soc<=BATTERY_LOW;
+    assert(battery_tone(battery_soc)==battery_color);
+    assert(lv_color_eq(lv_obj_get_style_bg_color(s_battery_fill,0),lv_color_hex(battery_color)));
+    assert(lv_color_eq(lv_obj_get_style_border_color(s_battery,0),lv_color_hex(battery_warn ? battery_color : MUTED)));
+    assert(lv_color_eq(lv_obj_get_style_bg_color(s_battery_tip,0),lv_color_hex(battery_warn ? battery_color : MUTED)));
+    assert(lv_color_eq(lv_obj_get_style_text_color(s_battery_text,0),lv_color_hex(battery_warn ? battery_color : WHITE)));
     lv_area_t battery_content;
     lv_obj_get_content_coords(s_battery,&battery_content);
     int battery_center_y=(battery_content.y1+battery_content.y2)/2;
     for (int column=0;column<lv_obj_get_content_width(s_battery);column++) {
-        uint32_t expected_color=column<battery_fill_width ? (battery_soc<=20 ? AMBER : MINT) : INK;
+        uint32_t expected_color=column<battery_fill_width ? battery_color : INK;
         uint16_t expected_rgb=lv_color_to_u16(lv_color_hex(expected_color));
         unsigned char expected_pixel[]={((expected_rgb>>11)&31)*255/31,((expected_rgb>>5)&63)*255/63,(expected_rgb&31)*255/31};
         const unsigned char *actual_pixel=&s_pixels[(battery_center_y*PASSPORT_LCD_W+battery_content.x1+column)*3];
@@ -238,6 +255,9 @@ int main(int argc, char **argv) {
     }
     strcpy(store.lang,"zh");strcpy(store.agents[0].name,"小夏");
     render("hermes-home",&v,&store);
+    assert(lv_color_eq(lv_obj_get_style_text_color(s_keys[PASSPORT_BTN_OK],0),lv_color_hex(CORAL)));
+    assert(lv_color_eq(lv_obj_get_style_text_color(s_keys[PASSPORT_BTN_DOWN],0),lv_color_hex(MINT)));
+    assert(lv_color_eq(lv_obj_get_style_bg_color(s_keys[PASSPORT_BTN_DOWN],0),lv_color_hex(LIVE_BG)));
     assert(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_LIVE);
     render("hermes-call-connecting",&v,&store);
     v.screen=PASSPORT_SCREEN_HOME;v.sending=false;
@@ -284,8 +304,28 @@ int main(int argc, char **argv) {
         for (int selection=0;selection<4;selection++) {
             v.preference_cursor=selection;
             render(settings_previews[language][selection],&v,&store);
-            assert(!strstr(lv_label_get_text(s_body),"OpenClaw"));
-            assert(strstr(lv_label_get_text(s_body),language ? "Agents" : "助手"));
+            /* The same list as the network and assistant pages, plus a
+             * right-aligned value on every row. */
+            assert(lv_obj_has_flag(s_body,LV_OBJ_FLAG_HIDDEN));
+            check_choice_rows(MENU_ROWS,0,(size_t)selection);
+            const char *names[2][MENU_ROWS]={{"网络","助手","蓝牙","音量"},{"Wi-Fi","Agent","Bluetooth","Volume"}};
+            for (int row=0;row<MENU_ROWS;row++) {
+                assert(!strcmp(lv_label_get_text(s_chat_rows[row]),names[language ? 1 : 0][row]));
+                lv_obj_t *value=s_menu_values[row];
+                assert(!lv_obj_has_flag(value,LV_OBJ_FLAG_HIDDEN));
+                assert(lv_obj_get_style_text_align(value,0)==LV_TEXT_ALIGN_RIGHT);
+                assert(lv_obj_get_y(value)==lv_obj_get_y(s_chat_rows[row]));
+                /* The value stays inside the row highlight and clear of the name. */
+                assert(lv_obj_get_x(value)+lv_obj_get_width(value)<=
+                       lv_obj_get_x(s_chat_rows[row])+lv_obj_get_width(s_chat_rows[row]));
+                lv_point_t name_size,value_size;
+                lv_text_get_size(&name_size,lv_label_get_text(s_chat_rows[row]),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
+                lv_text_get_size(&value_size,lv_label_get_text(value),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
+                assert(lv_obj_get_x(s_chat_rows[row])+name_size.x<lv_obj_get_x(value));
+                assert(value_size.x<=lv_obj_get_width(value) && value_size.y<=lv_obj_get_height(value));
+            }
+            assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Off" : "关"));
+            assert(!strcmp(lv_label_get_text(s_menu_values[3]),"55%"));
             if (language) {
                 assert(!strcmp(s_key_word_text[0],"Next"));
                 assert(!strcmp(s_key_word_text[1],selection==2 ? "On" : "Open"));
@@ -298,15 +338,16 @@ int main(int argc, char **argv) {
         }
         v.preference_cursor=2;v.bluetooth_ready=true;
         render(language ? "english-settings-bluetooth-on" : "settings-bluetooth-on",&v,&store);
-        assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  On" : "蓝牙  已开启"));
+        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "On" : "开"));
+        assert(lv_color_eq(lv_obj_get_style_text_color(s_menu_values[2],0),lv_color_hex(MINT)));
         assert(!strcmp(passport_action_label(s_last_binding[1].action,!language),language ? "Off" : "关闭"));
         v.bluetooth_connected=true;
         render(language ? "english-settings-bluetooth-connected" : "settings-bluetooth-connected",&v,&store);
-        assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  Connected" : "蓝牙  已连接"));
+        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Linked" : "已连接"));
         assert(s_last_binding[1].action==PASSPORT_ACT_CLOSE_CONFIG && s_last_binding[1].enabled);
         v.bluetooth_busy=true;
         render(language ? "english-settings-bluetooth-busy" : "settings-bluetooth-busy",&v,&store);
-        assert(strstr(lv_label_get_text(s_body),language ? "Bluetooth  Busy" : "蓝牙  处理中"));
+        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Busy" : "处理中"));
         assert(!s_last_binding[1].enabled && s_last_binding[0].enabled && s_last_binding[2].enabled);
         v.bluetooth_ready=false;v.bluetooth_busy=false;v.bluetooth_connected=false;
         v.screen=PASSPORT_SCREEN_HOME;
@@ -323,12 +364,15 @@ int main(int argc, char **argv) {
         v.screen=PASSPORT_SCREEN_PREFERENCES;
     }
     strcpy(store.lang,"zh");
-    const int battery_previews[]={100,0,-1,1,20,21,101,-2,9,10,99};
-    const char *battery_preview_names[]={"full-width-status-battery-full","full-width-status-battery-empty","full-width-status-battery-unknown","battery-one-percent","battery-low","battery-normal","battery-over-full","battery-unavailable","battery-single-digit","battery-double-digit","battery-nearly-full"};
+    /* Both sides of each level boundary, plus empty, unknown and over-full. */
+    const int battery_previews[]={100,0,-1,1,10,11,30,31,101,-2,9,99};
+    const char *battery_preview_names[]={"full-width-status-battery-full","full-width-status-battery-empty","full-width-status-battery-unknown","battery-one-percent","battery-critical","battery-low-edge","battery-low","battery-normal","battery-over-full","battery-unavailable","battery-single-digit","battery-nearly-full"};
     for (size_t index=0;index<sizeof(battery_previews)/sizeof(battery_previews[0]);index++) {
         v.battery_soc=battery_previews[index];
         render(battery_preview_names[index],&v,&store);
     }
+    assert(battery_tone(10)==RED && battery_tone(11)==AMBER && battery_tone(30)==AMBER && battery_tone(31)==MINT);
+    assert(battery_tone(0)==RED && battery_tone(100)==MINT && battery_tone(-1)==FAINT);
     v.bluetooth_ready=true;v.bluetooth_connected=true;v.battery_soc=100;
     render("bluetooth-linked-full-battery",&v,&store);
     v.battery_soc=1;
@@ -338,26 +382,104 @@ int main(int argc, char **argv) {
     v.wifi_online=true;
     v.battery_soc=98;
     v.screen=PASSPORT_SCREEN_VOLUME;render("speaker-volume",&v,&store);
+    /* The level is shown once, as the headline, with a bar under it. */
+    assert(!strcmp(lv_label_get_text(s_headline),"音量 55%") && !strstr(lv_label_get_text(s_body),"%"));
+    assert(!lv_obj_has_flag(s_volume_track,LV_OBJ_FLAG_HIDDEN));
+    assert(lv_obj_get_width(s_volume_fill)==166*55/100);
+    for (int row=0;row<MENU_ROWS;row++) assert(lv_obj_has_flag(s_menu_values[row],LV_OBJ_FLAG_HIDDEN));
+    v.speaker_volume=100;render("speaker-full",&v,&store);
+    assert(lv_obj_get_width(s_volume_fill)==lv_obj_get_width(s_volume_track));
     v.speaker_volume=0;render("speaker-silent",&v,&store);
+    assert(lv_obj_has_flag(s_volume_fill,LV_OBJ_FLAG_HIDDEN) && !strcmp(lv_label_get_text(s_headline),"音量 0%"));
     v.speaker_volume=75;
     strcpy(store.lang,"en");render("english-speaker-volume",&v,&store);strcpy(store.lang,"zh");
+    assert(!strcmp(lv_label_get_text(s_headline),"Volume 75%"));
+    v.screen=PASSPORT_SCREEN_HOME;render("volume-left",&v,&store);
+    assert(lv_obj_has_flag(s_volume_track,LV_OBJ_FLAG_HIDDEN));
     v.screen=PASSPORT_SCREEN_LIVE;v.sending=true;v.live_ready=false;
     render("live-connecting",&v,&store);
     assert(!strcmp(lv_label_get_text(s_headline),"正在连接"));
     assert(s_last_binding[PASSPORT_BTN_UP].enabled && s_last_binding[PASSPORT_BTN_OK].enabled);
+    /* Connecting keeps the large headline and the small caption card. */
+    assert(!lv_obj_has_flag(s_headline,LV_OBJ_FLAG_HIDDEN) && lv_obj_get_y(s_card)==168);
     v.live_ready=true;snprintf(v.reply,sizeof(v.reply),"可以直接说话，停顿后自动回复");
     render("live-listening",&v,&store);
+    {
+        /* Once connected the captions get the screen: the state moves into
+         * the status line with a small meter beside it. */
+        assert(lv_obj_has_flag(s_headline,LV_OBJ_FLAG_HIDDEN));
+        assert(!strcmp(lv_label_get_text(s_status),"正在听"));
+        assert(lv_obj_get_y(s_card)==CALL_CARD_TOP && lv_obj_get_y(s_card)+lv_obj_get_height(s_card)==CALL_CARD_BOTTOM);
+        /* Ten whole caption lines, with the card clear of the divider. */
+        assert(lv_obj_get_height(s_body_view)==10*CALL_LINE_PITCH-CALL_LINE_SPACE);
+        assert(CALL_LINE_PITCH==lv_font_get_line_height(&passport_font_16)+lv_obj_get_style_text_line_space(s_body,0));
+        assert(lv_obj_get_y(s_card)>70);
+        assert(lv_obj_get_y(s_body_view)>=lv_obj_get_y(s_card)+4);
+        /* The card runs as far down as the rounded screen corner allows:
+         * no pixel of it, and no caption text, falls outside the panel. */
+        int card_bottom=lv_obj_get_y(s_card)+lv_obj_get_height(s_card)-1;
+        for (int x=lv_obj_get_x(s_card);x<lv_obj_get_x(s_card)+lv_obj_get_width(s_card);x++)
+            assert(!bsp_display_pixel_outside_rounded_rect(x,card_bottom,PASSPORT_LCD_W,PASSPORT_LCD_H,30));
+        int text_bottom=lv_obj_get_y(s_body_view)+lv_obj_get_height(s_body_view)-1;
+        assert(text_bottom<card_bottom);
+        assert(!bsp_display_pixel_outside_rounded_rect(lv_obj_get_x(s_body_view),text_bottom,PASSPORT_LCD_W,PASSPORT_LCD_H,30));
+        const uint8_t levels[PASSPORT_WAVEFORM_BARS]={10,30,55,80,100,70,45,90,60,35,20,5};
+        memcpy(v.waveform,levels,sizeof(levels));
+        render("live-listening-level",&v,&store);
+        lv_point_t state_size;
+        lv_text_get_size(&state_size,lv_label_get_text(s_status),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
+        for (size_t bar=0;bar<PASSPORT_WAVEFORM_BARS;bar++) {
+            /* The meter stays between the state text and the key column,
+             * above the divider and clear of the status icons. */
+            assert(lv_obj_get_x(s_waveform[bar])>lv_obj_get_x(s_status)+state_size.x);
+            assert(lv_obj_get_x(s_waveform[bar])+lv_obj_get_width(s_waveform[bar])<=202);
+            assert(lv_obj_get_y(s_waveform[bar])>=34);
+            assert(lv_obj_get_y(s_waveform[bar])+lv_obj_get_height(s_waveform[bar])<=68);
+        }
+        assert(lv_obj_get_height(s_waveform[4])>lv_obj_get_height(s_waveform[0]));
+        assert(lv_color_eq(lv_obj_get_style_bg_color(s_waveform[0],0),lv_color_hex(CORAL)));
+        assert(lv_color_eq(lv_obj_get_style_text_color(s_status,0),lv_color_hex(CORAL)));
+        v.live_speaking=true;render("live-speaking-level",&v,&store);
+        assert(!strcmp(lv_label_get_text(s_status),"正在回复"));
+        assert(lv_color_eq(lv_obj_get_style_bg_color(s_waveform[0],0),lv_color_hex(MINT)));
+        assert(lv_color_eq(lv_obj_get_style_text_color(s_status,0),lv_color_hex(MINT)));
+        v.live_muted=true;render("live-speaking-muted",&v,&store);
+        assert(!strcmp(lv_label_get_text(s_status),"正在回复 · 静音"));
+        /* A muted microphone has no level: the meter goes away and the
+         * state text takes the line, in the quiet colour. */
+        assert(lv_color_eq(lv_obj_get_style_text_color(s_status,0),lv_color_hex(MUTED)));
+        for (size_t bar=0;bar<PASSPORT_WAVEFORM_BARS;bar++) assert(lv_obj_has_flag(s_waveform[bar],LV_OBJ_FLAG_HIDDEN));
+        strcpy(store.lang,"en");render("english-live-speaking-muted",&v,&store);strcpy(store.lang,"zh");
+        assert(!strstr(lv_label_get_text(s_status),"…"));
+        v.live_speaking=false;render("live-muted-level",&v,&store);
+        assert(!strcmp(lv_label_get_text(s_status),"已静音"));
+        assert(lv_obj_has_flag(s_waveform[0],LV_OBJ_FLAG_HIDDEN));
+        v.live_muted=false;memset(v.waveform,0,sizeof(v.waveform));
+        render("live-listening",&v,&store);
+        /* Unmuting brings the meter back. */
+        for (size_t bar=0;bar<PASSPORT_WAVEFORM_BARS;bar++) assert(!lv_obj_has_flag(s_waveform[bar],LV_OBJ_FLAG_HIDDEN));
+    }
     assert(lv_obj_get_scroll_y(s_body_view)==0);
     snprintf(v.reply,sizeof(v.reply),"第一句回复\n第二句回复\n第三句回复\n第四句回复\n第五句回复\n第六句回复\n第七句回复\n第八句回复\n最后一句回复");
     render("live-long-reply",&v,&store);
+    /* Ten lines fit, up from five, so nine need no scrolling and the last
+     * one is fully inside the card. A longer caption scrolls to its newest
+     * line by whole lines. */
+    assert((lv_obj_get_height(s_body_view)+3)/(lv_font_get_line_height(&passport_font_16)+3)==10);
+    assert(lv_obj_get_scroll_y(s_body_view)==0);
+    assert(lv_obj_get_height(s_body)<=lv_obj_get_height(s_body_view));
+    assert(lv_obj_get_y(s_body_view)+lv_obj_get_height(s_body)<lv_obj_get_y(s_card)+lv_obj_get_height(s_card));
+    snprintf(v.reply,sizeof(v.reply),"第一句回复\n第二句回复\n第三句回复\n第四句回复\n第五句回复\n第六句回复\n第七句回复\n第八句回复\n第九句回复\n第十句回复\n第十一句回复\n最后一句回复");
+    render("live-longer-reply",&v,&store);
     assert(lv_obj_get_scroll_y(s_body_view)>0 && lv_obj_get_scroll_bottom(s_body_view)==0);
+    assert(lv_obj_get_scroll_y(s_body_view)%CALL_LINE_PITCH==0);
     assert(lv_obj_get_y(s_body)+lv_obj_get_height(s_body)-lv_obj_get_scroll_y(s_body_view)==lv_obj_get_height(s_body_view));
     v.live_muted=true;render("live-muted-long-reply",&v,&store);
     assert(strstr(lv_label_get_text(s_body),"最后一句回复"));
     v.live_muted=false;snprintf(v.reply,sizeof(v.reply),"新一轮回复");render("live-new-turn",&v,&store);
     assert(lv_obj_get_scroll_y(s_body_view)==0);
     strcpy(store.lang,"en");
-    snprintf(v.reply,sizeof(v.reply),"First line\nSecond line\nThird line\nFourth line\nFifth line\nSixth line\nSeventh line\nLatest reply");
+    snprintf(v.reply,sizeof(v.reply),"First line\nSecond line\nThird line\nFourth line\nFifth line\nSixth line\nSeventh line\nEighth line\nNinth line\nTenth line\nEleventh line\nLatest reply");
     render("english-live-long-reply",&v,&store);
     assert(lv_obj_get_scroll_y(s_body_view)>0 && lv_obj_get_scroll_bottom(s_body_view)==0);
     strcpy(store.lang,"zh");
@@ -402,6 +524,7 @@ int main(int argc, char **argv) {
         "（）［］｛｝｟｠〔〕【】〖〗〘〙〚〛《》〈〉﹙﹚﹛﹜﹝﹞"
         "—―–‐‑‒…‥⋯·・•‧"
         "／＼｜～〜〰﹏＿﹋﹌※＊＃＠＆％‰‱′″‵‶‴‷§¶†‡‖‗"
+        "→←↑↓↔↕↩↪✓✔✕✖×÷±≈≠≤≥∞√∑∫★☆"
         "能帮忙查天气？好的，可以帮你查天气。天气：多云，14～19℃，体感 18°C。";
     const lv_font_t *reply_font = lv_obj_get_style_text_font(s_body, LV_PART_MAIN);
     uint32_t offset = 0;
@@ -413,6 +536,14 @@ int main(int argc, char **argv) {
     }
     lv_font_glyph_dsc_t missing_glyph = {0};
     assert(!lv_font_get_glyph_dsc(reply_font, &missing_glyph, 0x1f680, 0) || missing_glyph.is_placeholder);
+    const lv_font_t *headline_font = &passport_font_20;
+    const char *headline_text = "返回";
+    offset = 0;
+    while (headline_text[offset]) {
+        uint32_t codepoint = lv_text_encoded_next(headline_text, &offset);
+        lv_font_glyph_dsc_t glyph = {0};
+        assert(lv_font_get_glyph_dsc(headline_font, &glyph, codepoint, 0) && !glyph.is_placeholder);
+    }
     render("home",&v,&store);
     assert(!strcmp(lv_label_get_text(s_status),"助手：助手·Cloudflare"));
     lv_point_t name_size;
@@ -437,10 +568,11 @@ int main(int argc, char **argv) {
     assert(!strstr(lv_label_get_text(s_body),"代理") && !strcmp(lv_label_get_text(s_keys[1]),"配\n置"));
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     v.screen=PASSPORT_SCREEN_SETTINGS;render("assistants",&v,&store);
+    assert(s_last_binding[1].action==PASSPORT_ACT_NONE && lv_obj_has_flag(s_keys[1],LV_OBJ_FLAG_HIDDEN));
     passport_agent_upsert(&store,"助手·SakuraFrp","openclaw","wss://domestic.example","",NULL,NULL,NULL);
     v.cursor=1; render("assistant-domestic",&v,&store);
-    assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"  助手·Cloudflare"));
-    assert(!strcmp(lv_label_get_text(s_chat_rows[1]),"> 助手·SakuraFrp"));
+    assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"助手·Cloudflare"));
+    assert(!strcmp(lv_label_get_text(s_chat_rows[1]),"助手·SakuraFrp"));
     assert(!strcmp(lv_label_get_text(s_hint),"OpenClaw · 可切换\n直连"));
     store.agents[0].proxy=(passport_proxy_t){.enabled=true,.host="proxy.example",.secret="pw",.port=443};
     v.cursor=0; render("assistant-shadowsocks",&v,&store);
@@ -497,6 +629,11 @@ int main(int argc, char **argv) {
     v.reply_page=passport_reply_pages(&v)-1;render("reply-last",&v,&store);
     assert(s_last_binding[PASSPORT_BTN_UP].action==PASSPORT_ACT_PREV_PAGE &&
            s_last_binding[PASSPORT_BTN_DOWN].action==PASSPORT_ACT_BACK);
+    v.reply_page=0;
+    passport_set_reply(&v,"请使用💻继续操作。这里保留足够长度，继续验证中文回复、标点、分页和实体按键提示的布局不会因为动态字符被替换而改变。回复内容还要能够自然换行，并在下一页继续显示，避免短文本掩盖分页状态的问题。");
+    render("reply-unsupported-emoji",&v,&store);
+    assert(strstr(lv_label_get_text(s_body),"⌨") != NULL);
+    assert(strstr(lv_label_get_text(s_body),"💻") == NULL);
     v.sending=true;render("replying",&v,&store);
     assert(!strcmp(lv_label_get_text(s_status),"正在回复"));
     assert(s_last_binding[PASSPORT_BTN_OK].action==PASSPORT_ACT_CANCEL_SEND && s_last_binding[PASSPORT_BTN_OK].enabled);
@@ -518,10 +655,10 @@ int main(int argc, char **argv) {
     strcpy(v.reply,"助手处理中");render("english-waiting",&v,&store);
     strcpy(v.heard,"请介绍水浒传里的林冲。");
     render("english-ask-transcript",&v,&store);
-    assert(!strcmp(lv_label_get_text(s_status),"WAITING"));
+    assert(!strncmp(lv_label_get_text(s_status),"WAITING",strlen("WAITING")));
     assert(strstr(lv_label_get_text(s_body),"You said:\n请介绍"));
     strcpy(store.lang,"zh");render("ask-transcript",&v,&store);
-    assert(!strcmp(lv_label_get_text(s_status),"等待回复"));
+    assert(!strncmp(lv_label_get_text(s_status),"等待回复",strlen("等待回复")));
     assert(strstr(lv_label_get_text(s_body),"你说：\n请介绍"));
     assert(s_last_binding[PASSPORT_BTN_UP].action==PASSPORT_ACT_CANCEL_SEND);
     assert(s_last_binding[PASSPORT_BTN_DOWN].action==PASSPORT_ACT_RESTART_SEND);
@@ -540,7 +677,13 @@ int main(int argc, char **argv) {
     passport_chat_update(&v,NULL);v.screen=PASSPORT_SCREEN_TALK;
     render("chat-waiting",&v,&store);
     assert(chat_contains("你：") && chat_contains("林冲是谁？"));
-    assert(!strcmp(lv_label_get_text(s_status),"等待回复"));
+    assert(!strncmp(lv_label_get_text(s_status),"等待回复",strlen("等待回复")));
+    char waiting_status[32];
+    snprintf(waiting_status,sizeof(waiting_status),"%s",lv_label_get_text(s_status));
+    lv_tick_inc(420);
+    render("chat-waiting-animated",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_page_count),"1 / 1"));
+    assert(strcmp(waiting_status,lv_label_get_text(s_status)) != 0);
     passport_chat_update(&v,"林冲是水浒传中的人物。");
     render("chat-streaming",&v,&store);
     assert(chat_contains("你：") && chat_contains(v.chat_name));
@@ -577,7 +720,7 @@ int main(int argc, char **argv) {
     passport_store_init(&store);passport_view_init(&v);render("offline",&v,&store);
     v.screen=PASSPORT_SCREEN_NETS;render("no-networks",&v,&store);
     check_choice_rows(1,0,0);
-    assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"> 添加 Wi-Fi"));
+    assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"添加 Wi-Fi"));
     v.screen=PASSPORT_SCREEN_SETTINGS;render("no-assistants",&v,&store);
     for (size_t row=0;row<PASSPORT_REPLY_ROWS;row++) assert(lv_obj_has_flag(s_chat_rows[row],LV_OBJ_FLAG_HIDDEN));
     assert(!strcmp(lv_label_get_text(s_page_count),""));
@@ -622,14 +765,16 @@ int main(int argc, char **argv) {
             v.cursor=(int)selected;
             char shot[64];snprintf(shot,sizeof(shot),"%s-network-list-%u",store.lang,(unsigned)selected);
             render(shot,&v,&store);
-            size_t first=selected>2?selected-2:0;
-            if (first>store.count+1-5) first=store.count+1-5;
+            /* Four rows show at once; the focus keeps one row of context
+             * above it until the list reaches either end. */
+            size_t first=selected>1?selected-1:0;
+            if (first>store.count+1-LIST_VISIBLE) first=store.count+1-LIST_VISIBLE;
             check_choice_rows(store.count+1,first,selected);
             char counter[16];snprintf(counter,sizeof(counter),"%u / 9",(unsigned)selected+1);
             assert(!strcmp(lv_label_get_text(s_page_count),counter));
             if (selected==1 || selected==2)
                 assert(strstr(lv_label_get_text(s_chat_rows[selected-first]),"…"));
-            if (selected==store.count) assert(strstr(lv_label_get_text(s_chat_rows[4]),"Wi-Fi"));
+            if (selected==store.count) assert(strstr(lv_label_get_text(s_chat_rows[LIST_VISIBLE-1]),"Wi-Fi"));
         }
         v.screen=PASSPORT_SCREEN_SETTINGS;
         for (size_t selected=0;selected<store.agent_count;selected++) {
@@ -643,6 +788,25 @@ int main(int argc, char **argv) {
         assert(store.connected==3 && store.active_agent==2);
     }
     v.battery_soc=5;v.screen=PASSPORT_SCREEN_ADD;render("bluetooth-off",&v,&store);
+    passport_store_init(&store);
+    passport_store_add(&store,"Home","Passport Home","fixture");
+    store.connected=0;
+    passport_agent_upsert(&store,"小夏","openclaw","wss://gateway.example","",NULL,NULL,NULL);
+    passport_view_init(&v);v.wifi_online=true;v.battery_soc=98;
+    render("product-home",&v,&store);
+    strcpy(store.agents[0].kind,"hermes");
+    render("product-hermes",&v,&store);
+    strcpy(store.agents[0].kind,"openclaw");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    strcpy(v.heard,"林冲是谁？");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_finish_send(&v,true,false,"林冲是《水浒传》中的人物，绰号豹子头。你想了解他的哪段故事？");
+    render("product-ask",&v,&store);
+    passport_view_init(&v);v.wifi_online=true;v.battery_soc=98;
+    v.screen=PASSPORT_SCREEN_LIVE;v.live_ready=true;v.live_speaking=true;
+    strcpy(v.reply,"林冲是《水浒传》中的人物，绰号豹子头。你想了解他的哪段故事？");
+    for (size_t bar=0;bar<PASSPORT_WAVEFORM_BARS;bar++) v.waveform[bar]=(uint8_t)(10+bar%5*12);
+    render("product-call",&v,&store);
     lv_mem_monitor_t memory;lv_mem_monitor(&memory);
     printf("Screen PASS: zh/en, complete glyphs, text bounds, aligned keys, steady redraw, live waveform; host pool used=%zu\n",memory.total_size-memory.free_size);
     return 0;

@@ -37,15 +37,15 @@ struct BuiltFirmware {
     private static func locateProject(_ project: URL) -> BuiltFirmware? {
         // Only the complete gate publishes this merged image and its matching
         // archive. The incremental build/application may contain older code.
-        guard let full = try? Data(contentsOf: project.appendingPathComponent("build/FoloToy-AI-Passport-full.bin")) else { return nil }
+        guard let full = try? Data(contentsOf: project.appendingPathComponent("build/agent-talk-full.bin")) else { return nil }
         let fullHash = hash(full)
         let archive = project.appendingPathComponent("build/firmware/\(fullHash)")
-        let bin = archive.appendingPathComponent("FoloToy-AI-Passport.bin")
+        let bin = archive.appendingPathComponent("agent-talk.bin")
         guard let raw = try? Data(contentsOf: archive.appendingPathComponent("manifest.json")),
               let manifest = try? JSONDecoder().decode(Manifest.self, from: raw),
               manifest.target == "esp32c3", manifest.full_bin_sha256 == fullHash,
-              manifest.image_offsets["FoloToy-AI-Passport.bin"] == appOffset,
-              let record = manifest.files["FoloToy-AI-Passport.bin"],
+              manifest.image_offsets["agent-talk.bin"] == appOffset,
+              let record = manifest.files["agent-talk.bin"],
               let data = try? Data(contentsOf: bin), record.size == data.count,
               record.sha256 == hash(data), let id = identity(in: data),
               id == String(manifest.app_elf_sha256.prefix(16)),

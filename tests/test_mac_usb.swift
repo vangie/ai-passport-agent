@@ -94,22 +94,22 @@ import Foundation
         let source = root.appendingPathComponent("mac/PassportMac/FirmwareUpdate.swift").path
         var old = application
         old[176] = 0xaa
-        try old.write(to: root.appendingPathComponent("build/FoloToy-AI-Passport.bin"))
+        try old.write(to: root.appendingPathComponent("build/agent-talk.bin"))
         precondition(BuiltFirmware.locate(root: source) == nil, "An incremental image is not a verified update")
         var full = Data(repeating: 0, count: BuiltFirmware.appOffset)
         full.append(application)
         let fullHash = hash(full)
         let archive = root.appendingPathComponent("build/firmware/\(fullHash)")
         try FileManager.default.createDirectory(at: archive, withIntermediateDirectories: true)
-        let fullPath = root.appendingPathComponent("build/FoloToy-AI-Passport-full.bin")
+        let fullPath = root.appendingPathComponent("build/agent-talk-full.bin")
         try full.write(to: fullPath)
-        let bin = archive.appendingPathComponent("FoloToy-AI-Passport.bin")
+        let bin = archive.appendingPathComponent("agent-talk.bin")
         try application.write(to: bin)
         let manifest: [String: Any] = [
             "target": "esp32c3", "full_bin_sha256": fullHash,
             "app_elf_sha256": "0102030405060708" + String(repeating: "0", count: 48),
-            "image_offsets": ["FoloToy-AI-Passport.bin": BuiltFirmware.appOffset],
-            "files": ["FoloToy-AI-Passport.bin": ["size": application.count, "sha256": hash(application)]],
+            "image_offsets": ["agent-talk.bin": BuiltFirmware.appOffset],
+            "files": ["agent-talk.bin": ["size": application.count, "sha256": hash(application)]],
         ]
         let manifestPath = archive.appendingPathComponent("manifest.json")
         try JSONSerialization.data(withJSONObject: manifest).write(to: manifestPath)
@@ -129,7 +129,7 @@ import Foundation
         guard let packaged = BuiltFirmware.locate(root: "/missing/source/mac/PassportMac/FirmwareUpdate.swift", resources: bundled)
         else { preconditionFailure("Bundled firmware must work without a source checkout") }
         precondition(packaged.projectRoot == bundled.path && packaged.matches("0102030405060708"))
-        try corrupted.write(to: bundled.appendingPathComponent("build/firmware/\(fullHash)/FoloToy-AI-Passport.bin"))
+        try corrupted.write(to: bundled.appendingPathComponent("build/firmware/\(fullHash)/agent-talk.bin"))
         precondition(BuiltFirmware.locate(root: source, resources: bundled) == nil,
                      "A corrupt bundle must not fall back to another firmware")
         full[BuiltFirmware.appOffset + 200] ^= 1

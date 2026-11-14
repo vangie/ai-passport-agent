@@ -25,7 +25,7 @@ sys.dont_write_bytecode = True
 from verify_firmware import FLASH_SIZE, REQUIRED_IMAGES, verify_firmware_layout
 
 
-APP = "FoloToy-AI-Passport"
+APP = "agent-talk"
 FULL_BIN = f"{APP}-full.bin"
 ARTIFACTS = (
     f"{APP}.elf",

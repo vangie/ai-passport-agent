@@ -30,6 +30,9 @@ typedef struct {
     uint32_t mute_chunks, response_chunks, echo_chunks, input_clipped;
     uint32_t play_stalls, play_gap_ms;
     uint32_t voice_interrupts, button_interrupts;
+    /* Voice detector for the Ask recording: 10 ms frames seen, frames
+     * classed as voice, and the longest run of voice in milliseconds. */
+    uint32_t vad_frames, vad_voice, vad_longest_ms;
     int32_t dc;
     bool worker_owned, response, muted;
 } passport_audio_diagnostics_t;

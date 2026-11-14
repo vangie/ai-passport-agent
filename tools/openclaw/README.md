@@ -83,8 +83,8 @@ in warm white. Captions use “You” and the configured assistant name, falling
 to “Assistant” when unnamed. Long names are ellipsized without reducing the body
 font size. At most three recent turns remain in device RAM.
 Continue adds a new turn without replacing earlier messages; page keys read long
-conversations. The reader opens at the latest turn, without jumping as text streams
-or when you page back. History is not persisted, is cleared on restart or assistant
+conversations. The reader opens at the latest turn and follows new text while you remain
+on the latest page; after you page back, it does not take control of the page again. History is not persisted, is cleared on restart or assistant
 change, and is not the gateway's conversation context. Retry updates the same turn;
 cancel or re-record removes the unfinished turn. Status/error text is not stored
 as an answer. This does not run a second ASR or
@@ -95,6 +95,39 @@ At most 32 short transcripts (479 UTF-8 bytes each) remain in process memory for
 up to ten minutes; they are not persisted or logged by the plugin. New recordings
 and cancellation clear the current input echo, not completed turns. Older gateways without this method
 continue normal Ask operation without the echo.
+
+Ask transcription is performed by the OpenClaw gateway's audio model, not on the
+Passport. For Chinese input, explicitly lock the language and give the transcriber
+a spelling/context hint; automatic language detection can misclassify short Chinese
+utterances, and proper names are especially prone to homophone errors. Add this to
+the OpenClaw configuration:
+
+```json5
+{
+  tools: {
+    media: {
+      audio: {
+        enabled: true,
+        language: "zh",
+        prompt: "Accurately transcribe spoken Mandarin. Preserve person names, place names, product names, and English proper nouns; do not translate or rewrite."
+      }
+    }
+  }
+}
+```
+
+Or set the two values from the command line:
+
+```sh
+openclaw config set tools.media.audio.language zh
+openclaw config set tools.media.audio.prompt 'Accurately transcribe spoken Mandarin. Preserve person names, place names, product names, and English proper nouns; do not translate or rewrite.'
+```
+
+Restart the gateway and run the plugin `doctor`; `askAudio.language` should be `zh`
+and `askAudio.promptConfigured` should be `true`. This only affects Ask transcription;
+it does not put credentials on the Passport or change the realtime voice model used by
+Call. If errors remain, inspect the gateway's selected audio model and logs before
+changing the screen or reflashing the firmware.
 
 Ask prepares the authenticated gateway connection as soon as recording starts.
 On paired devices, audio is uploaded as it is recorded; the final request is

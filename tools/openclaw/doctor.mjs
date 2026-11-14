@@ -29,11 +29,15 @@ export async function checkCompatibility({config, getProvider, WebSocket, api, v
             } catch { finish(new Error('Native gateway challenge contract changed')); }
         });
     });
-    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.7.0',
+    const audio = config?.tools?.media?.audio;
+    const audioLanguage = typeof audio?.language === 'string' && audio.language.trim() ? audio.language.trim() : 'auto';
+    const audioPromptConfigured = typeof audio?.prompt === 'string' && audio.prompt.trim().length > 0;
+    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.7.1',
         protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH, upstreamProvider: upstreamId,
         checks: ['public-plugin-sdk', 'native-provider-contract', 'native-device-challenge'],
         credentials: 'checked by the running gateway, not exported to the doctor',
-        microphoneStarted: false, providerConnected: false};
+        microphoneStarted: false, providerConnected: false,
+        askAudio: {enabled: audio?.enabled !== false, language: audioLanguage, promptConfigured: audioPromptConfigured}};
 }
 
 async function main() {

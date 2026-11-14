@@ -186,10 +186,14 @@ internet. A hotspot alone does not expose a home gateway; see [connectivity](net
 
 ## Bluetooth behavior and security
 
-Bluetooth is enabled by default in standby. At boot Wi-Fi gets up to ten seconds
-before BLE starts; manually enabling it skips that wait. Settings toggles it in
-place. The dim status icon means enabled; brighter/thicker blue strokes mean a
-client is connected; disabling Bluetooth hides it. This is not proof of a saved
+Bluetooth is off while the device is online, and is turned on by hand in
+Settings; it stays on until turned off or until the device restarts. A device
+that cannot get online turns it on by itself so it can always be set up: at
+once when no network is saved, and ten seconds after boot when a saved network
+does not connect. Bluetooth and a standing gateway connection do not fit in
+memory together, so leaving it off lets the device keep that connection and
+answer faster. The dim status icon means enabled; brighter/thicker blue strokes
+mean a client is connected; no icon means off. This is not proof of a saved
 configuration or authenticated gateway connection.
 
 The firmware retains encrypted client bonds. A new client may take over after
@@ -198,9 +202,9 @@ stay with their originating session. The previous page keeps its draft and does
 not automatically take the device back. Just Works encryption does not authenticate
 ownership or defeat an active man-in-the-middle. Configure in a trusted environment.
 
-Recording, Call and gateway work temporarily release BLE memory/disconnect setup
-clients. It returns after cleanup. Wi-Fi saves and scans do not intentionally
-disable configuration Bluetooth. Older firmware may need a USB update before
+While Bluetooth is on, recording, Call and gateway work temporarily release
+its memory and disconnect setup clients; it returns after cleanup. Wi-Fi saves
+and scans do not intentionally disable configuration Bluetooth. Older firmware may need a USB update before
 secure configuration works. Browser/OS pairing prompts can still vary.
 
 ## NFC and personal hotspot

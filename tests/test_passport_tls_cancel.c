@@ -66,7 +66,8 @@ int esp_tls_conn_new_async(const char *h,int n,int port,const esp_tls_cfg_t *cfg
     if (session_fixture) {
         assert(cfg->non_block);
         assert((cfg->client_session!=NULL)==(tls->step==0 && expect_ticket));
-        if (tls->step>0) assert(sessions_allocated==sessions_freed);
+        /* The offered session stays cached while the handshake runs. */
+        if (tls->step>0) assert(sessions_allocated-sessions_freed==(expect_ticket ? 1 : 0));
         if (fail_session) return -1;
         tls->fd=sockets[0];
         return ++tls->step>=2 ? 1 : 0;
@@ -223,7 +224,11 @@ static void check_session(const char *host,int port,esp_tls_cfg_t cfg,bool ticke
 static void check_sessions(void) {
     esp_tls_cfg_t cfg={.timeout_ms=2000,.crt_bundle_attach=bundle};
     check_session("one.example",443,cfg,false,false);
+    /* Every later connection to the same gateway resumes, not every other. */
     check_session("one.example",443,cfg,true,false);
+    check_session("one.example",443,cfg,true,false);
+    check_session("one.example",443,cfg,true,false);
+    assert(sessions_allocated-sessions_freed==1);
     check_session("two.example",443,cfg,false,false);
     check_session("two.example",8443,cfg,false,false);
     cfg.common_name="verified.example";
@@ -231,12 +236,16 @@ static void check_sessions(void) {
     check_session("two.example",8443,cfg,true,false);
     cfg.crt_bundle_attach=other_bundle;
     check_session("two.example",8443,cfg,false,false);
-    clock_offset+=600000001;
+    clock_offset+=12LL*3600*1000000+1;
     check_session("two.example",8443,cfg,false,false);
+    /* A rejected resumption drops the session; the retry is a full handshake. */
     fail_session=true;check_session("two.example",8443,cfg,true,false);fail_session=false;
     check_session("two.example",8443,cfg,false,false);
+    /* The idle connection is closed by a cancel; its session still counts. */
     check_session("two.example",8443,cfg,true,true);
-    check_session("two.example",8443,cfg,false,false);
+    check_session("two.example",8443,cfg,true,false);
+    check_session("three.example",443,cfg,false,true);
+    check_session("three.example",443,cfg,true,false);
     cfg.skip_common_name=true;
     check_session("two.example",8443,cfg,false,false);
     cfg.skip_common_name=false;
@@ -255,8 +264,8 @@ static void check_sessions(void) {
     check_session("two.example",8443,cfg,false,false);
     const int ciphers[]={1,0};cfg.ciphersuites_list=ciphers;
     check_session("two.example",8443,cfg,false,false);
-    assert(sessions_allocated==sessions_freed && sessions_destroyed==21);
-    puts("TLS tickets: host/port/SNI/trust isolation, single handshake application, expiry, rejection fallback, cancel and cleanup PASS");
+    assert(sessions_allocated==sessions_freed && sessions_destroyed==25);
+    puts("TLS tickets: repeated resumption, host/port/SNI/trust isolation, expiry, rejection fallback, cancel and cleanup PASS");
 }
 int main(void) {
     signal(SIGPIPE,SIG_IGN);assert(passport_tls_control_prepare()==ESP_OK);
