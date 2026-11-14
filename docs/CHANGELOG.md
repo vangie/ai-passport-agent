@@ -14,6 +14,12 @@
 
 No pending changes.
 
+## v0.7.2 - 2026-11-15
+
+- Keep a call running when the realtime voice service reports a stream error after the microphone has started. The device no longer mutes the microphone and waits 30 seconds for a recovery signal that cannot arrive; it ends the call only after more than five such errors in a row or when the gateway closes the session.
+- Apply the same rule in the Hermes plugin: a rejected single request no longer ends an established call.
+- Record a fixed-vocabulary error category in OpenClaw plugin diagnostics, without the error text, and count stream errors in the device's call diagnostic.
+
 ## v0.7.1 - 2026-11-14
 
 - Optimize gateway connection, clock synchronization and reconnect paths, reusing available connections and TLS sessions to reduce repeated handshakes; latency still depends on the network and provider.

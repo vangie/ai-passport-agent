@@ -113,7 +113,13 @@ retaining server turn detection. Only a device-confirmed voice/button interrupti
 cancels output; another upstream detector must not compete with it.
 The Hermes adapter uses the same device-owned interruption policy. An OpenClaw
 reply-phase failure is shown immediately as retryable failure, not a fictional
-30-second reconnection; startup/transport recovery retains its existing bound.
+30-second reconnection; startup recovery retains its existing 30-second bound.
+After the microphone has started, a stream-phase provider error no longer mutes
+the microphone or pauses uploads: the gateway keeps such a session open, so the
+badge keeps listening and counts the error in the `LIVE errors=` diagnostic. The
+call ends with the gateway's message only after more than five such errors arrive
+with no ready, audio or transcript event between them, or when the gateway closes
+the session; a silent connection still ends at the 90-second receive bound.
 Call layout changes invalidate the full screen under the LVGL lock; the display
 task performs rendering. The application task never forces a synchronous refresh,
 which would put the renderer on its smaller stack and can restart the device.

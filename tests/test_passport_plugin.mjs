@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createPassportProvider, PASSPORT_PROVIDER, PASSPORT_END_CALL} from '../tools/openclaw/passport-plugin.mjs';
+import {createPassportProvider, passportErrorKind, PASSPORT_PROVIDER, PASSPORT_END_CALL} from '../tools/openclaw/passport-plugin.mjs';
 import {createPassportConnection, createPassportTransport, forwardedAddress, gatewayTarget} from '../tools/openclaw/passport-proxy.mjs';
 import {createPassportTranscripts, registerPassportTranscripts} from '../tools/openclaw/passport-transcript.mjs';
 
@@ -110,8 +110,14 @@ launched.onError({code: 'private-token contains spaces', type: 'server_error', m
 assert.deepEqual(diagnostics, [
     {event: 'response.done', status: 'incomplete', reason: 'max_output_tokens', code: 'server_error'},
     {event: 'input_audio_buffer.speech_started'},
-    {event: 'provider.error', type: 'server_error'}
+    {event: 'provider.error', type: 'server_error', kind: 'other'}
 ]);
+assert.equal(passportErrorKind(new Error('Audio content of 1200ms is already shorter than 1500ms')), 'truncate');
+assert.equal(passportErrorKind(new Error('Cancellation failed: no active response found')), 'cancel');
+assert.equal(passportErrorKind(new Error('Conversation already has an active response in progress: resp_private')), 'active-response');
+assert.equal(passportErrorKind('Your session hit the maximum duration of 60 minutes.'), 'session-limit');
+assert.equal(passportErrorKind(new Error('private transcript text')), 'other');
+assert.equal(passportErrorKind(undefined), 'other');
 assert.deepEqual(callbackEvents, ['incomplete', 'input_audio_buffer.speech_started', 'server_error']);
 bridge.sendUserMessage('Read the tool result.');
 assert(spoken.includes('普通话'));

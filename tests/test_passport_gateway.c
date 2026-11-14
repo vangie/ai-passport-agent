@@ -81,6 +81,7 @@ static bool talk_completed;
 static bool talk_scope_denied, talk_no_ready, talk_append_reject, talk_tools, tool_rejected, tool_early;
 static bool talk_provider_error, talk_early_error;
 static unsigned talk_recovery, talk_fault;
+static unsigned talk_stream_errors, stream_errors_sent, appends_after_error;
 static unsigned talk_duplex, duplex_appends, duplex_backlog;
 static struct { int64_t ready_at; char json[200]; } capture_acks[32];
 static unsigned capture_ack_head, capture_ack_tail;
@@ -494,6 +495,14 @@ int passport_transport_ws_send_raw(esp_transport_handle_t handle,int opcode,cons
         }
         if (talk_fault==2) { cJSON_Delete(frame);return -37; }
         talk_appends++;
+        if (talk_stream_errors) {
+            if (stream_errors_sent) {
+                assert(s_state!=PASSPORT_SEND_CONNECTING);
+                appends_after_error++;
+            }
+            if (duplex_appends==20) for (;stream_errors_sent<talk_stream_errors;stream_errors_sent++)
+                event("{\"event\":\"talk.event\",\"payload\":{\"relaySessionId\":\"live-1\",\"type\":\"error\",\"message\":\"Realtime provider error.\",\"phase\":\"stream\"}}");
+        }
         if (tool_resume_test && tool_resume_at) tool_resume_test=false;
         if (talk_duplex) {
             clock_us+=talk_duplex==11 && !(duplex_appends%20)?600000:
@@ -864,7 +873,10 @@ int main(void) {
         bool completed=scenario<=4 || scenario==8;
         assert(s_state==(completed?PASSPORT_SEND_DONE:PASSPORT_SEND_FAILED) && !passport_gateway_active());
         assert(live_starts==previous_starts+(scenario==5 || scenario==7 ? 0 : 1));
-        if (scenario!=5 && scenario!=6 && scenario!=7) {
+        if (scenario==6) {
+            assert(s_talk_retained.errors==2 && !strcmp(s_talk_retained.step,"receive-timeout"));
+            assert(talk_marks==previous_marks && clock_us-before>=90000000 && !strstr(s_message,"服务出错"));
+        } else if (scenario!=5 && scenario!=7) {
             assert(!talk_event_delay);
             assert(talk_marks==previous_marks+1);
             assert(live_pushes==previous_pushes+(scenario>=10 ? 4 : scenario==3 || scenario==4 || scenario==8 ? 2 : 1));
@@ -879,6 +891,24 @@ int main(void) {
         }
     }
     talk_ima=false;
+    for (unsigned errors=1;errors<=6;errors+=5) {
+        talk_duplex=1;talk_input=true;talk_stream_errors=errors;stream_errors_sent=appends_after_error=0;
+        unsigned previous_starts=live_starts;
+        int64_t before=clock_us;
+        assert(passport_gateway_live(true)==ESP_OK);step(&service);
+        assert(live_starts==previous_starts+1 && !passport_gateway_active() && !live_response);
+        assert(stream_errors_sent==errors && s_talk_retained.errors==errors);
+        if (errors==1) {
+            assert(s_state==PASSPORT_SEND_DONE && !strcmp(s_talk_retained.step,"session-close"));
+            assert(appends_after_error>=79 && clock_us-before<30000000);
+        } else {
+            assert(s_state==PASSPORT_SEND_FAILED && !strcmp(s_talk_retained.step,"provider-errors"));
+            assert(strstr(s_message,"检查网关日志") && clock_us-before<30000000);
+        }
+        char diagnostic[320];passport_gateway_diagnostic(diagnostic,sizeof(diagnostic));
+        assert(strstr(diagnostic,errors==1?"errors=1":"errors=6"));
+    }
+    talk_duplex=talk_stream_errors=0;talk_input=false;
     talk_recovery=13;
     int64_t response_failure_at=clock_us;
     assert(passport_gateway_live(true)==ESP_OK);step(&service);

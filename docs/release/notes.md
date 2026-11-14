@@ -1,15 +1,15 @@
 **English** · [简体中文](notes.zh_CN.md)
 
-# AI Passport Agent v0.7.1
+# AI Passport Agent v0.7.2
 
-Stability and experience update · 2026-11-14
+Call reliability fix · 2026-11-15
 
 ## Highlights
 
-- **Stay in the conversation.** Follow-up recording, sending and waiting preserve existing chat. New replies follow the latest content without moving readers who paged back. Animated waiting feedback makes progress visible.
-- **Lighter connections, less noise.** Improve clock synchronization, connection reuse and TLS reconnection to reduce repeated preparation. Ask filters recording-start noise and short bursts, and longer recordings no longer hit the old gateway frame limit. First connection latency and recognition still depend on the network, provider and gateway model.
-- **A clearer screen.** More room for call subtitles, simpler assistant settings and duplicate labels, and balanced home voice actions. Battery icon and percentage use three color levels. Expanded text/punctuation coverage and a monochrome keyboard fallback avoid known missing glyphs.
-- **Reserve resources for dialogue.** Reduce firmware size and disable Bluetooth by default while online; enable it manually for setup. Downloads are now `agent-talk.bin` and `agent-talk-full.bin`, while the website continues recognizing historical versions.
+- **Calls stay connected.** When several people talk around the badge, it interrupts replies often. The realtime voice service can then reject one of those requests while the session itself stays healthy. Earlier firmware treated that rejection as a lost connection: it muted the microphone, showed "connecting" and gave up 30 seconds later, because with the microphone muted no recovery signal could arrive. The badge now keeps listening.
+- **A bound on real faults.** The call still ends with the gateway's message after more than five such errors in a row with no reply or transcript between them, when the gateway closes the session, or after 90 seconds without any data.
+- **Hermes follows the same rule.** The Hermes plugin no longer ends an established call because the voice service rejected a single request.
+- **Diagnostics name the fault.** The OpenClaw plugin logs a category for each upstream error from a fixed vocabulary, never the error text. The device's call diagnostic counts stream errors.
 
 ## Install or update
 
@@ -17,22 +17,24 @@ Open <https://ai-passport-agent.codelife.me/> in desktop Chrome/Edge, connect by
 Leave **Keep settings** enabled for a compatible update to retain saved networks, assistants and device identity.
 A first installation or full replacement may clear configuration; read the [data policy](../development/engineering/firmware-layout.md#flashing-and-stored-data).
 
-Update the external plugin for your backend: `ai-passport-openclaw-0.7.1.tgz` or `ai-passport-hermes-0.7.1.tar.gz`.
+Update the external plugin for your backend: `ai-passport-openclaw-0.7.2.tgz` or `ai-passport-hermes-0.7.2.tar.gz`.
+The firmware fix works with the v0.7.1 plugins; Hermes users need the new plugin for the Hermes-side fix.
+Restart the gateway after replacing plugin files: neither backend reloads them while running.
 Firmware is shared; its bundle is `ai-passport-agent-firmware.tar.gz`.
 For CLI installation, flash `agent-talk-full.bin` at `0x0`; `agent-talk.bin` is only for compatible application updates at `0x10000`.
 Verify `SHA256SUMS.txt` and `release-manifest.json`; never publish device grants, Wi-Fi passwords or model keys.
 
-**Bluetooth behavior changed:** it is off by default while online. Enable it in Passport Settings before phone/browser Bluetooth setup.
-Offline devices still enable setup automatically; USB setup is unaffected. On iPhone use Bluefy because Safari/Chrome lack Web Bluetooth.
+Bluetooth stays off by default while online, as in v0.7.1. Enable it in Passport Settings before phone/browser Bluetooth setup.
 
 ## Build and limitations
 
 With ESP-IDF 5.5.3, run `./tools/validate.sh` from the matching tag. CI rebuilds from the immutable tag, validates firmware and re-downloads release assets before publication.
 Native macOS/iOS apps remain source-only and are not built or distributed.
 
-Earlier local candidates were flashed and checked for boot/networking, and the user confirmed visible UI changes; the tagged artifact still needs separate hardware acceptance.
-Voice detection cannot exclude every noise source or recognize every short phrase.
-ASR models are gateway configuration: this release does not embed large-v3-turbo or apply the maintainer's host configuration as user defaults.
-Call uses a realtime model for ordinary dialogue and consults the agent for tasks/context. Device-side interactive tool approval is not supported.
+The fix was reproduced in a host test from a recorded failure and a local candidate was flashed and checked with synthetic calls on both backends.
+A real long call with several speakers has not been repeated on the tagged artifact.
+The exact upstream error text of the recorded failure was not logged, so its category is inferred from timing.
+Gateways bound call length on their own: OpenClaw closes a call after 30 minutes and Hermes after 60. This release does not change that.
+Voice detection cannot exclude every noise source; nearby speech can still interrupt a reply.
 
 See [release readiness](readiness.md) for actual validation status.

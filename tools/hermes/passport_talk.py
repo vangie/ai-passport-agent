@@ -20,6 +20,7 @@ from .passport_protocol import bounded_text, wire_json
 DEFAULT_ENDPOINT = "wss://api.openai.com/v1/realtime"
 CONSULT = "hermes_agent_consult"
 END_CALL = "passport_end_call"
+MAX_REQUEST_ERRORS = 5
 
 
 def talk_config(extra, get_secret):
@@ -145,6 +146,7 @@ class TalkSession:
         self.mark_number = 0
         self.marks = {}
         self.seen_calls = set()
+        self.request_errors = 0
         self.started = time.monotonic()
 
     def description(self):
@@ -278,6 +280,9 @@ class TalkSession:
         response = frame.get("response_id") or frame.get("response", {}).get("id")
         if response and response == self.suppressed_response:
             return
+        if event in {"response.created", "response.output_audio.delta",
+                     "conversation.item.input_audio_transcription.completed"}:
+            self.request_errors = 0
         if event == "session.updated":
             if not self.ready:
                 self.ready = True
@@ -330,7 +335,14 @@ class TalkSession:
                 raise ProtocolError("Realtime response failed")
             await self.resume()
         elif event == "error":
-            raise ProtocolError("Realtime service rejected the request")
+            detail = frame.get("error") if isinstance(frame.get("error"), dict) else {}
+            kind = detail.get("type")
+            self.request_errors += 1
+            if not self.ready or kind != "invalid_request_error" or self.request_errors > MAX_REQUEST_ERRORS:
+                raise ProtocolError("Realtime service rejected the request")
+            if detail.get("code") == "response_cancel_not_active":
+                self.response_active = False
+                await self.resume()
 
     async def run_tool(self, call, frame):
         try:

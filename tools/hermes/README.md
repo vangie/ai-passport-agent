@@ -99,7 +99,11 @@ buffers.
 Call supports two-way audio, captions, voice/button interruption, playback marks,
 explicit hang-up and consecutive turns. Interruption is owned by the device's
 echo-confirmed voice detector and interrupt button. Upstream VAD retains automatic
-turn detection but does not independently cancel or clear playback. Tool requests
+turn detection but does not independently cancel or clear playback. Once a call is
+ready, an upstream rejection of a single request (`invalid_request_error`, such as a
+cancel or truncate that arrives after the reply already ended) no longer ends the
+call; it ends after more than five in a row with no new reply or transcript between
+them, or on any other error type. Tool requests
 use Hermes's normal native session and approvals; the realtime model must not
 invent tool results. Closing
 the call cancels its pending delegation, not another device's task. Ask and Call

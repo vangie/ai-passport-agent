@@ -175,6 +175,9 @@ detects normal turn endings and starts replies; it must not independently cancel
 speaker output. This policy is local to Passport calls, not other clients.
 Gateway diagnostics retain bounded response status/reason/error-code fields,
 not transcript text, endpoint URLs or credentials.
+An upstream error also records a `kind` from a fixed vocabulary (such as `truncate`,
+`cancel`, `network` or `other`) so a rejected interruption request can be told apart
+from a real connection fault; the error text itself is never logged.
 The top key can mute while connecting; audio startup retains that choice and
 muted input is sent as silence, without silencing the assistant's speaker.
 Connecting displays “Connecting”, not a recording prompt. The bottom key can

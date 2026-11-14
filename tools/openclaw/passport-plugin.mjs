@@ -14,6 +14,23 @@ const endCallTool = {
     parameters: {type: 'object', properties: {}, required: []}
 };
 
+const errorKinds = [
+    ['truncate', /audio content of \d+ms is already shorter than|conversation\.item\.truncate|audio_end_ms/i],
+    ['cancel', /cancellation failed|response\.cancel/i],
+    ['active-response', /already has an active response/i],
+    ['buffer', /input audio buffer|buffer too small|buffer is empty/i],
+    ['item', /item with id|item_id|does not exist|not found/i],
+    ['session-limit', /maximum duration|session.*expired/i],
+    ['rate-limit', /rate limit|quota|429/i],
+    ['auth', /api key|unauthorized|401|403/i],
+    ['network', /timeout|timed out|econn|enotfound|socket|network|closed/i]
+];
+
+export function passportErrorKind(error) {
+    const message = typeof error === 'string' ? error : typeof error?.message === 'string' ? error.message : '';
+    return errorKinds.find(([, pattern]) => pattern.test(message))?.[0] ?? 'other';
+}
+
 export function createPassportProvider(getProvider, upstreamId = 'openai', diagnostic = () => {}) {
     if (!upstreamId || upstreamId === PASSPORT_PROVIDER) throw new Error('Invalid Passport upstream provider');
     function upstream(cfg) {
@@ -64,11 +81,11 @@ export function createPassportProvider(getProvider, upstreamId = 'openai', diagn
             const callbacks = Object.fromEntries(['onAudio', 'onClearAudio', 'onMark',
                 'onReady'].filter(name => typeof request[name] === 'function')
                 .map(name => [name, (...args) => { if (!ending && !ended) return request[name](...args); }]));
-            function report(type, detail = {}) {
+            function report(type, detail = {}, extra = {}) {
                 const fields = Object.fromEntries(['status', 'reason', 'code', 'type'].map(key =>
                     [key, detail[key] ?? detail.error?.[key]]).filter(([, value]) =>
                     typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)));
-                try { diagnostic({event: type, ...fields}); } catch {}
+                try { diagnostic({event: type, ...fields, ...extra}); } catch {}
             }
             bridge = provider.createBridge({
                 ...request,
@@ -91,7 +108,7 @@ export function createPassportProvider(getProvider, upstreamId = 'openai', diagn
                 },
                 onError(error) {
                     if (ending || ended) return;
-                    report('provider.error', error);
+                    report('provider.error', error, {kind: passportErrorKind(error)});
                     return request.onError?.(error);
                 },
                 onToolCall(event) {

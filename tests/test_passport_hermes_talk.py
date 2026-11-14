@@ -197,6 +197,37 @@ class TalkTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ProtocolError):
             self.call.enqueue({"type": "audio"}, 2 * 1024 * 1024 + 1)
 
+    async def test_rejected_requests_keep_an_established_call(self):
+        rejected = {"type": "error", "error": {"type": "invalid_request_error", "code": "response_cancel_not_active",
+                                               "message": "Cancellation failed: no active response found"}}
+        with self.assertRaises(ProtocolError):
+            await self.call.handle(rejected)
+        self.call.request_errors = 0
+        self.call.ready = True
+        self.call.response_active = True
+        self.call.resume_pending = True
+        await self.call.handle(rejected)
+        self.assertFalse(self.call.closed)
+        self.assertIn({"type": "response.create"}, self.frames)
+        truncate = {"type": "error", "error": {"type": "invalid_request_error",
+                                               "message": "Audio content of 1200ms is already shorter than 1500ms"}}
+        for _ in range(4):
+            await self.call.handle(truncate)
+        self.assertEqual(self.call.request_errors, 5)
+        await self.call.handle({"type": "response.created", "response": {"id": "reply-9"}})
+        self.assertEqual(self.call.request_errors, 0)
+        for _ in range(5):
+            await self.call.handle(truncate)
+        with self.assertRaises(ProtocolError):
+            await self.call.handle(truncate)
+        self.call.request_errors = 0
+        for fatal in ({"type": "error", "error": {"type": "server_error"}}, {"type": "error", "error": "opaque"},
+                      {"type": "error", "error": {"type": "authentication_error"}}):
+            with self.assertRaises(ProtocolError):
+                await self.call.handle(fatal)
+            self.call.request_errors = 0
+        self.assertFalse(any(event["type"] == "error" for event in self.events))
+
     async def test_close_cancels_owned_work_once(self):
         self.call.work = asyncio.create_task(asyncio.Event().wait())
         self.call.player = asyncio.create_task(asyncio.Event().wait())

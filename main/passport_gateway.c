@@ -98,7 +98,7 @@ typedef struct {
     uint32_t elapsed_ms, appends, audio, marks, replies, ack_ms, inflight;
     uint32_t write_ms, oldest_ms, pending, consults;
     uint32_t upload_bytes, write_total_ms, receive_ms;
-    uint32_t inputs, turns, skipped;
+    uint32_t inputs, turns, skipped, errors;
     uint32_t loops, empty, window_waits, receive_waits, loop_gap_ms, dropped;
     uint32_t during_response, during_consult;
     uint32_t silence_appends, wire_bytes, ima;
@@ -112,14 +112,15 @@ void passport_gateway_diagnostic(char *out, size_t cap) {
     portENTER_CRITICAL(&s_guard);
     talk_trace_t trace = s_talk_retained;
     portEXIT_CRITICAL(&s_guard);
-    snprintf(out, cap, "LIVE step=%s transport=%s result=%d ms=%lu appends=%lu audio=%lu marks=%lu replies=%lu ack_ms=%lu inflight=%lu write_ms=%lu oldest_ms=%lu pending=%lu consults=%lu inputs=%lu turns=%lu skipped=%lu upload_bytes=%lu write_total_ms=%lu receive_ms=%lu ima=%lu",
+    snprintf(out, cap, "LIVE step=%s transport=%s result=%d ms=%lu appends=%lu audio=%lu marks=%lu replies=%lu ack_ms=%lu inflight=%lu write_ms=%lu oldest_ms=%lu pending=%lu consults=%lu inputs=%lu turns=%lu skipped=%lu upload_bytes=%lu write_total_ms=%lu receive_ms=%lu ima=%lu errors=%lu",
              trace.step ? trace.step : "idle", trace.transport ? trace.transport : "none", trace.result, (unsigned long)trace.elapsed_ms,
              (unsigned long)trace.appends, (unsigned long)trace.audio, (unsigned long)trace.marks,
              (unsigned long)trace.replies, (unsigned long)trace.ack_ms, (unsigned long)trace.inflight,
              (unsigned long)trace.write_ms, (unsigned long)trace.oldest_ms,
              (unsigned long)trace.pending, (unsigned long)trace.consults,
              (unsigned long)trace.inputs, (unsigned long)trace.turns, (unsigned long)trace.skipped,
-             (unsigned long)trace.upload_bytes, (unsigned long)trace.write_total_ms, (unsigned long)trace.receive_ms, (unsigned long)trace.ima);
+             (unsigned long)trace.upload_bytes, (unsigned long)trace.write_total_ms, (unsigned long)trace.receive_ms, (unsigned long)trace.ima,
+             (unsigned long)trace.errors);
 }
 
 void passport_gateway_timing_diagnostic(char *out, size_t cap) {
@@ -1063,7 +1064,7 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
     char session[80] = "", early_ready[80] = "", early_failed[80] = "";
     const char *early_failure = NULL, *failure = NULL;
     uint32_t first_sequence = sequence, pending = 0;
-    unsigned receive_turns = 0;
+    unsigned receive_turns = 0, stream_errors = 0;
     uint32_t sent_at[32] = {0};
     struct { char name[96]; uint32_t target; } marks[8] = {0};
     unsigned mark_head = 0, mark_tail = 0;
@@ -1423,6 +1424,7 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
                     ready = true;
                     recovery_deadline = 0;
                     failure = NULL;
+                    stream_errors = 0;
                 }
                 if (!strcmp(event, "toolCall")) {
                     s_talk_trace.step = "tool-call";
@@ -1456,10 +1458,19 @@ static bool talk_operation(esp_transport_handle_t ws, bool synthetic) {
                         cJSON_Delete(frame); break;
                     }
                     ESP_LOGW("passport_gateway", "talk_recovering=%s", failure);
-                    if (!recovery_deadline) recovery_deadline = now + 30000000;
-                    ready = false;
-                    passport_audio_live_response(true);
-                    state(PASSPORT_SEND_CONNECTING, "正在连接助手");
+                    if (audio_started) {
+                        s_talk_trace.errors++;
+                        if (++stream_errors > 5) {
+                            s_talk_trace.step = "provider-errors";
+                            state(PASSPORT_SEND_FAILED, failure);
+                            cJSON_Delete(frame); break;
+                        }
+                    } else {
+                        if (!recovery_deadline) recovery_deadline = now + 30000000;
+                        ready = false;
+                        passport_audio_live_response(true);
+                        state(PASSPORT_SEND_CONNECTING, "正在连接助手");
+                    }
                 } else if (!strcmp(event, "close")) {
                     s_talk_trace.step = "session-close";
                     if (audio_started && !failure && !strcmp(str(payload, "reason"), "completed")) {
