@@ -29,6 +29,7 @@ test('copy is escaped and missing sections fail clearly', () => {
 });
 
 test('actual bilingual submission copy has natural paragraphs and intact lists', async () => {
+  const updateNotes = [];
   for (const [suffix, headings] of [['', ['Description', 'Quick-start instructions', 'Update notes']], ['.zh_CN', ['简介', '使用方法', '更新日志']]]) {
     const document = await readFile(new URL(`../docs/release/community${suffix}.md`, import.meta.url), 'utf8');
     const description = extractCommunityCopy(document, headings[0]);
@@ -37,8 +38,11 @@ test('actual bilingual submission copy has natural paragraphs and intact lists',
     const steps = extractCommunityCopy(document, headings[1]);
     assert.equal(steps.split('\n').length, 4);
     assert.equal((renderCommunityCopy(steps).match(/<li>/g) || []).length, 4);
-    assert.equal(extractCommunityCopy(document, headings[2]).split('\n').length, 4);
+    const notes = extractCommunityCopy(document, headings[2]).split('\n');
+    assert(notes.length >= 1 && notes.length <= 5 && notes.every(note => note.startsWith('- ')));
+    updateNotes.push(notes.length);
   }
+  assert.equal(updateNotes[0], updateNotes[1]);
 });
 
 test('community titles are bilingual product names, independent from repository branding', async () => {
