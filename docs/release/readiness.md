@@ -43,7 +43,14 @@ Reply language was measured directly against the voice model with rebuilt gatewa
 with one-syllable prompts, 4 of 50 replies were English under the old instructions and 0 of 50 under the new ones.
 A real spoken call with voice interruption, an interruption during an agent consult and a long call with several speakers remain unverified.
 The Hermes plugin is unchanged apart from its version.
-This is not hardware acceptance of the tagged artifact. Publishing itself does not modify personal gateway models or grants.
+Publishing itself does not modify personal gateway models or grants.
+
+After publication the maintainer device was application-flashed with the Release's `agent-talk.bin`, written after its SHA-256 was checked;
+it reports build identifier `fc6ebd07458dc4be`, and three Wi-Fi networks and three assistants were retained.
+The maintainer gateway was switched to the Release's `ai-passport-openclaw-0.7.3.tgz` and restarted at 14:49; `passport.status` reports 0.7.3.
+A 20-second synthetic call from the tagged firmware through that gateway passed with `errors=0` and zero allocation failures, and the
+gateway log has no unconfirmed cancellation and no session error since the restart.
+Synthetic calls carry no real speech and no interruption; this is not full hardware acceptance of the tagged firmware.
 
 ## Community
 
@@ -62,5 +69,29 @@ The local complete gate passed: repository and host tests, web unit and browser 
 The added interruption test fails with the fix disabled and passes with it; the home centring test fails when the ring is moved by 4 pixels.
 Four Hermes tests requiring unavailable native imports still skip locally.
 
-Build: PASS. Host tests: PASS. Device tests: local-candidate synthetic calls PASS; NOT RUN for the tagged release.
-Unverified: tagged-artifact hardware acceptance, automatic power-off and key wake, a call with real voice interruption, and the community update.
+GitHub v0.7.3 was published on 2026-11-15 at 06:44:01 UTC:
+<https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.3>.
+Its immutable source commit is `6ddaadd9fc061d68b9a911c3a28a3605a54c851d`; all four workflows on main passed for that commit before tagging.
+[Release run 43686485640](https://github.com/vangie/ai-passport-agent/actions/runs/43686485640)
+passed every job; all eight downloaded assets passed provenance, filename and checksum verification.
+The merged image SHA-256 is `bb42e850edbb2345d93cde85a09bfece183ba952afe92eda5d9294a21cf57354`;
+the application SHA-256 is `4d70998a10338d1db27fe1e763cc88201135f9367682fb2fed42c3d42b9d1aa3`.
+Its device build identifier is `fc6ebd07458dc4be`.
+
+[Pages run 43686785498](https://github.com/vangie/ai-passport-agent/actions/runs/43686785498)
+succeeded. The live <https://ai-passport-agent.codelife.me/> manifest reports v0.7.3 and
+the same source commit; both same-origin firmware downloads are byte-identical to Release.
+Identities for v0.7.2 and earlier remain in the live historical-build catalog.
+
+Publisher 1.14.0 validated the exact downloaded merged firmware and cover. The cover now shows a single home screen and the
+three posters were regenerated from the current interface; each was opened and inspected before submitting.
+The approved descriptions were preserved, step 3 of the instructions gained screen-off and automatic power-off,
+and this release's changes were submitted separately.
+Submission returned revision **5674**, **pending review**, for existing play **2236**.
+A subsequent `projects` read confirmed the same submission result, firmware hash and independent bilingual
+description/instructions/changelog fields. Approved revision **5643** (v0.7.2) remains public;
+v0.7.3 is not yet public in the community. The grant is consumed; do not resubmit or reuse it.
+
+Build: PASS. Host tests: PASS. Device tests: synthetic calls on the tagged firmware PASS; automatic power-off, key wake and a real call NOT RUN.
+Unverified: automatic power-off and key wake, a call with real voice interruption, an interruption during an agent consult,
+and community approval of revision 5674.

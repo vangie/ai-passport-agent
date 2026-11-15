@@ -2,13 +2,18 @@
 
 # Community submission · v0.7.3
 
-Update materials for existing play **2236**, prepared on 2026-11-15 and **not yet submitted**.
-The user supplied a one-time `update_once` grant bound to that play. Before submission, `projects` /
-`publishedRevision` confirmed revision **5643** (v0.7.2) approved and public, with no draft or pending conflict.
-Submit only after GitHub v0.7.3 is published and its merged image is verified; stop on draft/pending or
-version conflicts, without withdrawing, overwriting or creating a duplicate.
-The cover now shows a single home screen and a one-line title so it stays readable as a thumbnail in the
-community list; the three optional images are regenerated from the current interface.
+Submitted on 2026-11-15 to existing play **2236** only, using its target-bound
+`update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
+revision **5643** (v0.7.2) was approved and public, with no draft or pending conflict.
+The response and readback identify revision **5674**, **pending review**; the approved
+revision remains public. This is not a claim that v0.7.3 is public in the community.
+GitHub v0.7.3's verified merged image was submitted. The cover now shows a single home screen and a
+one-line title so it stays readable as a thumbnail in the community list; the three optional images were
+regenerated from the current interface and each was inspected before submitting.
+Descriptions are unchanged, step 3 of the instructions gained screen-off and automatic power-off, and the
+changelog is this release's own. The firmware hash and independent text fields were confirmed by readback.
+The grant is consumed. Future updates need fresh authorization and a current-state check;
+stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
 
 ## Title
 
