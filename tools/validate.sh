@@ -37,6 +37,9 @@ run_static_checks() {
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
         tests/test_passport_power.c -o "${test_dir}/test_passport_power"
     "${test_dir}/test_passport_power"
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Iapp -Imain \
+        tests/test_passport_idle.c -o "${test_dir}/test_passport_idle"
+    "${test_dir}/test_passport_idle"
     "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain -Iapp \
         tests/test_passport_buttons.c -o "${test_dir}/test_passport_buttons"
     "${test_dir}/test_passport_buttons"

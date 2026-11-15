@@ -59,7 +59,16 @@ typedef enum {
     PASSPORT_SCREEN_PREFERENCES = 10,
     PASSPORT_SCREEN_LIVE = 12,
     PASSPORT_SCREEN_VOLUME = 13,
+    PASSPORT_SCREEN_STANDBY = 14,
+    PASSPORT_SCREEN_POWEROFF = 15,
 } passport_screen_t;
+
+/* Rows of the Settings list, in display order. */
+enum {
+    PASSPORT_PREFERENCE_NETWORK, PASSPORT_PREFERENCE_AGENT, PASSPORT_PREFERENCE_BLUETOOTH,
+    PASSPORT_PREFERENCE_VOLUME, PASSPORT_PREFERENCE_STANDBY, PASSPORT_PREFERENCE_POWEROFF,
+    PASSPORT_PREFERENCE_COUNT,
+};
 
 typedef enum {
     PASSPORT_ACT_NONE, PASSPORT_ACT_NETWORKS, PASSPORT_ACT_AGENTS, PASSPORT_ACT_RECORD,
@@ -75,6 +84,7 @@ typedef enum {
     PASSPORT_ACT_NEXT_PREFERENCE, PASSPORT_ACT_VOLUME, PASSPORT_ACT_VOLUME_UP, PASSPORT_ACT_VOLUME_DOWN,
     PASSPORT_ACT_OPEN_PREFERENCE,
     PASSPORT_ACT_LIVE_INTERRUPT,
+    PASSPORT_ACT_STANDBY, PASSPORT_ACT_POWEROFF, PASSPORT_ACT_IDLE_LATER, PASSPORT_ACT_IDLE_SOONER,
 } passport_action_t;
 
 typedef struct { passport_action_t action; bool enabled; } passport_key_binding_t;
@@ -178,6 +188,9 @@ typedef struct {
     bool live_failed;
     uint8_t preference_cursor;
     uint8_t speaker_volume;
+    /* Idle times in seconds as shown and edited on the device; power-off 0 means never. */
+    uint16_t standby_s;
+    uint16_t poweroff_s;
 } passport_view_t;
 
 typedef struct {

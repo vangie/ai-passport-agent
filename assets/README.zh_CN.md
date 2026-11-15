@@ -17,7 +17,7 @@
 
 `fonts/passport_font_16.c` 是本应用使用的 16 px、2 bpp 压缩 Noto Sans SC 字库，覆盖 ASCII、U+00B0（°）、U+00B7（·）、U+2103（℃）、U+3000–3020、U+4E00–9FFF 和 U+FF00–FF60，直接编译进应用并由屏幕标签选用。Noto Sans SC 采用 [`fonts/OFL.txt`](fonts/OFL.txt) 中的 SIL Open Font License；字体源文件由 [Google Fonts](https://github.com/google/fonts/tree/main/ofl/notosanssc) 维护。重新生成命令为 `lv_font_conv@1.5.3 --font PATH_TO_NotoSansSC.ttf --range 0x20-0x7e,0xb0,0xb7,0x2103,0x3000-0x3020,0x4e00-0x9fff,0xff00-0xff60 --size 16 --bpp 2 --format lvgl --no-kerning --lv-include lvgl.h --lv-font-name passport_font_16 -o assets/fonts/passport_font_16.c`。也可运行 `python3 tools/make_font.py PATH_TO_NotoSansSC.ttf`，使用固定版本转换器和上述字符范围重新生成。LVGL 必须启用压缩字库和大字库偏移。范围外字符（包括 emoji）不保证支持。
 
-`fonts/passport_font_20.c` 是 20 px、2 bpp 压缩 Noto Sans SC 标题子集，覆盖 ASCII 和 `tools/make_font.py` 中列出的固定标题。动态回复和名称继续使用应用的完整 16 px 字库。两种字号共用 Noto 的 SIL OFL 许可证，可由该脚本一起重新生成。
+`fonts/passport_font_20.c` 是 20 px、2 bpp 压缩 Noto Sans SC 标题子集，覆盖 ASCII 和 `tools/make_font.py` 中列出的固定标题（含设置里息屏、关机时间用到的字）。动态回复和名称继续使用应用的完整 16 px 字库。两种字号共用 Noto 的 SIL OFL 许可证，可由该脚本一起重新生成。
 
 16 px 回复字库还包含 `tools/make_font.py` 的完整 `PUNCTUATION` 清单：中文常用句读、直引号／弯引号／直角引号、圆括号／方括号／花括号／方头括号／六角括号、书名号、连字符、破折号、横向省略号、间隔号、项目符号、斜线、分隔线、波浪号、下划线、参照号、百分号／千分号及角分角秒符号，并覆盖全角和小型变体。清单还包含常见方向、勾选、删除、运算、比较、无穷和星号符号，避免回复或状态文案显示成方框。新增范围包含 U+2010–2017、U+2018/U+2019、U+201C/U+201D、U+2022/U+2025/U+2026/U+2027、U+2030–2037、U+203B、U+22EF、U+3030 以及 U+FE4B–FE5E 中选定的符号。运行 `python3 tools/make_font.py PATH_TO_NotoSansSC.ttf` 可包含全部维护清单，不要仅按基础范围重新生成。`make preview-ui` 通过实际回复标签的字体逐字检查清单，同时验证已知不支持的 emoji 确实缺字，并在中英文界面逐页渲染所有标点。回复分页会让前引号／左括号跟随后文，避免后引号／右括号出现在行首。
 

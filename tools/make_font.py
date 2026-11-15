@@ -18,7 +18,8 @@ PUNCTUATION = (
 )
 # Every fixed headline the screens show, so no state falls back to 16 px.
 HEADLINES = ("想聊点什么？正在听准备录音正在发送等待回复未能发送录音可重试正在结束连接未完成"
-             "尚无网络助手蓝牙配置设置聊天写中断已静音量返回")
+             "尚无网络助手蓝牙配置设置聊天写中断已静音量返回"
+             "息屏关机秒分钟小时从不")
 
 
 def clean_generated_header(output: Path, source: Path) -> None:

@@ -63,7 +63,8 @@ tick per choice: screen off at 15 s, 30 s or 1/2/5/10 min; power off at 5/10/15/
 screen off past power off pushes power off to the next allowed step, power off cannot be
 dragged earlier than screen off, and **Never** stays **Never**. Both are written with
 **Save configuration**. Firmware without this setting keeps the sliders disabled and asks
-for a firmware update first.
+for a firmware update first. The same two times can also be changed with the keys under
+**Settings** on the device, in the same steps.
 
 ## Start locally
 

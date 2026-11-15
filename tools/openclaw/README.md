@@ -41,7 +41,8 @@ OpenClaw version before release. Packaging tests are not a live gateway SDK test
 ### Device standby
 
 After an idle period (60 seconds by default, adjustable from 15 seconds to 10 minutes under
-**Device preferences** in the web studio), the Passport turns off its backlight, puts the
+**Settings → Screen off** on the device or **Device preferences** in the web studio), the
+Passport turns off its backlight, puts the
 LCD into reversible sleep, pauses LVGL ticks and component button polling, and
 releases the application's full-speed/keep-awake power locks. ESP-IDF automatic
 light sleep and Wi-Fi modem power saving are enabled; the application still polls
@@ -61,6 +62,12 @@ restarts both. The firmware and the web studio both enforce this.
 `POWERCFG <old standby s> <old power-off s> <new standby s> <new power-off s>` changes the two
 times, with 0 meaning never for power-off. A mismatched old pair returns `ERR stale`; a pair
 outside the range or ordering returns `ERR range`.
+**Screen off** and **Power off** under **Settings** on the device use the same steps as the web
+studio: the top key moves one step later and the middle key one step earlier, and a key greys
+out at the end of its scale. Moving screen-off past power-off pushes power-off to the next
+allowed step, and power-off cannot be moved in front of screen-off. Back saves and applies the
+change at once, writes nothing when nothing changed, and stays on the page with a retry notice
+if saving fails. The display stays awake on these two pages, as on the other settings pages.
 
 Recording, calls, sending/cancelling, gateway work, settings pages, active
 configuration and an enumerated USB host keep the display awake. A BLE connection

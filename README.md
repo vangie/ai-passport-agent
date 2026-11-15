@@ -38,8 +38,8 @@ the stock application and does not retain all of its original features.
 | Continue or leave | Follow up, page through messages or return | Use the displayed keys to mute, interrupt or end |
 
 The home screen has **Settings / Call / Ask**. Captions beside the physical keys
-change with each screen. Chinese and English, volume adjustment, saved network
-switching and connection indicators are built in. Ask reaches your agent's tools
+change with each screen. Chinese and English, volume adjustment, screen-off and
+power-off times, saved network switching and connection indicators are built in. Ask reaches your agent's tools
 and context, not just a standalone chat model. Call needs a realtime voice provider
 on the gateway. Speed, tools and voice
 quality depend on that provider, your gateway and network.

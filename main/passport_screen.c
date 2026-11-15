@@ -1,4 +1,5 @@
 #include "passport.h"
+#include "passport_idle.h"
 #include "passport_network.h"
 
 #include <stdio.h>
@@ -64,6 +65,7 @@ static lv_obj_t *s_chat_rows[PASSPORT_REPLY_ROWS];
  * names; only the right-aligned values are extra objects. The LVGL pool is
  * 28 KB with no PSRAM behind it, so a second set of rows is not affordable. */
 #define MENU_ROWS 4
+#define MENU_ITEMS PASSPORT_PREFERENCE_COUNT
 #define LIST_LEFT 30
 #define LIST_TOP 133
 #define LIST_PITCH 28
@@ -547,23 +549,41 @@ static void show_choices(const passport_view_t *view, const passport_store_t *st
     }
 }
 
+/* A whole number of seconds, minutes or hours; 0 is "never". */
+static void idle_text(char *out, size_t cap, const passport_store_t *s, unsigned seconds) {
+    if (!seconds) snprintf(out, cap, "%s", tr(s, "从不", "Never"));
+    else if (seconds < 60) snprintf(out, cap, tr(s, "%u 秒", "%u s"), seconds);
+    else if (seconds < 3600) snprintf(out, cap, tr(s, "%u 分钟", "%u min"), seconds / 60);
+    else snprintf(out, cap, tr(s, "%u 小时", "%u h"), seconds / 3600);
+}
+
+/* First item shown when the settings list scrolls: the focus stays one row
+ * below the top, as on the network and assistant pages. */
+static int menu_first(int selected) {
+    int first = selected > 1 ? selected - 1 : 0;
+    return first > MENU_ITEMS - MENU_ROWS ? MENU_ITEMS - MENU_ROWS : first;
+}
+
 static void show_menu(const passport_view_t *v, const passport_store_t *s) {
     const passport_agent_t *agent = passport_agent_active(s);
-    char volume[8];
+    char volume[8], standby[16], poweroff[16];
     snprintf(volume, sizeof(volume), "%u%%", v->speaker_volume);
-    const char *names[MENU_ROWS] = { tr(s, "网络", "Wi-Fi"), tr(s, "助手", "Agent"),
-        tr(s, "蓝牙", "Bluetooth"), tr(s, "音量", "Volume") };
-    const char *values[MENU_ROWS] = {
+    idle_text(standby, sizeof(standby), s, v->standby_s);
+    idle_text(poweroff, sizeof(poweroff), s, v->poweroff_s);
+    const char *names[MENU_ITEMS] = { tr(s, "网络", "Wi-Fi"), tr(s, "助手", "Agent"),
+        tr(s, "蓝牙", "Bluetooth"), tr(s, "音量", "Volume"),
+        tr(s, "息屏", "Screen off"), tr(s, "关机", "Power off") };
+    const char *values[MENU_ITEMS] = {
         v->wifi_online && s->connected >= 0 && (size_t)s->connected < s->count
             ? s->nets[s->connected].ssid : s->count ? tr(s, "未连接", "Offline") : tr(s, "未设置", "Not set"),
         agent ? agent->name : tr(s, "未设置", "Not set"),
         v->bluetooth_busy ? tr(s, "处理中", "Busy")
             : v->bluetooth_ready && v->bluetooth_connected ? tr(s, "已连接", "Linked")
             : v->bluetooth_ready ? tr(s, "开", "On") : tr(s, "关", "Off"),
-        volume };
+        volume, standby, poweroff };
     /* Only Bluetooth is a switch; its colour says on or off at a glance. */
-    const uint32_t tones[MENU_ROWS] = { MUTED, MUTED,
-        v->bluetooth_busy ? AMBER : v->bluetooth_ready ? MINT : FAINT, MUTED };
+    const uint32_t tones[MENU_ITEMS] = { MUTED, MUTED,
+        v->bluetooth_busy ? AMBER : v->bluetooth_ready ? MINT : FAINT, MUTED, MUTED, MUTED };
     for (int row = 0; row < PASSPORT_REPLY_ROWS; row++) visible(s_chat_rows[row], row < MENU_ROWS);
     /* Chinese names are two characters wide; "Bluetooth" needs more room. */
     int left = passport_lang_zh(s) ? 80 : 112, width = MENU_VALUE_RIGHT - left;
@@ -572,16 +592,18 @@ static void show_menu(const passport_view_t *v, const passport_store_t *s) {
         lv_obj_set_x(s_menu_values[row], left);
         lv_obj_set_width(s_menu_values[row], width);
     }
+    int selected = v->preference_cursor < MENU_ITEMS ? v->preference_cursor : 0, first = menu_first(selected);
     for (int row = 0; row < MENU_ROWS; row++) {
-        bool focused = row == v->preference_cursor;
+        int item = first + row;
+        bool focused = item == selected;
         char shown[PASSPORT_SSID_MAX + 4];
-        text(s_chat_rows[row], names[row]);
+        text(s_chat_rows[row], names[item]);
         list_row(s_chat_rows[row], row, focused ? WHITE : MUTED);
         if (focused) focus_row(row);
-        snprintf(shown, sizeof(shown), "%s", values[row]);
+        snprintf(shown, sizeof(shown), "%s", values[item]);
         fit_line(shown, sizeof(shown), 0, width);
         text(s_menu_values[row], shown);
-        lv_color_t tone = lv_color_hex(tones[row]);
+        lv_color_t tone = lv_color_hex(tones[item]);
         if (!lv_color_eq(lv_obj_get_style_text_color(s_menu_values[row], 0), tone))
             lv_obj_set_style_text_color(s_menu_values[row], tone, 0);
     }
@@ -845,7 +867,10 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
     bool chat = mode == READER && v->chat_visible && v->chat_count;
     bool choices = v->screen == PASSPORT_SCREEN_NETS ||
         (v->screen == PASSPORT_SCREEN_SETTINGS && s->agent_count > 0);
-    bool menu = v->screen == PASSPORT_SCREEN_PREFERENCES, volume = v->screen == PASSPORT_SCREEN_VOLUME;
+    bool menu = v->screen == PASSPORT_SCREEN_PREFERENCES;
+    bool idle = v->screen == PASSPORT_SCREEN_STANDBY || v->screen == PASSPORT_SCREEN_POWEROFF;
+    /* The idle pages reuse the volume page's bar and caption position. */
+    bool volume = v->screen == PASSPORT_SCREEN_VOLUME || idle;
     visible(s_body, !chat && !choices && !menu);
     for (int row = 0; row < MENU_ROWS; row++) visible(s_menu_values[row], menu);
     if (!choices && !menu) focus_row(-1);
@@ -994,6 +1019,28 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
             if (menu) {
                 text(s_status, tr(s, "设备设置", "SETTINGS")); text(s_headline, tr(s, "设置", "Settings"));
                 show_menu(v, s);
+                snprintf(value, sizeof(value), "%u / %u",
+                    (unsigned)(v->preference_cursor < MENU_ITEMS ? v->preference_cursor : 0) + 1, (unsigned)MENU_ITEMS);
+                text(s_page_count, value);
+            } else if (idle) {
+                bool standby = v->screen == PASSPORT_SCREEN_STANDBY;
+                unsigned seconds = standby ? v->standby_s : v->poweroff_s;
+                unsigned steps = standby ? PASSPORT_STANDBY_STEP_COUNT : PASSPORT_POWEROFF_STEP_COUNT;
+                unsigned index = passport_idle_index(standby ? passport_standby_steps : passport_poweroff_steps, steps, seconds);
+                char amount[16];
+                idle_text(amount, sizeof(amount), s, seconds);
+                text(s_status, tr(s, "设备设置", "SETTINGS"));
+                if (seconds) snprintf(value, sizeof(value), "%s %s", standby ? tr(s, "息屏", "Screen off") : tr(s, "关机", "Power off"), amount);
+                else snprintf(value, sizeof(value), "%s", tr(s, "从不关机", "Never powers off"));
+                text(s_headline, value);
+                /* One segment of the bar per step: the first step is not an empty bar. */
+                int width = 166 * (int)(index + 1) / (int)steps;
+                if (lv_obj_get_width(s_volume_fill) != width) lv_obj_set_width(s_volume_fill, width);
+                visible(s_volume_fill, true);
+                text(s_body, standby ? tr(s, "闲置后关闭屏幕\n按任意键唤醒", "Screen off when idle.\nAny key wakes it.")
+                    : seconds ? tr(s, "息屏后继续闲置则关机\n按任意键开机", "Powers off if still idle.\nAny key starts it.")
+                    : tr(s, "息屏后保持待机\n按任意键唤醒", "Stays in standby.\nAny key wakes it."));
+                /* Like the volume page: the bar shows the position, the header stays clear. */
                 text(s_page_count, "");
             } else if (volume) {
                 text(s_status, tr(s, "设备设置", "SETTINGS"));

@@ -136,7 +136,15 @@ static void test_navigation(void) {
     expect(v.screen == PASSPORT_SCREEN_VOLUME, "volume remains reachable after Bluetooth");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(v.preference_cursor == 0, "settings cycles through all four options");
+    passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
+    expect(v.screen == PASSPORT_SCREEN_STANDBY, "screen-off follows volume");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
+    expect(v.screen == PASSPORT_SCREEN_POWEROFF, "power-off is the last settings row");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(v.preference_cursor == 0, "settings cycles through all six options");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
 
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
@@ -312,13 +320,14 @@ static void test_preference_navigation(void) {
     passport_agent_upsert(&store,"First","openclaw","wss://first.example","",NULL,NULL,NULL);
     passport_agent_upsert(&store,"Second","openclaw","wss://second.example","",NULL,NULL,NULL);
     passport_agent_select(&store,1);
-    const passport_screen_t screens[]={PASSPORT_SCREEN_NETS,PASSPORT_SCREEN_SETTINGS,PASSPORT_SCREEN_PREFERENCES,PASSPORT_SCREEN_VOLUME};
+    const passport_screen_t screens[]={PASSPORT_SCREEN_NETS,PASSPORT_SCREEN_SETTINGS,PASSPORT_SCREEN_PREFERENCES,PASSPORT_SCREEN_VOLUME,
+        PASSPORT_SCREEN_STANDBY,PASSPORT_SCREEN_POWEROFF};
     const char *labels[][3]={{"Next","Open","Back"},{"切换","打开","返回"}};
     for (int language=0;language<2;language++) {
         passport_lang_set(&store,language ? "zh" : "en");
         passport_view_init(&view);
         passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-        for (int selection=0;selection<4;selection++) {
+        for (int selection=0;selection<PASSPORT_PREFERENCE_COUNT;selection++) {
             expect(view.preference_cursor==selection,"settings cycle through the selected rows");
             for (int button=PASSPORT_BTN_UP;button<=PASSPORT_BTN_OK;button++) {
                 passport_key_binding_t binding=passport_key_binding(&view,&store,(passport_btn_t)button);
@@ -400,6 +409,50 @@ static void test_live_navigation(void) {
     view.sending=false;
     passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     expect(view.screen==PASSPORT_SCREEN_PREFERENCES && view.preference_cursor==3,"volume returns to its selected settings row");
+    /* Screen-off and power-off: stepped, ordered, and editable while the device is busy elsewhere. */
+    expect(view.standby_s==60 && view.poweroff_s==1800,"idle times start at one and thirty minutes");
+    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_OPEN_PREFERENCE && view.screen==PASSPORT_SCREEN_STANDBY,
+           "screen-off opens from its settings row");
+    expect(!strcmp(passport_action_label(passport_key_binding(&view,&store,PASSPORT_BTN_UP).action,true),"延长") &&
+           !strcmp(passport_action_label(passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).action,true),"缩短") &&
+           !strcmp(passport_action_label(passport_key_binding(&view,&store,PASSPORT_BTN_OK).action,true),"返回"),
+           "idle pages label the keys by what they do to the time");
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK)==PASSPORT_ACT_IDLE_LATER && view.standby_s==120 && view.poweroff_s==1800,
+           "screen-off moves one step later");
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_HOLD)==PASSPORT_ACT_NONE && view.standby_s==120,"a held key does not step");
+    for (int step=0;step<8;step++) passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(view.standby_s==600 && view.poweroff_s==1800 && !passport_key_binding(&view,&store,PASSPORT_BTN_UP).enabled,
+           "screen-off stops at ten minutes");
+    for (int step=0;step<8;step++) passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
+    expect(view.standby_s==15 && !passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).enabled &&
+           passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_NONE,"screen-off stops at fifteen seconds");
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_BACK &&
+           view.screen==PASSPORT_SCREEN_PREFERENCES && view.preference_cursor==PASSPORT_PREFERENCE_STANDBY,
+           "screen-off returns to its settings row");
+    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_OPEN_PREFERENCE && view.screen==PASSPORT_SCREEN_POWEROFF,
+           "power-off opens from its settings row");
+    for (int step=0;step<8;step++) passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
+    expect(view.poweroff_s==300 && !passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).enabled,"power-off stops at five minutes");
+    for (int step=0;step<8;step++) passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(view.poweroff_s==0 && !passport_key_binding(&view,&store,PASSPORT_BTN_UP).enabled,"power-off ends at never");
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_IDLE_SOONER && view.poweroff_s==7200,
+           "never steps back to two hours");
+    expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_BACK &&
+           view.screen==PASSPORT_SCREEN_PREFERENCES && view.preference_cursor==PASSPORT_PREFERENCE_POWEROFF,
+           "power-off returns to its settings row");
+    /* A later screen-off pushes power-off later; power-off cannot be moved in front of it. */
+    view.standby_s=120;view.poweroff_s=300;view.screen=PASSPORT_SCREEN_STANDBY;
+    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(view.standby_s==300 && view.poweroff_s==600,"a later screen-off moves power-off out of its way");
+    view.screen=PASSPORT_SCREEN_POWEROFF;
+    expect(!passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).enabled &&
+           passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_NONE && view.poweroff_s==600,
+           "power-off cannot move in front of screen-off");
+    view.standby_s=60;view.poweroff_s=1800;view.screen=PASSPORT_SCREEN_PREFERENCES;
+    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(view.preference_cursor==0,"settings wrap after power-off");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_BACK &&
            view.screen==PASSPORT_SCREEN_HOME,"settings return directly to the two voice entries");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_RECORD && view.recording,"home starts a recording");

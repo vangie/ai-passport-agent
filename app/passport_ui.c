@@ -1,4 +1,5 @@
 #include "passport.h"
+#include "passport_idle.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -25,6 +26,8 @@ void passport_view_init(passport_view_t *view) {
     view->battery_soc = -1;
     view->network_target = -1;
     view->speaker_volume = PASSPORT_VOLUME_DEFAULT;
+    view->standby_s = passport_standby_steps[2];
+    view->poweroff_s = passport_poweroff_steps[3];
     view->wifi_online = false;
     view->bluetooth_ready = false;
     view->sending = false;
@@ -329,13 +332,23 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
             break;
         case PASSPORT_SCREEN_PREFERENCES:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_NEXT_PREFERENCE
-                : btn == PASSPORT_BTN_DOWN ? (v->preference_cursor == 2
+                : btn == PASSPORT_BTN_DOWN ? (v->preference_cursor == PASSPORT_PREFERENCE_BLUETOOTH
                     ? (v->bluetooth_ready ? PASSPORT_ACT_CLOSE_CONFIG : PASSPORT_ACT_ENABLE_CONFIG)
                     : PASSPORT_ACT_OPEN_PREFERENCE) : PASSPORT_ACT_BACK;
             key.enabled = btn == PASSPORT_BTN_OK || !busy || v->network_state == PASSPORT_NETWORK_CONNECTING;
-            if (btn == PASSPORT_BTN_DOWN && v->preference_cursor == 2)
+            if (btn == PASSPORT_BTN_DOWN && v->preference_cursor == PASSPORT_PREFERENCE_BLUETOOTH)
                 key.enabled = !busy && !v->bluetooth_busy;
             break;
+        case PASSPORT_SCREEN_STANDBY:
+        case PASSPORT_SCREEN_POWEROFF: {
+            bool later = btn == PASSPORT_BTN_UP;
+            key.action = later ? PASSPORT_ACT_IDLE_LATER
+                : btn == PASSPORT_BTN_DOWN ? PASSPORT_ACT_IDLE_SOONER : PASSPORT_ACT_BACK;
+            key.enabled = btn == PASSPORT_BTN_OK || (!v->cancel_pending &&
+                (v->screen == PASSPORT_SCREEN_STANDBY ? passport_idle_standby_can(v->standby_s, later)
+                    : passport_idle_poweroff_can(v->standby_s, v->poweroff_s, later)));
+            break;
+        }
         case PASSPORT_SCREEN_VOLUME:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_VOLUME_UP
                 : btn == PASSPORT_BTN_DOWN ? PASSPORT_ACT_VOLUME_DOWN : PASSPORT_ACT_BACK;
@@ -424,6 +437,7 @@ const char *passport_action_label(passport_action_t action, bool zh) {
         { "切换", "Next" }, { "打开", "Open" }, { "调高", "Vol+" }, { "调低", "Vol-" },
         { "打开", "Open" },
         { "打断", "Stop" },
+        { "打开", "Open" }, { "打开", "Open" }, { "延长", "More" }, { "缩短", "Less" },
     };
     if ((unsigned)action >= sizeof(labels)/sizeof(labels[0])) return "";
     return labels[action][zh ? 0 : 1];
@@ -446,8 +460,10 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
     if (!key.enabled) return PASSPORT_ACT_NONE;
     passport_action_t action = key.action;
     if (action == PASSPORT_ACT_OPEN_PREFERENCE) {
-        action = v->preference_cursor == 0 ? PASSPORT_ACT_NETWORKS
-            : v->preference_cursor == 1 ? PASSPORT_ACT_AGENTS
+        action = v->preference_cursor == PASSPORT_PREFERENCE_NETWORK ? PASSPORT_ACT_NETWORKS
+            : v->preference_cursor == PASSPORT_PREFERENCE_AGENT ? PASSPORT_ACT_AGENTS
+            : v->preference_cursor == PASSPORT_PREFERENCE_STANDBY ? PASSPORT_ACT_STANDBY
+            : v->preference_cursor == PASSPORT_PREFERENCE_POWEROFF ? PASSPORT_ACT_POWEROFF
             : PASSPORT_ACT_VOLUME;
     }
     v->notice[0] = 0;
@@ -456,7 +472,19 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             v->screen = PASSPORT_SCREEN_PREFERENCES;
             break;
         case PASSPORT_ACT_NEXT_PREFERENCE:
-            v->preference_cursor = (v->preference_cursor + 1) % 4;
+            v->preference_cursor = (v->preference_cursor + 1) % PASSPORT_PREFERENCE_COUNT;
+            break;
+        case PASSPORT_ACT_STANDBY:
+            v->screen = PASSPORT_SCREEN_STANDBY;
+            break;
+        case PASSPORT_ACT_POWEROFF:
+            v->screen = PASSPORT_SCREEN_POWEROFF;
+            break;
+        case PASSPORT_ACT_IDLE_LATER:
+        case PASSPORT_ACT_IDLE_SOONER:
+            if (v->screen == PASSPORT_SCREEN_STANDBY)
+                passport_idle_standby_step(&v->standby_s, &v->poweroff_s, action == PASSPORT_ACT_IDLE_LATER);
+            else passport_idle_poweroff_step(v->standby_s, &v->poweroff_s, action == PASSPORT_ACT_IDLE_LATER);
             break;
         case PASSPORT_ACT_VOLUME:
             v->screen = PASSPORT_SCREEN_VOLUME;
@@ -547,7 +575,8 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             }
             v->screen = v->screen == PASSPORT_SCREEN_NET_MENU ? PASSPORT_SCREEN_NETS
                 : v->screen == PASSPORT_SCREEN_ADD ? ((v->setup_parent == PASSPORT_SCREEN_PREFERENCES || v->setup_parent == PASSPORT_SCREEN_SETTINGS || v->setup_parent == PASSPORT_SCREEN_NET_MENU || v->setup_parent == PASSPORT_SCREEN_NETS) ? v->setup_parent : PASSPORT_SCREEN_HOME)
-                : v->screen == PASSPORT_SCREEN_NETS || v->screen == PASSPORT_SCREEN_SETTINGS || v->screen == PASSPORT_SCREEN_VOLUME ? PASSPORT_SCREEN_PREFERENCES
+                : v->screen == PASSPORT_SCREEN_NETS || v->screen == PASSPORT_SCREEN_SETTINGS || v->screen == PASSPORT_SCREEN_VOLUME ||
+                  v->screen == PASSPORT_SCREEN_STANDBY || v->screen == PASSPORT_SCREEN_POWEROFF ? PASSPORT_SCREEN_PREFERENCES
                 : PASSPORT_SCREEN_HOME;
             break;
         case PASSPORT_ACT_PREV_PAGE: v->reply_page--; break;

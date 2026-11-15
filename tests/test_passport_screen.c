@@ -311,23 +311,34 @@ int main(int argc, char **argv) {
     assert(!strcmp(passport_action_label(PASSPORT_ACT_LIVE_INTERRUPT,false),"Stop"));
     assert(!strcmp(passport_action_label(PASSPORT_ACT_VOLUME_UP,false),"Vol+"));
     assert(!strcmp(passport_action_label(PASSPORT_ACT_VOLUME_DOWN,false),"Vol-"));
-    const char *settings_previews[][4]={
-        {"settings-menu","settings-agents-selected","settings-bluetooth-selected","settings-volume-selected"},
-        {"english-settings-menu","english-settings-agents-selected","english-settings-bluetooth-selected","english-settings-volume-selected"}
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_LATER,false),"More"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_SOONER,false),"Less"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_LATER,true),"延长"));
+    assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_SOONER,true),"缩短"));
+    const char *settings_previews[][MENU_ITEMS]={
+        {"settings-menu","settings-agents-selected","settings-bluetooth-selected","settings-volume-selected",
+         "settings-standby-selected","settings-poweroff-selected"},
+        {"english-settings-menu","english-settings-agents-selected","english-settings-bluetooth-selected","english-settings-volume-selected",
+         "english-settings-standby-selected","english-settings-poweroff-selected"}
     };
     v.screen=PASSPORT_SCREEN_PREFERENCES;
     for (int language=0;language<2;language++) {
         strcpy(store.lang,language ? "en" : "zh");
-        for (int selection=0;selection<4;selection++) {
+        for (int selection=0;selection<MENU_ITEMS;selection++) {
             v.preference_cursor=selection;
             render(settings_previews[language][selection],&v,&store);
             /* The same list as the network and assistant pages, plus a
-             * right-aligned value on every row. */
+             * right-aligned value on every row. Six items scroll through
+             * four rows with the focus one row below the top. */
+            const int expected_first[MENU_ITEMS]={0,0,1,2,2,2};
+            int first=expected_first[selection];
+            assert(menu_first(selection)==first);
             assert(lv_obj_has_flag(s_body,LV_OBJ_FLAG_HIDDEN));
-            check_choice_rows(MENU_ROWS,0,(size_t)selection);
-            const char *names[2][MENU_ROWS]={{"网络","助手","蓝牙","音量"},{"Wi-Fi","Agent","Bluetooth","Volume"}};
+            check_choice_rows(MENU_ITEMS,(size_t)first,(size_t)selection);
+            const char *names[2][MENU_ITEMS]={{"网络","助手","蓝牙","音量","息屏","关机"},
+                {"Wi-Fi","Agent","Bluetooth","Volume","Screen off","Power off"}};
             for (int row=0;row<MENU_ROWS;row++) {
-                assert(!strcmp(lv_label_get_text(s_chat_rows[row]),names[language ? 1 : 0][row]));
+                assert(!strcmp(lv_label_get_text(s_chat_rows[row]),names[language ? 1 : 0][first+row]));
                 lv_obj_t *value=s_menu_values[row];
                 assert(!lv_obj_has_flag(value,LV_OBJ_FLAG_HIDDEN));
                 assert(lv_obj_get_style_text_align(value,0)==LV_TEXT_ALIGN_RIGHT);
@@ -341,30 +352,38 @@ int main(int argc, char **argv) {
                 assert(lv_obj_get_x(s_chat_rows[row])+name_size.x<lv_obj_get_x(value));
                 assert(value_size.x<=lv_obj_get_width(value) && value_size.y<=lv_obj_get_height(value));
             }
-            assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Off" : "关"));
-            assert(!strcmp(lv_label_get_text(s_menu_values[3]),"55%"));
+            /* Each value follows its item as the list scrolls. */
+            const char *expected_values[2][MENU_ITEMS]={{NULL,NULL,"关","55%","1 分钟","30 分钟"},{NULL,NULL,"Off","55%","1 min","30 min"}};
+            for (int row=0;row<MENU_ROWS;row++) {
+                const char *expected=expected_values[language ? 1 : 0][first+row];
+                if (expected) assert(!strcmp(lv_label_get_text(s_menu_values[row]),expected));
+            }
+            char position[12];
+            snprintf(position,sizeof(position),"%d / %d",selection+1,MENU_ITEMS);
+            assert(!strcmp(lv_label_get_text(s_page_count),position));
+            bool toggle=selection==PASSPORT_PREFERENCE_BLUETOOTH;
             if (language) {
                 assert(!strcmp(s_key_word_text[0],"Next"));
-                assert(!strcmp(s_key_word_text[1],selection==2 ? "On" : "Open"));
+                assert(!strcmp(s_key_word_text[1],toggle ? "On" : "Open"));
                 assert(!strcmp(s_key_word_text[2],"Back"));
             } else {
                 assert(!strcmp(lv_label_get_text(s_keys[0]),"切\n换"));
-                assert(!strcmp(lv_label_get_text(s_keys[1]),selection==2 ? "开\n启" : "打\n开"));
+                assert(!strcmp(lv_label_get_text(s_keys[1]),toggle ? "开\n启" : "打\n开"));
                 assert(!strcmp(lv_label_get_text(s_keys[2]),"返\n回"));
             }
         }
         v.preference_cursor=2;v.bluetooth_ready=true;
         render(language ? "english-settings-bluetooth-on" : "settings-bluetooth-on",&v,&store);
-        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "On" : "开"));
-        assert(lv_color_eq(lv_obj_get_style_text_color(s_menu_values[2],0),lv_color_hex(MINT)));
+        assert(!strcmp(lv_label_get_text(s_menu_values[1]),language ? "On" : "开"));
+        assert(lv_color_eq(lv_obj_get_style_text_color(s_menu_values[1],0),lv_color_hex(MINT)));
         assert(!strcmp(passport_action_label(s_last_binding[1].action,!language),language ? "Off" : "关闭"));
         v.bluetooth_connected=true;
         render(language ? "english-settings-bluetooth-connected" : "settings-bluetooth-connected",&v,&store);
-        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Linked" : "已连接"));
+        assert(!strcmp(lv_label_get_text(s_menu_values[1]),language ? "Linked" : "已连接"));
         assert(s_last_binding[1].action==PASSPORT_ACT_CLOSE_CONFIG && s_last_binding[1].enabled);
         v.bluetooth_busy=true;
         render(language ? "english-settings-bluetooth-busy" : "settings-bluetooth-busy",&v,&store);
-        assert(!strcmp(lv_label_get_text(s_menu_values[2]),language ? "Busy" : "处理中"));
+        assert(!strcmp(lv_label_get_text(s_menu_values[1]),language ? "Busy" : "处理中"));
         assert(!s_last_binding[1].enabled && s_last_binding[0].enabled && s_last_binding[2].enabled);
         v.bluetooth_ready=false;v.bluetooth_busy=false;v.bluetooth_connected=false;
         v.screen=PASSPORT_SCREEN_HOME;
@@ -411,6 +430,45 @@ int main(int argc, char **argv) {
     v.speaker_volume=75;
     strcpy(store.lang,"en");render("english-speaker-volume",&v,&store);strcpy(store.lang,"zh");
     assert(!strcmp(lv_label_get_text(s_headline),"Volume 75%"));
+    /* Screen-off and power-off: the time is the headline, the bar has one
+     * segment per step, and the keys say which way each one moves it. */
+    v.screen=PASSPORT_SCREEN_STANDBY;render("idle-standby",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"息屏 1 分钟") && !strcmp(lv_label_get_text(s_page_count),""));
+    assert(!lv_obj_has_flag(s_volume_track,LV_OBJ_FLAG_HIDDEN) && lv_obj_get_width(s_volume_fill)==166*3/6);
+    assert(!strcmp(lv_label_get_text(s_keys[0]),"延\n长") && !strcmp(lv_label_get_text(s_keys[1]),"缩\n短") &&
+           !strcmp(lv_label_get_text(s_keys[2]),"返\n回"));
+    assert(s_last_binding[0].enabled && s_last_binding[1].enabled);
+    for (int row=0;row<MENU_ROWS;row++) assert(lv_obj_has_flag(s_menu_values[row],LV_OBJ_FLAG_HIDDEN));
+    v.standby_s=15;render("idle-standby-shortest",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"息屏 15 秒") && lv_obj_get_width(s_volume_fill)==166/6);
+    assert(!lv_obj_has_flag(s_volume_fill,LV_OBJ_FLAG_HIDDEN) && s_last_binding[0].enabled && !s_last_binding[1].enabled);
+    v.standby_s=600;render("idle-standby-longest",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"息屏 10 分钟") && lv_obj_get_width(s_volume_fill)==lv_obj_get_width(s_volume_track));
+    assert(!s_last_binding[0].enabled && s_last_binding[1].enabled);
+    v.screen=PASSPORT_SCREEN_POWEROFF;render("idle-poweroff",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"关机 30 分钟") && lv_obj_get_width(s_volume_fill)==166*4/7);
+    /* Ten minutes of screen-off leaves fifteen as the earliest power-off. */
+    v.poweroff_s=900;render("idle-poweroff-earliest",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"关机 15 分钟") && s_last_binding[0].enabled && !s_last_binding[1].enabled);
+    v.poweroff_s=7200;render("idle-poweroff-hours",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"关机 2 小时"));
+    v.poweroff_s=0;render("idle-poweroff-never",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"从不关机"));
+    assert(lv_obj_get_width(s_volume_fill)==lv_obj_get_width(s_volume_track) && !s_last_binding[0].enabled && s_last_binding[1].enabled);
+    assert(strstr(lv_label_get_text(s_body),"保持待机"));
+    strcpy(store.lang,"en");
+    render("english-idle-poweroff-never",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"Never powers off"));
+    assert(!strcmp(s_key_word_text[0],"More") && !strcmp(s_key_word_text[1],"Less") && !strcmp(s_key_word_text[2],"Back"));
+    v.poweroff_s=3600;render("english-idle-poweroff",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"Power off 1 h"));
+    v.screen=PASSPORT_SCREEN_STANDBY;v.standby_s=120;render("english-idle-standby",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_headline),"Screen off 2 min"));
+    /* A failed save keeps the page and says so in the hint line. */
+    snprintf(v.notice,sizeof(v.notice),"保存失败，请重试");
+    strcpy(store.lang,"zh");render("idle-standby-save-failed",&v,&store);
+    assert(!strcmp(lv_label_get_text(s_hint),"保存失败，请重试"));
+    v.notice[0]=0;v.standby_s=60;v.poweroff_s=1800;
     v.screen=PASSPORT_SCREEN_HOME;render("volume-left",&v,&store);
     assert(lv_obj_has_flag(s_volume_track,LV_OBJ_FLAG_HIDDEN));
     v.screen=PASSPORT_SCREEN_LIVE;v.sending=true;v.live_ready=false;

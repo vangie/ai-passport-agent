@@ -170,6 +170,7 @@ static void power_maintain(void) {
         s_view.screen == PASSPORT_SCREEN_PREFERENCES || s_view.screen == PASSPORT_SCREEN_NETS ||
         s_view.screen == PASSPORT_SCREEN_NET_MENU || s_view.screen == PASSPORT_SCREEN_ADD ||
         s_view.screen == PASSPORT_SCREEN_SETTINGS || s_view.screen == PASSPORT_SCREEN_VOLUME ||
+        s_view.screen == PASSPORT_SCREEN_STANDBY || s_view.screen == PASSPORT_SCREEN_POWEROFF ||
         s_polled_button >= 0 || passport_link_configuration_busy() ||
         usb_serial_jtag_is_connected() || s_view.network_state == PASSPORT_NETWORK_CONNECTING;
     if (s_power.sleeping && (busy || passport_gateway_active())) (void)power_wake();
@@ -463,6 +464,7 @@ void app_main(void) {
     uint16_t standby_s = PASSPORT_STANDBY_DEFAULT_S, poweroff_s = PASSPORT_POWEROFF_DEFAULT_S;
     passport_nvs_power_load(&standby_s, &poweroff_s);
     passport_power_configure(&s_power, standby_s, poweroff_s);
+    s_view.standby_s = s_power.standby_s; s_view.poweroff_s = s_power.poweroff_s;
     if (!bsp_lvgl_lock(1000)) {
         return;
     }
@@ -539,7 +541,10 @@ void app_main(void) {
                 if (event.power[0] != s_power.standby_s || event.power[1] != s_power.poweroff_s) result = "ERR stale";
                 else if (!passport_power_valid(event.power[2], event.power[3])) result = "ERR range";
                 else if (!passport_nvs_power_save((uint16_t)event.power[2], (uint16_t)event.power[3])) result = "ERR storage";
-                else passport_power_configure(&s_power, event.power[2], event.power[3]);
+                else {
+                    passport_power_configure(&s_power, event.power[2], event.power[3]);
+                    s_view.standby_s = s_power.standby_s; s_view.poweroff_s = s_power.poweroff_s;
+                }
                 passport_link_diagnostic_reply(result);
                 device_status();
                 passport_link_control_complete();
@@ -648,6 +653,16 @@ void app_main(void) {
                 if (passport_nvs_volume_save(s_view.speaker_volume)) s_saved_volume = s_view.speaker_volume;
                 else {
                     s_view.screen = PASSPORT_SCREEN_VOLUME;
+                    snprintf(s_view.notice, sizeof(s_view.notice), "保存失败，请重试");
+                }
+            }
+            if ((was_screen == PASSPORT_SCREEN_STANDBY || was_screen == PASSPORT_SCREEN_POWEROFF) && action == PASSPORT_ACT_BACK &&
+                (s_view.standby_s != s_power.standby_s || s_view.poweroff_s != s_power.poweroff_s)) {
+                if (passport_power_valid(s_view.standby_s, s_view.poweroff_s) &&
+                    passport_nvs_power_save(s_view.standby_s, s_view.poweroff_s)) {
+                    passport_power_configure(&s_power, s_view.standby_s, s_view.poweroff_s);
+                } else {
+                    s_view.screen = was_screen;
                     snprintf(s_view.notice, sizeof(s_view.notice), "保存失败，请重试");
                 }
             }
