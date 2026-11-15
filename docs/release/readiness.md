@@ -31,7 +31,17 @@ reset, and the device was restored to 60 s / 1800 s at the end.
 These were key commands sent over USB, not presses of the physical keys, and the look on the real screen was checked only in the host renderer.
 The notice shown when saving fails is covered by the host renderer and was not triggered on hardware.
 Automatic power-off and key wake remain unobserved on hardware, as in v0.7.3: the test device stays on a computer USB connection, which holds both timers.
-This is not hardware acceptance of the tagged artifact. Publishing itself does not modify personal gateway models or grants.
+Publishing itself does not modify personal gateway models or grants.
+
+After publication the maintainer device was application-flashed with the Release's `agent-talk.bin`, written after its SHA-256 was checked;
+it reports build identifier `4eb73c9951984233`, and three Wi-Fi networks and three assistants were retained.
+The same USB key-command test passed on the tagged firmware: both adjustment pages opened, stepped, saved on leaving and changed nothing before
+leaving; the device was then restored to 60 s / 1800 s with volume and Bluetooth as before the test.
+The first version of the test script assumed the Settings cursor rests on the first row, while it keeps its last position, so for a moment it
+changed the volume and the screen-off time and turned Bluetooth on; those were restored and the script now navigates by the page the device reports.
+That was a fault of the test script, not of the firmware.
+The maintainer gateway still runs the 0.7.3 plugin, which behaves like 0.7.4, and was not replaced.
+Key commands were sent over USB, not with the physical keys; this is not full hardware acceptance of the tagged firmware.
 
 ## Community
 
@@ -51,6 +61,29 @@ The local complete gate passed: repository and host tests, web unit and browser 
 The added key-flow test fails when the step limits are removed.
 Four Hermes tests requiring unavailable native imports still skip locally.
 
-Build: PASS. Host tests: PASS. Device tests: USB key-command test on the local candidate PASS; NOT RUN for the tagged release.
-Unverified: tagged-artifact hardware acceptance, operation with the physical keys and the look on the real screen, automatic power-off and key wake,
-and the community update.
+GitHub v0.7.4 was published on 2026-11-15 at 11:49:28 UTC:
+<https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.4>.
+Its immutable source commit is `49d437a3d28f75caaf43443735c91173823e42ac`; all four workflows on main passed for that commit before tagging.
+[Release run 43710375265](https://github.com/vangie/ai-passport-agent/actions/runs/43710375265)
+passed every job; all eight downloaded assets passed provenance, filename and checksum verification.
+The merged image SHA-256 is `0cdbb49856d500a4830ee6a344e11ff9ffd084d2e17cf5614679f524d076e0bd`;
+the application SHA-256 is `a0dc2bb6b58b87b783bcb222a5cb8f0a04d2add61a808e1981757f1d98702a26`.
+Its device build identifier is `4eb73c9951984233`.
+
+[Pages run 43710781645](https://github.com/vangie/ai-passport-agent/actions/runs/43710781645)
+succeeded. The live <https://ai-passport-agent.codelife.me/> manifest reports v0.7.4 and
+the same source commit; both same-origin firmware downloads are byte-identical to Release.
+Identities for v0.7.3 and earlier remain in the live historical-build catalog.
+
+Publisher 1.14.0 validated the exact downloaded merged firmware and cover. The cover and the three posters were regenerated at this
+version and each was opened and inspected before submitting.
+The approved descriptions were preserved, step 3 of the instructions now points to the device's Settings for the two times,
+and this release's changes were submitted separately.
+Submission returned revision **5707**, **pending review**, for existing play **2236**.
+A subsequent `projects` read confirmed the same submission result, firmware hash and independent bilingual
+description/instructions/changelog fields. Approved revision **5674** (v0.7.3) remains public;
+v0.7.4 is not yet public in the community. The grant is consumed; do not resubmit or reuse it.
+
+Build: PASS. Host tests: PASS. Device tests: USB key-command test on the tagged firmware PASS; physical keys, automatic power-off and key wake NOT RUN.
+Unverified: operation with the physical keys and the look on the real screen, automatic power-off and key wake, a call with real voice interruption,
+and community approval of revision 5707.

@@ -2,13 +2,18 @@
 
 # Community submission · v0.7.4
 
-Update materials for existing play **2236**, prepared on 2026-11-15 and **not yet submitted**.
-The user supplied a one-time `update_once` grant bound to that play. Before submission, `projects` /
-`publishedRevision` confirmed revision **5674** (v0.7.3) approved and public, with no draft or pending conflict.
-Submit only after GitHub v0.7.4 is published and its merged image is verified; stop on draft/pending or
-version conflicts, without withdrawing, overwriting or creating a duplicate.
-The interface only gains two Settings items; the cover and the three optional images are regenerated at
-this version and each is inspected before submitting.
+Submitted on 2026-11-15 to existing play **2236** only, using its target-bound
+`update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
+revision **5674** (v0.7.3) was approved and public, with no draft or pending conflict.
+The response and readback identify revision **5707**, **pending review**; the approved
+revision remains public. This is not a claim that v0.7.4 is public in the community.
+GitHub v0.7.4's verified merged image was submitted. The cover and the three optional images were
+regenerated at this version and each was inspected before submitting.
+Descriptions are unchanged, step 3 of the instructions now points to the device's Settings for the
+screen-off and power-off times, and the changelog is this release's own. The firmware hash and
+independent text fields were confirmed by readback.
+The grant is consumed. Future updates need fresh authorization and a current-state check;
+stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
 
 ## Title
 
