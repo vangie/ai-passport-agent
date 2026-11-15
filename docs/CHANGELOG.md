@@ -14,6 +14,12 @@
 
 No pending changes.
 
+## v0.7.4 - 2026-11-15
+
+- Add **Screen off** and **Power off** to the device's Settings list. Each opens a page where the top key moves the time one step later and the middle key one step earlier, in the same steps as the web studio; a key greys out at the end of its scale. Leaving the page saves and applies the change.
+- Keep the ordering rule on the device: a later screen-off pushes power-off to the next allowed step, and power-off cannot move in front of screen-off.
+- Scroll the Settings list, which now holds six items in four rows, and show the position of the selected item in the header.
+
 ## v0.7.3 - 2026-11-15
 
 - Add automatic power-off: a device that has been in standby for the configured time (30 minutes by default) enters deep sleep, and any function key starts it again. A computer USB connection, a key press or any activity restarts the timer.

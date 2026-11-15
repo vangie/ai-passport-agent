@@ -1,19 +1,14 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.7.3
+# Community submission · v0.7.4
 
-Submitted on 2026-11-15 to existing play **2236** only, using its target-bound
-`update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
-revision **5643** (v0.7.2) was approved and public, with no draft or pending conflict.
-The response and readback identify revision **5674**, **pending review**; the approved
-revision remains public. This is not a claim that v0.7.3 is public in the community.
-GitHub v0.7.3's verified merged image was submitted. The cover now shows a single home screen and a
-one-line title so it stays readable as a thumbnail in the community list; the three optional images were
-regenerated from the current interface and each was inspected before submitting.
-Descriptions are unchanged, step 3 of the instructions gained screen-off and automatic power-off, and the
-changelog is this release's own. The firmware hash and independent text fields were confirmed by readback.
-The grant is consumed. Future updates need fresh authorization and a current-state check;
-stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
+Update materials for existing play **2236**, prepared on 2026-11-15 and **not yet submitted**.
+The user supplied a one-time `update_once` grant bound to that play. Before submission, `projects` /
+`publishedRevision` confirmed revision **5674** (v0.7.3) approved and public, with no draft or pending conflict.
+Submit only after GitHub v0.7.4 is published and its merged image is verified; stop on draft/pending or
+version conflicts, without withdrawing, overwriting or creating a duplicate.
+The interface only gains two Settings items; the cover and the three optional images are regenerated at
+this version and each is inspected before submitting.
 
 ## Title
 
@@ -43,26 +38,24 @@ Independent open-source community project. Images are actual UI renders with fic
 
 1. Have a working OpenClaw or Hermes installation. Open https://ai-passport-agent.codelife.me/ in desktop Chrome/Edge, connect USB and update firmware. Uncheck Keep settings for first installation; retain it for compatible updates.
 2. Choose your backend under Add assistant. Give its prompt to an agent on the gateway host and paste back its address and pairing code; Call also needs realtime voice setup. Scan 2.4 GHz Wi-Fi, enter its password and Save configuration. A Wi-Fi icon confirms connection; correct failures and retry, or regenerate expired pairing codes.
-3. Ask: press to record, then press again or pause to send; follow up after the reply. Call: wait for Listening, speak and use displayed keys to mute, interrupt or end. The screen turns off after 1 idle minute and Passport powers off after 30; press any function key to wake or start it. Adjust both times under Device preferences in the web studio.
+3. Ask: press to record, then press again or pause to send; follow up after the reply. Call: wait for Listening, speak and use displayed keys to mute, interrupt or end. The screen turns off after 1 idle minute and Passport powers off after 30; press any function key to wake or start it. Adjust both times under Screen off and Power off in device Settings.
 4. Switch saved networks in Settings → Wi-Fi. Add networks using web USB/Bluetooth; enable Bluetooth in device Settings first. On iPhone use Bluefy. Enable Allow Others to Join and Maximize Compatibility for hotspots; keep the hotspot settings page open if discovery fails.
 
 ## Update notes
 
-- Add automatic power-off: after 30 idle minutes Passport powers off to save battery, and any function key starts it again. It stays on while connected to a computer.
-- Choose your own screen-off and power-off times with sliders under Device preferences in the web studio; power-off can also be set to never.
-- Rearrange the home screen so the ring and text sit in the centre instead of leaning left.
-- Fix calls ending on their own after a while: interrupting the assistant once it has finished speaking, while its audio is still playing, no longer drops the call about 30 seconds later.
-- In a Chinese call, a one- or two-syllable utterance is no longer sometimes answered in English. These last two fixes are in the OpenClaw plugin, so OpenClaw users should update it too.
+- Set the screen-off and power-off times on Passport itself: Settings gains Screen off and Power off. The top key makes the time longer, the middle key shorter, and Back saves. No computer or web page needed.
+- The choices match the web studio: screen-off from 15 seconds to 10 minutes, power-off from 5 minutes to 2 hours, or never.
+- The Settings list now has six items, scrolls with the selection and shows which item you are on in the top right.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
-- Version: v0.7.3. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.3
+- Version: v0.7.4. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.4
 - Use the full-image hash in that release's `release-manifest.json`; upload the same file to the community, not a local candidate.
 - Preserve both approved titles from the paired documents. Do not change other plays.
 - Generate materials with `node tools/community_materials.mjs`; output:
-  `build/community-market/v0.7.3/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
+  `build/community-market/v0.7.4/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
 - All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
   description, instructions and update-note files before uploading the same files. Generation does not submit anything.
 - Before uploading, compare the live public revision and trim update notes accordingly. Submit only the inspected cover and verified release firmware.

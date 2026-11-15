@@ -15,7 +15,7 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**v0.7.3：息屏与自动关机时间可调，首页居中，回复播完后打断不再导致通话中断。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
+**v0.7.4：息屏和关机时间可以直接在设备「设置」里调。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
 项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
@@ -136,7 +136,7 @@ iOS 自动化表现随系统版本变化，这不是设备认证。参见[NFC �
 
 ## 版本与开发
 
-v0.7.3 同时提供 `ai-passport-hermes-0.7.3.tar.gz`。
+v0.7.4 同时提供 `ai-passport-hermes-0.7.4.tar.gz`。
 原生 App 不参与构建或发布。
 
 Release 包含应用／完整固件、固件打包文件、OpenClaw 插件、`release-manifest.json`、
