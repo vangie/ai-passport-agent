@@ -304,8 +304,8 @@ void passport_link_control_complete(void) {
 
 static void handle_line(const char *line) {
     if (!strcmp(line, "DEVICE") || !strcmp(line, "CHECK") || !strcmp(line, "CHECK_CANCEL") ||
-        !strncmp(line, "VOLUME ", 7)) {
-        bool deferred = !strcmp(line, "DEVICE") || !strncmp(line, "VOLUME ", 7);
+        !strncmp(line, "VOLUME ", 7) || !strncmp(line, "POWERCFG ", 9)) {
+        bool deferred = !strcmp(line, "DEVICE") || !strncmp(line, "VOLUME ", 7) || !strncmp(line, "POWERCFG ", 9);
         if (deferred) atomic_fetch_add(&s_async_configuration, 1);
         if (!passport_app_control_request(line)) {
             if (deferred) atomic_fetch_sub(&s_async_configuration, 1);
@@ -389,7 +389,7 @@ static void handle_line(const char *line) {
     memset(&usb, 0, sizeof(usb));
     usb.store = s_store;
     usb.build = s_firmware_id;
-    usb.capabilities = "device-control ble-secure ble-takeover scan-live";
+    usb.capabilities = "device-control ble-secure ble-takeover scan-live power-config";
     usb.scan = s_scan;
     usb.scan_count = s_scan_count;
     usb.reply = reply;

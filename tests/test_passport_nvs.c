@@ -12,6 +12,8 @@ static uint8_t persisted[5120];
 static size_t persisted_size;
 static uint8_t persisted_volume;
 static bool has_volume;
+static uint8_t persisted_power[4];
+static bool has_power;
 
 static void *allocate(size_t bytes) {
     assert(bytes==5120);
@@ -45,6 +47,13 @@ esp_err_t nvs_get_blob(nvs_handle_t handle, const char *name, void *out, size_t 
         *size=1;
         return ESP_OK;
     }
+    if (!strcmp(name,"power")) {
+        assert(handle==1 && *size==4);
+        if (fail_read || !has_power) return ESP_FAIL;
+        memcpy(out,persisted_power,4);
+        *size=4;
+        return ESP_OK;
+    }
     assert(handle==1 && !strcmp(name,"store") && *size>=persisted_size);
     if (fail_read) return ESP_FAIL;
     memcpy(out,persisted,persisted_size);
@@ -56,6 +65,12 @@ esp_err_t nvs_set_blob(nvs_handle_t handle, const char *name, const void *data, 
         assert(handle==1 && size==1);
         if (fail_write) return ESP_FAIL;
         if (!fail_commit) { persisted_volume=*(const uint8_t *)data;has_volume=true; }
+        return ESP_OK;
+    }
+    if (!strcmp(name,"power")) {
+        assert(handle==1 && size==4);
+        if (fail_write) return ESP_FAIL;
+        if (!fail_commit) { memcpy(persisted_power,data,4);has_power=true; }
         return ESP_OK;
     }
     assert(handle==1 && !strcmp(name,"store") && size<=sizeof(persisted));
@@ -114,6 +129,27 @@ int main(void) {
     assert(passport_nvs_volume_save(0) && passport_nvs_volume_load()==0);
     assert(passport_nvs_volume_save(100) && passport_nvs_volume_load()==100);
     assert(allocations==allocations_before+1 && allocations==releases);
+    uint16_t standby=60, poweroff=1800;
+    passport_nvs_power_load(&standby,&poweroff);
+    assert(standby==60 && poweroff==1800);
+    assert(passport_nvs_power_save(300,0));
+    passport_nvs_power_load(&standby,&poweroff);
+    assert(standby==300 && poweroff==0);
+    fail_write=true;
+    assert(!passport_nvs_power_save(15,75));
+    fail_write=false;fail_commit=true;
+    assert(!passport_nvs_power_save(15,75));
+    fail_commit=false;fail_open=true;
+    standby=60;poweroff=1800;
+    passport_nvs_power_load(&standby,&poweroff);
+    assert(standby==60 && poweroff==1800 && !passport_nvs_power_save(15,75));
+    fail_open=false;fail_read=true;
+    passport_nvs_power_load(&standby,&poweroff);
+    assert(standby==60 && poweroff==1800);
+    fail_read=false;
+    passport_nvs_power_load(&standby,&poweroff);
+    assert(standby==300 && poweroff==0);
+    assert(passport_nvs_volume_load()==100 && allocations==allocations_before+1);
     assert(passport_nvs_load(&restored) && restored.count==1 && restored.agent_count==2);
     puts("NVS workspace: repeated load/save, allocation/storage failures and complete release PASS");
 }

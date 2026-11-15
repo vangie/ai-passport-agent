@@ -95,7 +95,8 @@ const bridge = provider.createBridge({cfg: config,
     onResponseDone: outcome => callbackEvents.push(outcome.status),
     onEvent: event => callbackEvents.push(event.type),
     onError: error => callbackEvents.push(error.type)});
-assert(launched.instructions.startsWith('Keep agent identity.'));
+assert(launched.instructions.startsWith('【最高优先级】本次通话始终用普通话'));
+assert(launched.instructions.includes('\n\nKeep agent identity.\n\n'), 'the agent identity is kept verbatim');
 assert(launched.instructions.includes('普通话'));
 assert(launched.instructions.includes('passport_end_call') && launched.instructions.includes('我不想聊了'));
 assert.equal(launched.tools.at(-1).name, PASSPORT_END_CALL);
@@ -120,17 +121,20 @@ assert.equal(passportErrorKind(new Error('private transcript text')), 'other');
 assert.equal(passportErrorKind(undefined), 'other');
 assert.deepEqual(callbackEvents, ['incomplete', 'input_audio_buffer.speech_started', 'server_error']);
 bridge.sendUserMessage('Read the tool result.');
-assert(spoken.includes('普通话'));
+assert(spoken.startsWith('Read the tool result.') && spoken.includes('普通话') && !spoken.includes('【最高优先级】'));
 bridge.handleBargeIn({audioPlaybackActive: true});
 assert.deepEqual(interrupted, {audioPlaybackActive: true, force: true});
+// No reply was being generated, so the wrapper settles the interruption for the gateway.
+assert.deepEqual(diagnostics.at(-1), {event: 'cancel.settled'});
+assert.equal(callbackEvents.at(-1), 'response.cancelled');
 await bridge.close();
 assert.equal(closed, 1);
 assert.equal(connected, 0);
 launched.onResponseDone({status: 'failed'});
 launched.onEvent({type: 'error'});
 launched.onError({type: 'server_error'});
-assert.equal(diagnostics.length, 3);
-assert.equal(callbackEvents.length, 3);
+assert.equal(diagnostics.length, 4);
+assert.equal(callbackEvents.length, 4);
 function callFixture({rejectClose = false, providerCloses = true, closeReason = 'completed'} = {}) {
     const events = [], delegated = [], transcripts = [];
     let request, closeCount = 0, resolveClose;
@@ -244,6 +248,7 @@ for (let index = 0; index < 4; index++) {
 current.connection.client({type: 'req', id: 'cross-owner', method: 'talk.session.close', params: {sessionId: 'other'}});
 assert.equal(current.client.at(-1).ok, false);
 assert.equal(current.failures.length, 0);
+current.connection.upstream({type: 'event', event: 'talk.event', payload: {relaySessionId: 'call', type: 'responseStarted'}});
 current.connection.client({type: 'req', id: 'interrupt', method: 'talk.session.cancelOutput',
     params: {sessionId: 'call', reason: 'barge-in'}});
 assert.equal(current.upstream.at(-1).method, 'talk.session.cancelOutput');
@@ -285,6 +290,63 @@ const deliveredEvents = current.client.filter(frame => frame.type === 'event' &&
 assert.deepEqual(deliveredEvents.map(frame => frame.seq), deliveredEvents.map((frame, index) => index + 1));
 current.connection.stop('finished');
 assert.equal(current.failures.length, 1);
+// Interrupting when no reply is being generated: the gateway waits for the upstream to end a
+// cancelled reply, the upstream has none, and 30 seconds later the gateway closes the call.
+// The provider wrapper must settle such an interruption itself, and only such an interruption.
+function interruptionFixture(upstreamId = 'openai') {
+    const seen = [], reports = [];
+    let request;
+    const native = {connect() {}, sendAudio() {}, submitToolResult() {}, acknowledgeMark() {}, close() {}, isConnected: () => true,
+        // Like the native bridge: asks the upstream to cancel only while a reply is active.
+        handleBargeIn() { if (native.active) request.onEvent({direction: 'client', type: 'response.cancel'}); }};
+    const wrapped = createPassportProvider(() => ({resolveConfig: context => context.rawConfig, isConfigured: () => true,
+        createBridge(options) { request = options; return native; }}), upstreamId, event => reports.push(event.event))
+        .createBridge({cfg: config, providerConfig: {}, language: 'zh', onEvent: event => seen.push(event), onResponseDone() {}});
+    const settled = () => seen.filter(event => event.direction === 'server' && event.type === 'response.cancelled').length;
+    return {native, wrapped, reports, settled,
+        created() { native.active = true; request.onEvent({direction: 'server', type: 'response.created', responseId: 'reply'}); },
+        requested() { request.onEvent({direction: 'client', type: 'response.create'}); },
+        done(status = 'completed') {
+            native.active = false;
+            request.onResponseDone({status, responseId: 'reply'});
+            request.onEvent({direction: 'server', type: 'response.done', responseId: 'reply'});
+        }};
+}
+{
+    const call = interruptionFixture();
+    call.created(); call.done();
+    call.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(call.settled(), 1, 'a finished reply leaves nothing to cancel, so the interruption is settled at once');
+    assert(call.reports.includes('cancel.settled'));
+    call.created();
+    call.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(call.settled(), 1, 'a reply still being generated is ended by the upstream, not here');
+    call.done('cancelled');
+    call.requested();
+    call.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(call.settled(), 1, 'a requested reply is ended by the upstream, not here');
+    call.created(); call.done();
+    call.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(call.settled(), 2, 'every later idle interruption is settled as well');
+}
+{
+    const idle = interruptionFixture();
+    idle.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(idle.settled(), 1, 'an interruption before the first reply is settled');
+    await idle.wrapped.close();
+    idle.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(idle.settled(), 1, 'nothing is reported after the call ended');
+}
+{
+    // An upstream that has not shown this reply lifecycle keeps the gateway's own handling.
+    const other = interruptionFixture('fixture-provider');
+    other.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(other.settled(), 0);
+    other.created(); other.done();
+    other.wrapped.handleBargeIn({audioPlaybackActive: true});
+    assert.equal(other.settled(), 1);
+}
+console.log('Passport interruption: idle interruptions settle at once, active replies are left to the upstream PASS');
 const denied = fixture(); authenticate(denied, false);
 assert.equal(denied.failures.length, 1);
 const unauthenticated = fixture(); unauthenticated.connection.client(create);

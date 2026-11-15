@@ -83,6 +83,23 @@ static void check_choice_rows(size_t count, size_t first, size_t selected) {
     }
 }
 
+/* Twice the horizontal centre of everything drawn in rows [top, bottom) left
+ * of the key column, so half pixels stay exact. Returns -1 for an empty band. */
+static int ink_centre2(int top, int bottom, int *left_out, int *right_out) {
+    const unsigned char *background=&s_pixels[(60*PASSPORT_LCD_W+100)*3];
+    int left=-1,right=-1;
+    for (int row=top;row<bottom;row++) for (int column=0;column<206;column++) {
+        const unsigned char *pixel=&s_pixels[(row*PASSPORT_LCD_W+column)*3];
+        int difference=abs(pixel[0]-background[0])+abs(pixel[1]-background[1])+abs(pixel[2]-background[2]);
+        if (difference<=60) continue;
+        if (left<0 || column<left) left=column;
+        if (column>right) right=column;
+    }
+    if (left_out) *left_out=left;
+    if (right_out) *right_out=right;
+    return left<0?-1:left+right;
+}
+
 static void render(const char *name, passport_view_t *v, passport_store_t *store) {
     bool changed=s_layout!=(int)mode_for(v) || s_key_language!=(int)passport_lang_zh(store);
     memset(s_flushed_rows,0,sizeof(s_flushed_rows));
@@ -545,6 +562,9 @@ int main(int argc, char **argv) {
         assert(lv_font_get_glyph_dsc(headline_font, &glyph, codepoint, 0) && !glyph.is_placeholder);
     }
     render("home",&v,&store);
+    assert(lv_obj_get_x(s_orbit)+lv_obj_get_width(s_orbit)/2==IDLE_AXIS);
+    assert(lv_obj_get_x(s_body)+lv_obj_get_width(s_body)/2==IDLE_AXIS);
+    assert(lv_obj_get_x(s_body)+lv_obj_get_width(s_body)<=206);
     assert(!strcmp(lv_label_get_text(s_status),"助手：助手·Cloudflare"));
     lv_point_t name_size;
     lv_text_get_size(&name_size,lv_label_get_text(s_status),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
@@ -555,8 +575,14 @@ int main(int argc, char **argv) {
     unsigned before=s_flushes;memset(v.waveform,75,sizeof(v.waveform));
     render("recording-louder",&v,&store);assert(s_flushes>before);
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);strcpy(v.reply,"正在连接 OpenClaw");
-    render("sending",&v,&store);strcpy(v.reply,"已发送，助手处理中");render("waiting",&v,&store);
+    render("sending",&v,&store);
+    assert(lv_obj_get_x(s_orbit)+lv_obj_get_width(s_orbit)/2==CONTENT_AXIS);
+    assert(lv_obj_get_x(s_headline)+lv_obj_get_width(s_headline)/2==CONTENT_AXIS);
+    assert(lv_obj_get_x(s_body)+lv_obj_get_width(s_body)/2==CONTENT_AXIS);
+    strcpy(v.reply,"已发送，助手处理中");render("waiting",&v,&store);
     passport_finish_send(&v,false,true,"连接中断，请重试");render("failure",&v,&store);
+    assert(lv_obj_get_x(s_mark_bar)+lv_obj_get_width(s_mark_bar)/2==CONTENT_AXIS);
+    assert(lv_obj_get_x(s_headline)+lv_obj_get_width(s_headline)/2==CONTENT_AXIS);
     passport_offer_retry(&v,"录音已恢复，可重试");render("restored",&v,&store);
     v.screen=PASSPORT_SCREEN_CANCELLING;v.cancel_pending=true;render("cancelling",&v,&store);
     passport_finish_cancel(&v,"本次操作已取消");render("home-after-cancel",&v,&store);
@@ -794,6 +820,32 @@ int main(int argc, char **argv) {
     passport_agent_upsert(&store,"小夏","openclaw","wss://gateway.example","",NULL,NULL,NULL);
     passport_view_init(&v);v.wifi_online=true;v.battery_soc=98;
     render("product-home",&v,&store);
+    {
+        /* One axis for the home group, measured on drawn pixels: the ring, the
+         * headline's visible ink and the caption share a centre, the group sits
+         * between the content axis and the screen centre, and the caption keeps
+         * a clear margin from the keys. */
+        int left=0,right=0;
+        int ring=ink_centre2(IDLE_ORBIT_TOP,IDLE_ORBIT_TOP+ORBIT_SIZE,NULL,NULL);
+        int headline=ink_centre2(IDLE_ORBIT_TOP+ORBIT_SIZE+10,IDLE_ORBIT_TOP+ORBIT_SIZE+46,NULL,NULL);
+        int caption=ink_centre2(IDLE_ORBIT_TOP+ORBIT_SIZE+50,IDLE_ORBIT_TOP+ORBIT_SIZE+90,&left,&right);
+        assert(ring>0 && headline>0 && caption>0);
+        assert(abs(ring-headline)<=1 && abs(ring-caption)<=1);
+        assert(abs(ring-(2*IDLE_AXIS-1))<=1);
+        assert(IDLE_AXIS>CONTENT_AXIS && IDLE_AXIS<PASSPORT_LCD_W/2);
+        assert(left>=CONTENT_LEFT && 212-right-1>=10);
+        int rule_left=0,rule_right=0;
+        assert(ink_centre2(68,71,&rule_left,&rule_right)>0);
+        assert(rule_left==CONTENT_LEFT+8 && rule_right==CONTENT_RIGHT-8-1);
+        assert(rule_left-CONTENT_LEFT==CONTENT_RIGHT-1-rule_right);
+        int top=-1,bottom=-1;
+        for (int row=72;row<PASSPORT_LCD_H;row++) {
+            if (ink_centre2(row,row+1,NULL,NULL)<0) continue;
+            if (top<0) top=row;
+            bottom=row;
+        }
+        assert(top>0 && abs((top-69)-(PASSPORT_LCD_H-1-bottom))<=14);
+    }
     strcpy(store.agents[0].kind,"hermes");
     render("product-hermes",&v,&store);
     strcpy(store.agents[0].kind,"openclaw");

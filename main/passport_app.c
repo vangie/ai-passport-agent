@@ -34,7 +34,7 @@ static passport_store_t s_store;
 static passport_view_t s_view;
 static char s_gateway_message[PASSPORT_TEXT_MAX];
 static QueueHandle_t s_inputs;
-typedef enum { INPUT_KEY, INPUT_PHYSICAL_KEY, INPUT_DIAG, INPUT_BATTERY, INPUT_POWER, INPUT_AUDIO_TEST, INPUT_GATEWAY_TEST, INPUT_BLE_ON, INPUT_BLE_OFF, INPUT_HISTORY_TEST, INPUT_RESUME_REPLY, INPUT_RESTORE_CLIP, INPUT_LIVE_TEST, INPUT_AUTO_SEND, INPUT_DEVICE, INPUT_VOLUME, INPUT_CHECK, INPUT_CHECK_CANCEL } input_kind_t;
+typedef enum { INPUT_KEY, INPUT_PHYSICAL_KEY, INPUT_DIAG, INPUT_BATTERY, INPUT_POWER, INPUT_AUDIO_TEST, INPUT_GATEWAY_TEST, INPUT_BLE_ON, INPUT_BLE_OFF, INPUT_HISTORY_TEST, INPUT_RESUME_REPLY, INPUT_RESTORE_CLIP, INPUT_LIVE_TEST, INPUT_AUTO_SEND, INPUT_DEVICE, INPUT_VOLUME, INPUT_POWER_CONFIG, INPUT_CHECK, INPUT_CHECK_CANCEL } input_kind_t;
 typedef struct {
     input_kind_t kind;
     passport_input_t key;
@@ -43,6 +43,7 @@ typedef struct {
     passport_action_t capture_action;
     unsigned expected_volume;
     unsigned desired_volume;
+    unsigned power[4];
 } app_input_t;
 static int64_t s_audio_test_end;
 static int64_t s_battery_next_us;
@@ -82,6 +83,8 @@ bool passport_nvs_load(passport_store_t *store);
 bool passport_nvs_save(const passport_store_t *store);
 uint8_t passport_nvs_volume_load(void);
 bool passport_nvs_volume_save(uint8_t volume);
+void passport_nvs_power_load(uint16_t *standby_s, uint16_t *poweroff_s);
+bool passport_nvs_power_save(uint16_t standby_s, uint16_t poweroff_s);
 bool passport_wifi_is_online(void);
 esp_err_t passport_wifi_gateway_performance(bool enabled);
 esp_err_t passport_wifi_prepare(void);
@@ -101,7 +104,10 @@ bool passport_app_control_request(const char *line) {
     if (!strcmp(line, "DEVICE")) event.kind = INPUT_DEVICE;
     else if (!strcmp(line, "CHECK")) event.kind = INPUT_CHECK;
     else if (!strcmp(line, "CHECK_CANCEL")) event.kind = INPUT_CHECK_CANCEL;
-    else {
+    else if (!strncmp(line, "POWERCFG ", 9)) {
+        event.kind = INPUT_POWER_CONFIG;
+        if (!passport_control_power(line, event.power)) return false;
+    } else {
         event.kind = INPUT_VOLUME;
         if (!passport_control_volume(line, &event.expected_volume, &event.desired_volume)) return false;
     }
@@ -117,7 +123,8 @@ static bool device_busy(void) {
 static void device_status(void) {
     char line[224];
     passport_control_status(line, sizeof(line), s_view.speaker_volume, s_view.battery_soc,
-        passport_wifi_is_online(), device_busy(), s_power.sleeping, usb_serial_jtag_is_connected());
+        passport_wifi_is_online(), device_busy(), s_power.sleeping, usb_serial_jtag_is_connected(),
+        s_power.standby_s, s_power.poweroff_s);
     size_t used = strlen(line);
     snprintf(line + used, sizeof(line) - used, " generation=%lu network=%d agent=%d",
         (unsigned long)s_store.generation, s_store.connected, s_store.active_agent);
@@ -166,6 +173,15 @@ static void power_maintain(void) {
         s_polled_button >= 0 || passport_link_configuration_busy() ||
         usb_serial_jtag_is_connected() || s_view.network_state == PASSPORT_NETWORK_CONNECTING;
     if (s_power.sleeping && (busy || passport_gateway_active())) (void)power_wake();
+    if (passport_power_off_due(&s_power, power_now_ms(), busy || passport_gateway_active(),
+                            usb_serial_jtag_is_connected())) {
+        int mv = bsp_button_read_mv();
+        if (mv >= 0 && mv < BSP_BTN_MV_RELEASED_MIN) return;
+        ESP_LOGI(TAG, "power off after %us idle; any key starts the device", (unsigned)s_power.poweroff_s);
+        passport_gateway_maintain(false);
+        (void)passport_link_pause_bluetooth();
+        passport_power_off();
+    }
     if (!passport_power_due(&s_power, power_now_ms(), busy || passport_gateway_active(),
                          usb_serial_jtag_is_connected())) return;
     esp_err_t error = passport_audio_release();
@@ -419,6 +435,7 @@ static void poll_button_wake(void) {
 
 void app_main(void) {
     passport_power_init();
+    passport_power_configure(&s_power, PASSPORT_STANDBY_DEFAULT_S, PASSPORT_POWEROFF_DEFAULT_S);
     passport_power_activity(&s_power, power_now_ms());
     passport_memory_init();
     passport_memory_report("boot");
@@ -443,6 +460,9 @@ void app_main(void) {
     passport_view_init(&s_view);
     s_view.speaker_volume = s_saved_volume = passport_nvs_volume_load();
     (void)passport_audio_set_volume(s_saved_volume);
+    uint16_t standby_s = PASSPORT_STANDBY_DEFAULT_S, poweroff_s = PASSPORT_POWEROFF_DEFAULT_S;
+    passport_nvs_power_load(&standby_s, &poweroff_s);
+    passport_power_configure(&s_power, standby_s, poweroff_s);
     if (!bsp_lvgl_lock(1000)) {
         return;
     }
@@ -487,9 +507,10 @@ void app_main(void) {
             }
             if (event.kind == INPUT_POWER) {
                 char line[128];
-                snprintf(line, sizeof(line), "POWER sleeping=%d idle_ms=%lu timeout_ms=%u usb_host=%d config=%d",
+                snprintf(line, sizeof(line), "POWER sleeping=%d idle_ms=%lu timeout_ms=%lu poweroff_ms=%lu usb_host=%d config=%d",
                     s_power.sleeping, (unsigned long)(power_now_ms() - s_power.activity_ms),
-                    PASSPORT_IDLE_TIMEOUT_MS, usb_serial_jtag_is_connected(), passport_link_configuration_busy());
+                    (unsigned long)s_power.standby_s * 1000UL, (unsigned long)s_power.poweroff_s * 1000UL,
+                    usb_serial_jtag_is_connected(), passport_link_configuration_busy());
                 passport_link_diagnostic_reply(line);
                 continue;
             }
@@ -508,6 +529,17 @@ void app_main(void) {
                     (void)passport_audio_set_volume(previous);
                     result = "ERR storage";
                 } else s_view.speaker_volume = s_saved_volume = event.desired_volume;
+                passport_link_diagnostic_reply(result);
+                device_status();
+                passport_link_control_complete();
+                continue;
+            }
+            if (event.kind == INPUT_POWER_CONFIG) {
+                const char *result = "OK power";
+                if (event.power[0] != s_power.standby_s || event.power[1] != s_power.poweroff_s) result = "ERR stale";
+                else if (!passport_power_valid(event.power[2], event.power[3])) result = "ERR range";
+                else if (!passport_nvs_power_save((uint16_t)event.power[2], (uint16_t)event.power[3])) result = "ERR storage";
+                else passport_power_configure(&s_power, event.power[2], event.power[3]);
                 passport_link_diagnostic_reply(result);
                 device_status();
                 passport_link_control_complete();

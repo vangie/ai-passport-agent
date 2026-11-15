@@ -87,6 +87,15 @@ export function createPassportProvider(getProvider, upstreamId = 'openai', diagn
                     typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)));
                 try { diagnostic({event: type, ...fields, ...extra}); } catch {}
             }
+            // Whether the upstream still owes a terminal event for a reply, as told by its own
+            // response lifecycle events. Other upstreams qualify once they report a reply this way.
+            let replyPending = false, lifecycleKnown = upstreamId === 'openai';
+            function trackReply(event) {
+                if (event?.direction === 'server' && event.type === 'response.created') replyPending = lifecycleKnown = true;
+                else if (event?.direction === 'client' && event.type === 'response.create') replyPending = true;
+                else if (event?.direction === 'server' && ['response.done', 'response.cancelled'].includes(event.type))
+                    replyPending = false;
+            }
             bridge = provider.createBridge({
                 ...request,
                 ...callbacks,
@@ -96,11 +105,13 @@ export function createPassportProvider(getProvider, upstreamId = 'openai', diagn
                 instructions: withPassportVoiceInstructions(request.instructions, request.language, true, true),
                 tools: [...(request.tools ?? []).filter(tool => tool.name !== PASSPORT_END_CALL), endCallTool],
                 onResponseDone(outcome) {
+                    replyPending = false;
                     if (ending || ended) return;
                     report('response.done', outcome);
                     return request.onResponseDone?.(outcome);
                 },
                 onEvent(event) {
+                    trackReply(event);
                     if (ending || ended) return;
                     if (['error', 'input_audio_buffer.speech_started', 'session.reconnect.scheduled',
                         'session.reconnect.ready'].includes(event.type)) report(event.type);
@@ -131,7 +142,18 @@ export function createPassportProvider(getProvider, upstreamId = 'openai', diagn
                     if (property === 'isConnected') return () => !ending && !ended && value.call(target);
                     if (property === 'sendAudio') return (...args) => { if (!ending && !ended) return value.apply(target, args); };
                     if (property === 'handleBargeIn') return options => {
-                        if (!ending && !ended) return value.call(target, {...options, force: true});
+                        if (ending || ended) return;
+                        const owed = replyPending;
+                        const result = value.call(target, {...options, force: true});
+                        if (lifecycleKnown && !owed && !replyPending) {
+                            // No reply is being generated: the last one already finished and only its
+                            // audio is still playing, or none has started. The upstream has nothing to
+                            // cancel and never sends the terminal event the gateway waits for, so the
+                            // gateway would close the call 30 seconds later. Settle it here instead.
+                            report('cancel.settled');
+                            request.onEvent?.({direction: 'server', type: 'response.cancelled'});
+                        }
+                        return result;
                     };
                     if (property === 'sendUserMessage' && typeof value === 'function')
                         return (text, options) => {

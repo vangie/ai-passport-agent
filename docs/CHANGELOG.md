@@ -14,6 +14,14 @@
 
 No pending changes.
 
+## v0.7.3 - 2026-11-15
+
+- Add automatic power-off: a device that has been in standby for the configured time (30 minutes by default) enters deep sleep, and any function key starts it again. A computer USB connection, a key press or any activity restarts the timer.
+- Make both idle times adjustable under **Device preferences** in the web studio with stepped sliders: screen-off from 15 seconds to 10 minutes, power-off from 5 minutes to 2 hours or never. Power-off is always at least one minute later than screen-off, enforced by both the firmware and the page; the new `POWERCFG` command and the `power-config` capability carry the setting.
+- Centre the home screen: the ring, greeting, caption and level meter share one axis that accounts for the key column, and busy pages share the content-area axis.
+- Keep an OpenClaw call open when an interruption arrives after the reply has already finished generating and only its audio is still playing. The gateway used to wait for a cancellation the voice service could not confirm and close the call 30 seconds later; the plugin now settles such an interruption itself.
+- Open the OpenClaw call instructions with a line stating the reply language, so a very short utterance is no longer sometimes answered in English during a Chinese call.
+
 ## v0.7.2 - 2026-11-15
 
 - Keep a call running when the realtime voice service reports a stream error after the microphone has started. The device no longer mutes the microphone and waits 30 seconds for a recovery signal that cannot arrive; it ends the call only after more than five such errors in a row or when the gateway closes the session.

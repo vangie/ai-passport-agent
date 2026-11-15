@@ -83,6 +83,9 @@ export class DemoTransport {
     this.generation = 1;
     this.language = 'zh';
     this.volume = 65;
+    this.standby = 60;
+    this.powerOff = 1800;
+    this.powerConfig = true;
     this.networks = ['Home Wi-Fi', 'My iPhone'];
     this.agents = [{ name: 'OpenClaw', url: 'wss://gateway.example', current: true }];
   }
@@ -91,7 +94,7 @@ export class DemoTransport {
     const parts = command.split(' ');
     const emit = line => this.onData?.(new TextEncoder().encode(line + '\n'));
     await new Promise(resolve => setTimeout(resolve, 70));
-    if (parts[0] === 'HELLO') emit(`HELLO ai-passport-openclaw ${this.generation} ${this.networks.length} ${this.agents.length} ${this.language} demo device-control scan-live gateway-route`);
+    if (parts[0] === 'HELLO') emit(`HELLO ai-passport-openclaw ${this.generation} ${this.networks.length} ${this.agents.length} ${this.language} demo device-control scan-live gateway-route${this.powerConfig ? ' power-config' : ''}`);
     else if (command === 'NETS') {
       emit(`NETS ${this.generation} ${this.networks.length} 0`);
       this.networks.forEach((ssid, index) => emit(`SAVED ${index} ${encode(ssid)} ${encode(ssid)}`));
@@ -100,7 +103,7 @@ export class DemoTransport {
       emit(`AGENTS ${this.generation} ${this.agents.length} ${this.agents.findIndex(agent => agent.current)}`);
       this.agents.forEach((agent, index) => { emit(`AGENT ${index} ${encode(agent.name)} ${encode(agent.url)} ready`); emit(`ROUTE ${index} direct - 0 0 aes-256-cfb`); });
       emit('AGENTS END');
-    } else if (command === 'DEVICE') emit(`DEVICE volume=${this.volume} battery=86 wifi=1 busy=0 sleeping=0 usb_host=1 idle_s=60`);
+    } else if (command === 'DEVICE') emit(`DEVICE volume=${this.volume} battery=86 wifi=1 busy=0 sleeping=0 usb_host=1 idle_s=${this.standby}${this.powerConfig ? ` poweroff_s=${this.powerOff}` : ''}`);
     else if (parts[0] === 'SCAN') {
       emit('SCAN LIVE');
       for (const line of ['NET -38 Home Wi-Fi', 'NET -52 My iPhone', 'NET_KIND hotspot My%20iPhone', 'NET -72 Studio']) {
@@ -109,7 +112,7 @@ export class DemoTransport {
       emit('SCAN END');
     } else if (parts[0] === 'TRY') emit('TRY ok');
     else {
-      const ending = { SAVE: 'saved', LANG: 'lang', VOLUME: 'volume', AGENT: 'agent', USE: 'use', DROP: 'drop', FORGET: 'forget', ROUTE: 'route' }[parts[0]];
+      const ending = { SAVE: 'saved', LANG: 'lang', VOLUME: 'volume', POWERCFG: 'power', AGENT: 'agent', USE: 'use', DROP: 'drop', FORGET: 'forget', ROUTE: 'route' }[parts[0]];
       if (!ending) { emit('ERR command'); return; }
       if (parts[0] === 'SAVE') { const ssid = decode(parts[2]); if (!this.networks.includes(ssid)) this.networks.push(ssid); }
       if (parts[0] === 'FORGET') this.networks.splice(Number(parts[2]), 1);
@@ -117,8 +120,14 @@ export class DemoTransport {
       if (parts[0] === 'USE') this.agents.forEach((agent, index) => { agent.current = index === Number(parts[2]); });
       if (parts[0] === 'LANG') this.language = parts[2];
       if (parts[0] === 'VOLUME') this.volume = Number(parts[2]);
+      if (parts[0] === 'POWERCFG') {
+        const [expectedStandby, expectedOff, standby, powerOff] = parts.slice(1).map(Number);
+        if (expectedStandby !== this.standby || expectedOff !== this.powerOff) { emit('ERR stale'); return; }
+        if (standby < 15 || standby > 600 || (powerOff !== 0 && (powerOff < standby + 60 || powerOff > 7200))) { emit('ERR range'); return; }
+        this.standby = standby; this.powerOff = powerOff;
+      }
       if (parts[0] === 'AGENT') { this.agents.forEach(agent => { agent.current = false; }); this.agents.push({ name: decode(parts[2]), url: 'wss://gateway.example', current: true }); }
-      if (parts[0] !== 'VOLUME') this.generation++;
+      if (parts[0] !== 'VOLUME' && parts[0] !== 'POWERCFG') this.generation++;
       emit(`OK ${ending}`);
     }
   }

@@ -29,6 +29,28 @@ bool passport_nvs_volume_save(uint8_t volume) {
     return err == ESP_OK;
 }
 
+void passport_nvs_power_load(uint16_t *standby_s, uint16_t *poweroff_s) {
+    nvs_handle_t handle;
+    uint16_t saved[2];
+    size_t bytes = sizeof(saved);
+    if (nvs_open(k_ns, NVS_READONLY, &handle) != ESP_OK) return;
+    esp_err_t err = nvs_get_blob(handle, "power", saved, &bytes);
+    nvs_close(handle);
+    if (err != ESP_OK || bytes != sizeof(saved)) return;
+    *standby_s = saved[0];
+    *poweroff_s = saved[1];
+}
+
+bool passport_nvs_power_save(uint16_t standby_s, uint16_t poweroff_s) {
+    nvs_handle_t handle;
+    const uint16_t saved[2] = {standby_s, poweroff_s};
+    if (nvs_open(k_ns, NVS_READWRITE, &handle) != ESP_OK) return false;
+    esp_err_t err = nvs_set_blob(handle, "power", saved, sizeof(saved));
+    if (err == ESP_OK) err = nvs_commit(handle);
+    nvs_close(handle);
+    return err == ESP_OK;
+}
+
 bool passport_nvs_load(passport_store_t *store) {
     uint8_t *blob = malloc(STORE_BYTES);
     if (!blob) return false;

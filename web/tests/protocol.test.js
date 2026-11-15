@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LineBuffer, encode, pairing, validateWiFi, hello, networks, agents, nearby, Session } from '../src/protocol.js';
+import { LineBuffer, encode, pairing, validateWiFi, hello, networks, agents, nearby, Session, STANDBY_STEPS, POWEROFF_STEPS, POWEROFF_GAP, powerOffAllowed, powerPair, nearestStep } from '../src/protocol.js';
 import { DemoTransport, BluetoothTransport } from '../src/transports.js';
 import { validateApplication, validatePartitions, validateManifest, getImage, matchesRelease, firmwareIdentity, firmwareUpdate, sha256 } from '../src/firmware.js';
 
@@ -193,4 +193,33 @@ test('downloaded firmware must match its hash before flashing', async () => {
   globalThis.fetch = async () => new Response(new Uint8Array(288));
   try { await assert.rejects(getImage({ application: { file: 'app.bin', size: 288, sha256: '0'.repeat(64) } }, 'application'), /integrity/); }
   finally { globalThis.fetch = original; }
+});
+
+test('power-off always stays later than standby for every slider position', async () => {
+  for (const standby of STANDBY_STEPS) for (const powerOff of POWEROFF_STEPS) {
+    const pair = powerPair(standby, powerOff);
+    assert.equal(pair.standby, standby, 'moving power-off never changes standby');
+    assert.ok(STANDBY_STEPS.includes(pair.standby) && POWEROFF_STEPS.includes(pair.powerOff));
+    assert.ok(pair.powerOff === 0 || pair.powerOff >= pair.standby + POWEROFF_GAP);
+    assert.equal(pair.powerOff === 0, powerOff === 0, 'never is only chosen by the user');
+    if (powerOffAllowed(standby, powerOff)) assert.equal(pair.powerOff, powerOff);
+  }
+  assert.deepEqual(powerPair(600, 300), { standby: 600, powerOff: 900 });
+  assert.deepEqual(powerPair(300, 300), { standby: 300, powerOff: 600 });
+  assert.deepEqual(powerPair(60, 0), { standby: 60, powerOff: 0 });
+  assert.equal(nearestStep(STANDBY_STEPS, 45), 30);
+  assert.equal(nearestStep(STANDBY_STEPS, 60), 60);
+  assert.equal(nearestStep(POWEROFF_STEPS, 0), 0);
+  assert.equal(nearestStep(POWEROFF_STEPS, 2000), 1800);
+
+  const fixture = new DemoTransport();
+  const session = new Session(fixture);
+  const state = await session.snapshot();
+  assert.ok(state.capabilities.includes('power-config'));
+  assert.equal(state.device.idle_s, 60);
+  assert.equal(state.device.poweroff_s, 1800);
+  const changed = await session.mutate('POWERCFG 60 1800 300 0', 'OK power');
+  assert.equal(changed.device.idle_s, 300);
+  assert.equal(changed.device.poweroff_s, 0);
+  await assert.rejects(session.mutate('POWERCFG 60 1800 300 600', 'OK power'));
 });

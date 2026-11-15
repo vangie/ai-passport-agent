@@ -5,6 +5,24 @@ export const bytes = value => new TextEncoder().encode(value).length;
 export const encode = value => encodeURIComponent(value).replace(/[!'()*~]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
 export const decode = value => decodeURIComponent(value);
 
+/* Slider positions, in seconds. Power-off 0 means never. The device enforces
+ * the same rule: power-off is at least one minute later than standby. */
+export const STANDBY_STEPS = [15, 30, 60, 120, 300, 600];
+export const POWEROFF_STEPS = [300, 600, 900, 1800, 3600, 7200, 0];
+export const POWEROFF_GAP = 60;
+export const powerOffAllowed = (standby, powerOff) => powerOff === 0 || powerOff >= standby + POWEROFF_GAP;
+export function nearestStep(steps, value) {
+  if (steps.includes(value)) return value;
+  return steps.filter(step => step > 0).reduce((best, step) => Math.abs(step - value) < Math.abs(best - value) ? step : best);
+}
+/* Returns the pair to show after one slider moved. Moving standby later pushes
+ * power-off later when needed; power-off cannot be dragged below standby. */
+export function powerPair(standby, powerOff) {
+  if (powerOffAllowed(standby, powerOff)) return { standby, powerOff };
+  const later = POWEROFF_STEPS.find(step => step > 0 && powerOffAllowed(standby, step));
+  return { standby, powerOff: later ?? 0 };
+}
+
 export function pairing(payload, address = '') {
   let raw = payload.trim();
   let outerURL = '';

@@ -40,7 +40,8 @@ OpenClaw version before release. Packaging tests are not a live gateway SDK test
 
 ### Device standby
 
-After 60 seconds without activity, the Passport turns off its backlight, puts the
+After an idle period (60 seconds by default, adjustable from 15 seconds to 10 minutes under
+**Device preferences** in the web studio), the Passport turns off its backlight, puts the
 LCD into reversible sleep, pauses LVGL ticks and component button polling, and
 releases the application's full-speed/keep-awake power locks. ESP-IDF automatic
 light sleep and Wi-Fi modem power saving are enabled; the application still polls
@@ -48,6 +49,18 @@ the ADC keys every 50 ms. This is connected standby, not deep sleep or shutdown:
 the current page, RAM conversation and saved configuration survive. Any function
 key wakes the display; that entire press is consumed, so it cannot accidentally
 record, submit or change settings. The next press performs the displayed action.
+
+When standby has lasted for the configured power-off time (30 minutes by default; 5 minutes
+to 2 hours, or never), the device powers off by itself. This board cannot cut its own supply
+from firmware, so automatic power-off is deep sleep after Wi-Fi, the fuel gauge, audio and the
+display have been stopped. Any function key starts the application like a fresh boot: the
+conversation in RAM is gone and saved configuration is kept. The hardware power button is unchanged.
+Power-off is always at least 1 minute later than standby, and only a device already in standby
+powers off, so the two timers cannot race; any key, busy state or computer USB connection
+restarts both. The firmware and the web studio both enforce this.
+`POWERCFG <old standby s> <old power-off s> <new standby s> <new power-off s>` changes the two
+times, with 0 meaning never for power-off. A mismatched old pair returns `ERR stale`; a pair
+outside the range or ordering returns `ERR range`.
 
 Recording, calls, sending/cancelling, gateway work, settings pages, active
 configuration and an enumerated USB host keep the display awake. A BLE connection
@@ -178,6 +191,15 @@ not transcript text, endpoint URLs or credentials.
 An upstream error also records a `kind` from a fixed vocabulary (such as `truncate`,
 `cancel`, `network` or `other`) so a rejected interruption request can be told apart
 from a real connection fault; the error text itself is never logged.
+An interruption can arrive when no reply is being generated: the reply already finished
+upstream and only its audio is still playing on the device, or nothing has started yet. The
+upstream then has nothing to cancel and never sends the terminal event the gateway waits
+for, so the gateway reported an unconfirmed cancellation after 1 second and closed the call
+30 seconds later. The Passport provider now tracks the upstream's reply lifecycle and
+settles such an interruption itself (logged as `cancel.settled`); the gateway still cancels
+the turn and any running consult. A reply that is being generated is still ended by the
+upstream. Upstreams other than `openai` get this only after they have reported a reply
+through the same lifecycle events.
 The top key can mute while connecting; audio startup retains that choice and
 muted input is sent as silence, without silencing the assistant's speaker.
 Connecting displays “Connecting”, not a recording prompt. The bottom key can
@@ -363,6 +385,11 @@ For an authenticated client whose signed device family is `ai-passport`:
   it does not constrain spoken output. Preserve existing persona/tool instructions
   and leave other device families and unspecified languages unchanged. End and
   reopen existing calls after installing this fix; no firmware flash is needed.
+  The session instructions also open with one line stating the reply language, and
+  keep the detailed policy at the end. The gateway's own call instructions are in
+  English, and with the policy only at the end a one-syllable Mandarin acknowledgement
+  or “OK” was sometimes answered in English: 4 of 50 direct test replies before
+  this line, 0 of 50 after. Per-message prompts do not repeat the line.
 - Enable native audio responses for ordinary conversation and general knowledge,
   without waiting for final transcription or forcing an agent consult on every
   turn. Retain the configured agent persona and consult/control tools. Current

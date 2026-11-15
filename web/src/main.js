@@ -1,7 +1,7 @@
 import './style.css';
 import brandLogo from '../../assets/logo/logo.png';
 import { language, text, setLanguage } from './i18n.js';
-import { Session, encode, bytes, pairing, validateWiFi, nearby } from './protocol.js';
+import { Session, encode, bytes, pairing, validateWiFi, nearby, STANDBY_STEPS, POWEROFF_STEPS, powerPair, nearestStep } from './protocol.js';
 import { SerialTransport, BluetoothTransport } from './transports.js';
 import { getManifest, getImage, firmwareIdentity, firmwareUpdate, flashFirmware } from './firmware.js';
 
@@ -56,7 +56,7 @@ let routeEditorOpen = false;
 const dirty = new Set();
 let draft = blankDraft();
 
-function blankDraft() { return { ssid: '', password: '', open: false, name: '', address: '', code: '', selectedAgent: '', routeMode: 'direct', proxyHost: '', proxyPort: '', proxySecret: '', proxyMethod: 'aes-256-cfb', language: 'zh', volume: 65 }; }
+function blankDraft() { return { ssid: '', password: '', open: false, name: '', address: '', code: '', selectedAgent: '', routeMode: 'direct', proxyHost: '', proxyPort: '', proxySecret: '', proxyMethod: 'aes-256-cfb', language: 'zh', volume: 65, standby: 60, powerOff: 1800 }; }
 function connected() { return session && !session.closed; }
 function supportedSerial() { return window.isSecureContext && typeof navigator.serial?.requestPort === 'function'; }
 function supportedBLE() { return window.isSecureContext && typeof navigator.bluetooth?.requestDevice === 'function'; }
@@ -121,6 +121,23 @@ function routeDraft(agent, preserveSecret = false) {
   const keepSecret = preserveSecret && agent && String(agent.id) === draft.selectedAgent && route?.savedSecret && route.mode === draft.routeMode && route.host === draft.proxyHost && String(route.port) === String(draft.proxyPort) && route.method === draft.proxyMethod;
   Object.assign(draft, { selectedAgent: agent ? String(agent.id) : '', routeMode: route?.mode || 'direct', proxyHost: route?.host || '', proxyPort: route?.port || '', proxySecret: keepSecret ? draft.proxySecret : '', proxyMethod: route?.method || 'aes-256-cfb' });
 }
+function powerSupported() { return Boolean(snapshot?.capabilities.includes('power-config')); }
+function adoptPower(value) {
+  draft.standby = nearestStep(STANDBY_STEPS, value.device.idle_s ?? 60);
+  draft.powerOff = nearestStep(POWEROFF_STEPS, value.device.poweroff_s ?? 1800);
+}
+function duration(seconds) {
+  if (!seconds) return text('never');
+  if (seconds < 60) return text('seconds').replace('{n}', seconds);
+  if (seconds < 3600) return text('minutes').replace('{n}', seconds / 60);
+  return text('hours').replace('{n}', seconds / 3600);
+}
+function powerSlider(key, steps, label) {
+  const unavailable = snapshot && !powerSupported();
+  const position = steps.indexOf(draft[key]);
+  const ticks = steps.map((step, index) => `<span class="step-tick ${index <= position ? 'is-on' : ''}" style="--at:${index}"></span>`).join('');
+  return `<div class="preferences ${unavailable ? 'is-unavailable' : ''}"><label for="${key}">${text(label)}</label><div class="volume"><div class="stepped" style="--steps:${steps.length - 1};--position:${position}"><div class="step-track" aria-hidden="true"><span class="step-fill"></span>${ticks}</div><input id="${key}" data-power="${key}" type="range" min="0" max="${steps.length - 1}" step="1" value="${position}" aria-valuetext="${escape(duration(draft[key]))}" ${unavailable ? 'disabled' : ''}></div><output id="${key}-value">${escape(duration(draft[key]))}</output></div></div>`;
+}
 function adopt(value, replace = false) {
   snapshot = value;
   if (replace) {
@@ -129,11 +146,13 @@ function adopt(value, replace = false) {
     routeEditorOpen = false;
     draft.language = value.language;
     draft.volume = value.device.volume ?? 65;
+    adoptPower(value);
     routeDraft(value.agents.find(agent => agent.current) || value.agents[0]);
     dirty.clear();
   } else {
     if (!dirty.has('language')) draft.language = value.language;
     if (!dirty.has('volume')) draft.volume = value.device.volume ?? 65;
+    if (!dirty.has('power')) adoptPower(value);
     if (!dirty.has('route')) routeDraft(value.agents.find(agent => String(agent.id) === draft.selectedAgent) || value.agents.find(agent => agent.current) || value.agents[0], true);
   }
 }
@@ -208,7 +227,7 @@ function render() {
         <div class="prompt-actions"><span id="copy-prompt-status" class="prompt-status" role="status" aria-live="polite" hidden></span></div>${field('name', 'agentName', 'text', text('namePlaceholder'))}${field('address', 'address', 'url', 'wss://gateway.example')}<label class="field">${text('code')}<textarea id="code" data-field="code" autocomplete="off" spellcheck="false">${escape(draft.code)}</textarea></label><p class="hint">${text('codeHint')}</p></details>
       ${feedback('agent')}
     </div></section>
-    <section id="preferences-card" class="card">${sectionHeader('settings', 'settingsTitle')}<fieldset class="card-content preference-fields" ${preferencesDisabled ? 'disabled' : ''}><div class="preferences"><label for="device-language">${text('screenLanguage')}</label><select id="device-language" data-field="language"><option value="zh" ${draft.language === 'zh' ? 'selected' : ''}>${text('chinese')}</option><option value="en" ${draft.language === 'en' ? 'selected' : ''}>${text('english')}</option></select></div><div class="preferences ${snapshot && !snapshot.capabilities.includes('device-control') ? 'is-unavailable' : ''}"><label for="volume">${text('volume')}</label><div class="volume"><input id="volume" data-field="volume" type="range" min="0" max="100" value="${draft.volume}" ${snapshot && !snapshot.capabilities.includes('device-control') ? 'disabled' : ''}><output id="volume-value">${draft.volume}%</output></div></div></fieldset></section>
+    <section id="preferences-card" class="card">${sectionHeader('settings', 'settingsTitle')}<fieldset class="card-content preference-fields" ${preferencesDisabled ? 'disabled' : ''}><div class="preferences"><label for="device-language">${text('screenLanguage')}</label><select id="device-language" data-field="language"><option value="zh" ${draft.language === 'zh' ? 'selected' : ''}>${text('chinese')}</option><option value="en" ${draft.language === 'en' ? 'selected' : ''}>${text('english')}</option></select></div><div class="preferences ${snapshot && !snapshot.capabilities.includes('device-control') ? 'is-unavailable' : ''}"><label for="volume">${text('volume')}</label><div class="volume"><input id="volume" data-field="volume" type="range" min="0" max="100" value="${draft.volume}" ${snapshot && !snapshot.capabilities.includes('device-control') ? 'disabled' : ''}><output id="volume-value">${draft.volume}%</output></div></div>${powerSlider('standby', STANDBY_STEPS, 'standbyAfter')}${powerSlider('powerOff', POWEROFF_STEPS, 'powerOffAfter')}<p id="power-note" class="hint power-note">${text(snapshot && !powerSupported() ? 'powerUnavailable' : 'powerHint')}</p></fieldset></section>
     ${supportedSerial() ? `<section id="firmware-card" class="card firmware-card">${sectionHeader('download', 'firmwareTitle', null, '<span class="tag">USB</span>')}<div class="card-content">
       <dl class="firmware-versions"><div><dt>${text('firmwareCurrent')}</dt><dd id="firmware-current">${escape(deviceVersion)}</dd></div><div><dt>${text('firmwareAvailable')}</dt><dd>${escape(manifest?.version || '—')}</dd></div></dl>
       ${snapshot && manifest && ['current', 'update', 'newer'].includes(update.status) ? `<p id="firmware-status" class="firmware-status" data-status="${update.status}">${text(`firmwareStatus_${update.status}`)}</p>` : ''}${!manifest ? `<p class="hint">${text(firmwareReady ? 'firmwareMissing' : 'firmwareLoading')}</p>` : ''}
@@ -244,6 +263,16 @@ function updateSave() {
   root.querySelectorAll('[data-forget], [data-drop], [data-use]').forEach(button => { button.disabled = busy || !connected() || hasChanges; });
   const output = document.querySelector('#volume-value');
   if (output) output.textContent = `${draft.volume}%`;
+  for (const [key, steps] of [['standby', STANDBY_STEPS], ['powerOff', POWEROFF_STEPS]]) {
+    const slider = document.querySelector(`#${key}`), value = document.querySelector(`#${key}-value`);
+    if (!slider || !value) continue;
+    const position = steps.indexOf(draft[key]);
+    slider.value = String(position);
+    slider.setAttribute('aria-valuetext', duration(draft[key]));
+    value.textContent = duration(draft[key]);
+    slider.parentElement.style.setProperty('--position', position);
+    slider.parentElement.querySelectorAll('.step-tick').forEach((tick, index) => tick.classList.toggle('is-on', index <= position));
+  }
   document.querySelector('#wifi-form-title').textContent = text(snapshot?.networks.some(network => network.ssid === draft.ssid) ? 'editNetwork' : 'addNetwork');
   document.querySelector('#wifi-draft').textContent = draft.ssid;
   for (const agent of snapshot?.agents || []) {
@@ -338,6 +367,7 @@ async function save() {
     }
     if (dirty.has('language')) await mutate(`LANG ${snapshot.generation} ${draft.language}`, 'OK lang', 'language');
     if (dirty.has('volume')) await mutate(`VOLUME ${snapshot.device.volume} ${draft.volume}`, 'OK volume', 'volume');
+    if (dirty.has('power')) await mutate(`POWERCFG ${snapshot.device.idle_s} ${snapshot.device.poweroff_s} ${draft.standby} ${draft.powerOff}`, 'OK power', 'power');
     say('savedOK');
   } catch (error) { if (written) say('partial', true); else report(error); }
 }
@@ -421,6 +451,18 @@ function bind() {
     }
     render();
     document.querySelector(`[data-agent="${button.dataset.agent}"]`).focus({ preventScroll: true });
+  });
+  root.querySelectorAll('[data-power]').forEach(input => {
+    input.disabled ||= busy;
+    input.oninput = () => {
+      const key = input.dataset.power;
+      const steps = key === 'standby' ? STANDBY_STEPS : POWEROFF_STEPS;
+      const pair = powerPair(key === 'standby' ? steps[Number(input.value)] : draft.standby, key === 'powerOff' ? steps[Number(input.value)] : draft.powerOff);
+      draft.standby = pair.standby;
+      draft.powerOff = pair.powerOff;
+      dirty.add('power');
+      updateSave();
+    };
   });
   root.querySelectorAll('[data-field]').forEach(input => {
     input.disabled ||= busy;

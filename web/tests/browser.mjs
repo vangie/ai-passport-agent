@@ -38,6 +38,7 @@ async function installBluetoothFixture(page, build = 'abcdef1234567890', network
     fixture.onData = data => {
       let line = new TextDecoder().decode(data).replace(' zh demo ', ` zh ${window.fixtureBuild} `);
       if (window.fixtureNoVolume) line = line.replace(' device-control', '');
+      if (window.fixtureNoPower) line = line.replace(' power-config', '').replace(/ poweroff_s=\d+/u, '');
       const match = /^ROUTE (\d+) /u.exec(line);
       if (match) {
         const route = fixture.agents[Number(match[1])].route;
@@ -251,7 +252,7 @@ async function checkCompactConnection(context, release) {
       await connectionPage.locator('#connect-usb').waitFor();
       assert.equal(await connectionPage.locator('#saved-networks').count(), 0, 'saved networks disappear after disconnecting');
       assert.equal(await connectionPage.getByRole('heading', { name: 'Saved networks', exact: true }).count(), 0, 'saved networks heading disappears after disconnecting');
-      for (const selector of ['#device-language', '#volume']) assert.equal(await connectionPage.locator(selector).isDisabled(), true, `${selector} disables after disconnecting`);
+      for (const selector of ['#device-language', '#volume', '#standby', '#powerOff']) assert.equal(await connectionPage.locator(selector).isDisabled(), true, `${selector} disables after disconnecting`);
       assert.equal(await connectionPage.locator('#keep-firmware-settings').isChecked(), true);
       assert.equal(await connectionPage.locator('#keep-firmware-settings').isEnabled(), true);
       assert.equal(await connectionPage.locator('#flash').isDisabled(), true);
@@ -777,6 +778,57 @@ try {
   await page.locator('#save').click();
   await page.getByText('已保存', { exact: true }).waitFor();
   assert.equal(await page.locator('#volume-value').textContent(), '40%');
+  assert.equal(await page.locator('#preferences-card #standby').count(), 1, 'standby slider sits in device preferences');
+  assert.equal(await page.locator('#preferences-card #powerOff').count(), 1, 'power-off slider sits in device preferences');
+  assert.equal(await page.locator('#standby').getAttribute('step'), '1');
+  assert.equal(await page.locator('#standby').locator('xpath=..').locator('.step-tick').count(), 6, 'standby shows one tick per choice');
+  assert.equal(await page.locator('#powerOff').locator('xpath=..').locator('.step-tick').count(), 7, 'power-off shows one tick per choice');
+  assert.equal(await page.locator('#standby').locator('xpath=..').locator('.step-tick.is-on').count(), 3, 'ticks up to the chosen step are filled');
+  {
+    const track = await page.locator('#standby').locator('xpath=..').locator('.step-track').boundingBox();
+    const ticks = await page.locator('#standby').locator('xpath=..').locator('.step-tick').evaluateAll(nodes => nodes.map(node => { const box = node.getBoundingClientRect(); return box.x + box.width / 2; }));
+    const gaps = ticks.slice(1).map((x, index) => x - ticks[index]);
+    assert.ok(Math.abs(ticks[0] - track.x) < 1.5 && Math.abs(ticks.at(-1) - (track.x + track.width)) < 1.5, 'ticks span the track');
+    assert.ok(Math.max(...gaps) - Math.min(...gaps) < 1.5, 'ticks are evenly spaced');
+    await page.locator('#standby').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('#standby-value').textContent(), '2 分钟', 'one key press moves exactly one step');
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(await page.locator('#standby-value').textContent(), '1 分钟');
+    assert.equal(await page.locator('#standby').locator('xpath=..').locator('.step-tick.is-on').count(), 3);
+  }
+  assert.equal(await page.locator('#standby-value').textContent(), '1 分钟');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '30 分钟');
+  await page.locator('#powerOff').fill('0');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '5 分钟');
+  await page.locator('#standby').fill('5');
+  assert.equal(await page.locator('#standby-value').textContent(), '10 分钟');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '15 分钟', 'a later standby pushes power-off later');
+  assert.equal(await page.locator('#powerOff').inputValue(), '2');
+  await page.locator('#powerOff').fill('0');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '15 分钟', 'power-off cannot be set earlier than standby');
+  assert.equal(await page.locator('#standby-value').textContent(), '10 分钟', 'moving power-off never changes standby');
+  await page.locator('#powerOff').fill('6');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '从不');
+  await page.locator('#standby').fill('4');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '从不', 'never stays never');
+  await page.locator('#powerOff').fill('2');
+  assert.equal(await page.locator('#save').isEnabled(), true);
+  if (await page.locator('#power-note').evaluate(element => element.scrollWidth > element.clientWidth + 1)) throw new Error('power note overflows');
+  await page.locator('#power-note').scrollIntoViewIfNeeded();
+  const noteBox = await page.locator('#power-note').boundingBox(), barBox = await page.locator('.save-bar').boundingBox();
+  if (noteBox.y + noteBox.height > barBox.y + 1) await page.evaluate(() => window.scrollBy(0, 400));
+  const visibleNote = await page.locator('#power-note').boundingBox(), visibleBar = await page.locator('.save-bar').boundingBox();
+  assert.ok(visibleNote.y + visibleNote.height <= visibleBar.y + 1, 'power settings can be scrolled clear of the save bar');
+  await page.evaluate(() => { document.querySelector('.save-bar').style.visibility = 'hidden'; });
+  await page.locator('#preferences-card').screenshot({ path: '../build/web-shots/preferences-power.png' });
+  await page.evaluate(() => { document.querySelector('.save-bar').style.visibility = ''; });
+  await page.locator('#save').click();
+  await page.getByText('已保存', { exact: true }).waitFor();
+  assert.ok((await page.evaluate(() => window.fixtureCommands)).includes('POWERCFG 60 1800 300 900'));
+  assert.equal(await page.locator('#standby-value').textContent(), '5 分钟');
+  assert.equal(await page.locator('#powerOff-value').textContent(), '15 分钟');
+  assert.equal(await page.locator('#save').isDisabled(), true);
   await page.locator('#ssid').fill('Unsaved');
   await page.locator('#discard').click();
   await page.locator('#dialog-confirm').click();
@@ -998,6 +1050,20 @@ try {
   assert.equal(await page.locator('.language-thumb').evaluate(element => element.getAnimations().length), 0);
   await page.setViewportSize({ width: 320, height: 844 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.equal(await page.locator('label[for="standby"]').textContent(), 'Screen off after');
+  assert.equal(await page.locator('label[for="powerOff"]').textContent(), 'Power off after');
+  assert.match(await page.locator('#standby-value').textContent(), /^\d+ (s|min)$/u);
+  for (const selector of ['#standby', '#powerOff', '#standby-value', '#powerOff-value', '#power-note']) {
+    const box = await page.locator(selector).boundingBox();
+    assert.ok(box && box.x >= 0 && box.x + box.width <= 320.5, `${selector} fits a 320px English layout`);
+  }
+  for (const key of ['standby', 'powerOff']) {
+    const label = await page.locator(`label[for="${key}"]`).boundingBox(), value = await page.locator(`#${key}-value`).boundingBox();
+    assert.ok(value.height < label.height * 2.2, `${key} value stays on one line`);
+  }
+  await page.evaluate(() => { document.querySelector('.save-bar').style.visibility = 'hidden'; });
+  await page.locator('#preferences-card').screenshot({ path: '../build/web-shots/preferences-power-en-320.png' });
+  await page.evaluate(() => { document.querySelector('.save-bar').style.visibility = ''; });
   await page.reload();
   await installBluetoothFixture(page, 'abcdef1234567890', []);
   await page.locator('#connect-ble').click();

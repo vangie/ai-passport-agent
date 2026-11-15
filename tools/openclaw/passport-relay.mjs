@@ -28,10 +28,10 @@ export function withPassportVoiceInstructions(instructions, language, enabled = 
         'If speech is ambiguous, ask a short clarification rather than silently changing the question. ' +
         'Keep spoken answers concise and natural. This call-specific routing replaces any instruction ' +
         'to consult before every substantive reply, not the agent identity or security rules.';
-    return withPassportVoiceLanguage(instructions ? `${instructions}\n\n${routing}` : routing, language, true);
+    return withPassportVoiceLanguage(instructions ? `${instructions}\n\n${routing}` : routing, language, true, true);
 }
 
-export function withPassportVoiceLanguage(instructions, language, enabled = false) {
+export function withPassportVoiceLanguage(instructions, language, enabled = false, lead = false) {
     if (!enabled || typeof language !== 'string') return instructions;
     const locale = language.trim().toLowerCase();
     let policy;
@@ -45,7 +45,16 @@ export function withPassportVoiceLanguage(instructions, language, enabled = fals
             'Use English for acknowledgements, waiting notices, errors and final replies, including summaries of tools or history in other languages. ' +
             'Preserve proper names and code; switch languages only when the user explicitly asks to switch or translate.';
     } else return instructions;
-    return instructions ? `${instructions}\n\n${policy}` : policy;
+    if (!instructions) return policy;
+    if (!lead) return `${instructions}\n\n${policy}`;
+    // The gateway's own call instructions open in English and a realtime model
+    // tends to answer a very short utterance in the language its instructions
+    // start with. State the reply language first, then again in detail last.
+    // Only the session instructions get this; per-message prompts stay short.
+    const opening = /^zh(?:-|$)/.test(locale)
+        ? '【最高优先级】本次通话始终用普通话（简体中文）回答，包括第一句问候；即使用户只说一两个字、或下面的说明是英文，也不要用英文回答。'
+        : 'Highest priority: always reply in English for this call, including the first greeting, even after a very short utterance or when the notes below are in another language.';
+    return instructions.startsWith(opening) ? `${instructions}\n\n${policy}` : `${opening}\n\n${instructions}\n\n${policy}`;
 }
 
 export function createPassportRelayOutput({send, enabled = false, ima = false, fail, now = Date.now,

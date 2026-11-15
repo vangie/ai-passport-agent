@@ -16,7 +16,7 @@ Turn FoloToy AI Passport into a dedicated voice interface for your personal agen
 Ask a question, read the answer, or have a spoken conversation. The device connects
 over Wi-Fi; a phone is not an audio relay.
 
-**v0.7.2: calls stay connected when the voice service rejects a single request.** Supports OpenClaw and Hermes; use the matching external plugin for your backend.
+**v0.7.3: adjustable screen-off and automatic power-off, a centred home screen, and calls that survive a late interruption.** Supports OpenClaw and Hermes; use the matching external plugin for your backend.
 Other agent integrations are not available yet.
 The project was previously named `ai-passport-openclaw`; existing devices and
 OpenClaw plugin installations remain compatible. The web studio is now at
@@ -171,7 +171,7 @@ See [NFC details](docs/configuration.md#nfc-and-personal-hotspot).
 
 Releases contain application/merged firmware, a firmware bundle, an installable
 OpenClaw plugin, `release-manifest.json`, `SHA256SUMS.txt` and license information.
-v0.7.2 also packages `ai-passport-hermes-0.7.2.tar.gz`. No native apps are packaged.
+v0.7.3 also packages `ai-passport-hermes-0.7.3.tar.gz`. No native apps are packaged.
 The web studio serves verified firmware on its own origin: your browser does not
 follow GitHub Release download redirects. GitHub Pages itself may still be
 unreachable on some networks. Hashes detect corruption, not a compromised publisher.

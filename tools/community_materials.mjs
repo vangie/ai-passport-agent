@@ -78,14 +78,14 @@ try {
   const brand = `<div class="brand"><img src="${logo}">${titles.zh} · ${titles.en}</div>`;
   const foot = label => `<div class="foot"><span>${label}</span><span>开源 · 自己的助手</span></div>`;
   const posters = [
-    ['00-cover', `${brand}<div class="eyebrow">PERSONAL AGENT · 随身语音终端</div><h1>把助手带在身边</h1><p class="lead">语音问答，实时通话<br>连接 OpenClaw 或 Hermes，使用自己的 Agent</p><div class="screens">${await image('firmware-hermes.png', 240, 320, 'device')}${await image('firmware-ask.png', 240, 320, 'device')}${await image('firmware-call.png', 240, 320, 'device')}</div><div class="strip"><div><strong>电脑 USB 刷机</strong><p>网页设置网络与助手</p></div><div><strong>手机蓝牙配置</strong><p>连热点，方便换网</p></div><div><strong>设备直连网关</strong><p>不经过手机中转</p></div></div><div class="note"><strong>OpenClaw + Hermes</strong><br>连接个人 Agent 的工具与上下文<br>网页配置 · 已有 OpenClaw 配对继续用</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
+    ['00-cover', `<div class="cover"><div class="cover-brand"><img src="${logo}"><span>${titles.zh}</span></div><h1>把助手带在身边</h1><div class="cover-screen">${await image('firmware-home.png', 240, 320, 'cover-device')}</div><div class="cover-tags"><span>语音提问</span><span>实时通话</span></div><div class="cover-line">连接你自己的 OpenClaw / Hermes</div></div>`],
     ['01-ask-and-call', `${brand}<div class="eyebrow">两种对话方式</div><h2>语音问答，实时通话</h2><p class="lead">提问看文字回复，通话听语音应答</p><div class="mode-grid"><div>${await image('firmware-ask.png', 240, 320)}<h3>提问</h3><p>按一下录音，再按发送<br>说完停顿也可自动提交<br>读完回复，接着追问</p></div><div>${await image('firmware-call.png', 240, 320)}<h3>通话</h3><p>连上后直接说话<br>语音回复，滚动字幕<br>按提示静音、打断或结束</p></div></div><div class="note">需自备 OpenClaw 或 Hermes；通话另需实时语音服务。</div>${foot('实际固件界面渲染 · 演示内容，非实机照片')}`],
     ['02-web-studio', `${brand}<div class="eyebrow">电脑 USB 连接</div><h2>在网页里配置与刷机</h2><p class="lead">设置 Wi-Fi 和助手，需要时更新固件</p>${await image('web-desktop.png', 1360, 1040, 'webshot')}<div class="strip"><div><strong>配置网络与助手</strong><p>改好后统一保存</p></div><div><strong>需要时更新固件</strong><p>改配置，不刷机</p></div></div><div class="note">无应用后台 · 配置直接写入设备<br>电脑推荐 Chrome／Edge，固件从本站下载</div>${foot('网页实际界面 · 虚构网络、助手与示例地址')}`],
     ['03-mobile-setup', `${brand}<div class="eyebrow">手机蓝牙配置 · 多网络保存</div><h2>连接手机热点，灵活切换网络</h2><p class="lead">保存常用 Wi-Fi 和热点，在设备上按需切换</p><div class="mobile-row">${await image('web-mobile.png', 390, 844, 'mobile-shot')}<div class="steps"><h3>连接手机热点</h3><p>iPhone 用 Bluefy 打开配置网页<br>把个人热点保存到 Passport</p><h3>保存多套网络</h3><p>家中、办公室或手机热点<br>都保存在设备上</p><h3>在设备上切换</h3><p>「设置 → Wi-Fi」选择已存网络<br>使用手机热点时保持热点开启</p></div></div><div class="note">iPhone 的 Safari／Chrome 不支持网页蓝牙，请用 Bluefy；更新固件请用电脑 USB。</div>${foot('网页移动布局演示 · 非手机实拍，无真实凭据')}`],
   ];
   const render = await browser.newPage({ viewport: { width: 1152, height: 1536 }, deviceScaleFactor: 1 });
   for (const [name, content] of posters) {
-    const overrides = 'h1{white-space:nowrap}.screens{margin:84px 0 62px}.strip{margin-top:46px}.webshot{height:690px;object-fit:cover;object-position:top}.webshot+.strip{margin-top:28px}.note{margin-top:28px}.foot{bottom:42px}.mobile-shot{height:810px}.mobile-row{margin-top:40px}.steps{padding-top:20px}.steps p{margin-bottom:38px}';
+    const overrides = '.cover{position:absolute;inset:0;padding:56px 72px;display:flex;flex-direction:column;align-items:center;text-align:center}.cover-brand{display:flex;align-items:center;gap:22px;font-size:46px;font-weight:650;letter-spacing:1px;align-self:flex-start}.cover-brand img{width:84px;height:84px;border-radius:22px}.cover h1{font-size:132px;line-height:1.1;letter-spacing:-5px;margin:14px 0 0;font-weight:800;white-space:nowrap}.cover-screen{margin-top:26px}.cover-device{width:720px;height:960px;border-radius:26px;box-shadow:0 30px 70px #193c3538;image-rendering:pixelated;display:block}.cover-tags{display:flex;gap:26px;margin-top:28px}.cover-tags span{font-size:54px;font-weight:700;color:#fff;background:#cc4b3e;border-radius:999px;padding:14px 44px;white-space:nowrap}.cover-tags span+span{background:#2f7f6c}.cover-line{font-size:40px;color:#3e5458;margin-top:20px;font-weight:550;white-space:nowrap}h1{white-space:nowrap}.screens{margin:84px 0 62px}.strip{margin-top:46px}.webshot{height:690px;object-fit:cover;object-position:top}.webshot+.strip{margin-top:28px}.note{margin-top:28px}.foot{bottom:42px}.mobile-shot{height:810px}.mobile-row{margin-top:40px}.steps{padding-top:20px}.steps p{margin-bottom:38px}';
     const html = `<!doctype html><meta charset="utf-8"><style>${style}${overrides}</style><main class="poster">${content}</main>`;
     await writeFile(resolve(output, `${name}.html`), html);
     await render.setContent(html, { waitUntil: 'load' });
@@ -94,10 +94,19 @@ try {
       const fits = await heading.evaluate(element => element.scrollWidth <= element.clientWidth && element.clientHeight <= Math.ceil(parseFloat(getComputedStyle(element).lineHeight)));
       if (!fits) throw new Error(`${name}: title wraps or overflows`);
     }
-    const footer = await render.locator('.foot').boundingBox();
-    for (const block of await render.locator('.poster > :not(.foot)').all()) {
-      const bounds = await block.boundingBox();
-      if (bounds.y + bounds.height > footer.y - 16) throw new Error(`${name}: content overlaps the footer`);
+    if (await render.locator('.cover').count()) {
+      for (const block of await render.locator('.cover > *').all()) {
+        const bounds = await block.boundingBox();
+        if (bounds.x < 40 || bounds.x + bounds.width > 1112 || bounds.y < 40 || bounds.y + bounds.height > 1496) throw new Error(`${name}: cover content leaves the safe area (${Math.round(bounds.x)},${Math.round(bounds.y)} ${Math.round(bounds.width)}x${Math.round(bounds.height)})`);
+      }
+      const overflow = await render.locator('.cover h1, .cover-line, .cover-tags span, .cover-brand span').evaluateAll(nodes => nodes.some(node => node.scrollWidth > node.clientWidth + 1));
+      if (overflow) throw new Error(`${name}: cover text overflows`);
+    } else {
+      const footer = await render.locator('.foot').boundingBox();
+      for (const block of await render.locator('.poster > :not(.foot)').all()) {
+        const bounds = await block.boundingBox();
+        if (bounds.y + bounds.height > footer.y - 16) throw new Error(`${name}: content overlaps the footer`);
+      }
     }
     await render.screenshot({ path: resolve(output, `${name}.png`) });
   }

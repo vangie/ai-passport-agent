@@ -14,7 +14,10 @@ for (const consultRouting of [undefined, 'auto', 'force-agent-consult']) {
 for (const language of ['zh', 'en', undefined, 'fr']) {
     assert.equal(withPassportVoiceInstructions(baseInstructions, language), baseInstructions);
     const instructions = withPassportVoiceInstructions(baseInstructions, language, true);
-    assert(instructions.startsWith(baseInstructions + '\n\n'));
+    assert(instructions.includes(baseInstructions + '\n\n'), 'the agent instructions are kept verbatim');
+    if (language === 'zh') assert(instructions.startsWith('【最高优先级】') && instructions.indexOf('普通话') < instructions.indexOf(baseInstructions));
+    else if (language === 'en') assert(instructions.startsWith('Highest priority: always reply in English'));
+    else assert(instructions.startsWith(baseInstructions + '\n\n'), 'an unknown language adds no lead');
     assert(instructions.includes('general knowledge directly from live audio'));
     assert(instructions.includes('openclaw_agent_consult') && instructions.includes('weather'));
     assert(instructions.includes('private memory') && instructions.includes('relevant context from this call'));
@@ -33,8 +36,15 @@ for (const language of ['zh', 'zh-CN', 'ZH-tw', 'en', 'en-US', 'fr', undefined])
     assert.equal(withPassportVoiceLanguage(undefined, language, false), undefined);
 }
 for (const language of ['zh', 'zh-CN', ' ZH-tw ']) {
-    const instructions = withPassportVoiceLanguage(baseInstructions, language, true);
-    assert(instructions.startsWith(baseInstructions + '\n\n'));
+    const prompt = withPassportVoiceLanguage(baseInstructions, language, true);
+    assert(prompt.startsWith(baseInstructions + '\n\n'), 'a per-message prompt keeps its text first and gets no lead');
+    assert(!prompt.includes('【最高优先级】'));
+    const instructions = withPassportVoiceLanguage(baseInstructions, language, true, true);
+    assert(instructions.startsWith('【最高优先级】本次通话始终用普通话'), 'the reply language is stated first');
+    assert(instructions.includes('\n\n' + baseInstructions + '\n\n'), 'the original instructions are kept verbatim');
+    assert(instructions.includes('即使用户只说一两个字'), 'a very short utterance still gets a Chinese reply');
+    assert(instructions.endsWith('才按要求切换。'), 'the detailed policy stays last');
+    assert.equal(withPassportVoiceLanguage(instructions, language, true, true).split('【最高优先级】').length, 2, 'the lead is not repeated');
     assert(instructions.includes('普通话') && instructions.includes('简体中文'));
     assert(instructions.includes('工具结果') && instructions.includes('错误解释'));
     assert(instructions.includes('用户明确要求'));
@@ -44,6 +54,8 @@ for (const prompt of ['Briefly tell the person that you are checking with OpenCl
 }
 assert(withPassportVoiceLanguage(undefined, 'zh', true).startsWith('# AI Passport'));
 assert(withPassportVoiceLanguage(baseInstructions, 'en-US', true).includes('Speak natural, concise English'));
+assert(withPassportVoiceLanguage(baseInstructions, 'en-US', true, true).startsWith('Highest priority: always reply in English'));
+assert(withPassportVoiceLanguage(baseInstructions, 'en-US', true).startsWith(baseInstructions));
 for (const language of [undefined, null, 1, 'fr', 'zh<script>', 'english'])
     assert.equal(withPassportVoiceLanguage(baseInstructions, language, true), baseInstructions);
 console.log('Passport voice language: initial policy, tool summaries, waiting notices, locale mapping and non-Passport isolation PASS');

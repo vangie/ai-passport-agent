@@ -158,6 +158,13 @@ summary { font-size: 12px; font-weight: 550; color: var(--green); }
 .preferences select { width: 150px; }
 .volume { display: flex; align-items: center; gap: 10px; width: 60%; }
 .volume input { width: 100%; }
+.volume output { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.power-note { margin-top: 12px; }
+.stepped { --thumb: 16px; position: relative; width: 100%; height: 24px; display: flex; align-items: center; }
+.step-track { position: absolute; left: calc(var(--thumb) / 2); right: calc(var(--thumb) / 2); top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--line); pointer-events: none; }
+.step-fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--position) / var(--steps) * 100%); border-radius: 2px; background: var(--green); }
+.step-tick { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; border: 2px solid var(--line); box-sizing: border-box; }
+.step-tick.is-on { border-color: var(--green); background: var(--green); }
 output { color: var(--green); min-width: 36px; font: 12px ui-monospace, monospace; }
 .firmware-card .card-head { padding: 16px 18px 10px; }
 .firmware-card .card-content { padding: 0 18px 16px; }
@@ -261,3 +268,12 @@ dialog .actions { justify-content: flex-end; }
   .language-options { width: 88px; }
   .language-switch { gap: 6px; }
 }
+.step-tick { left: calc(var(--at) / var(--steps) * 100%); }
+.stepped input[type="range"] { position: relative; width: 100%; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; }
+.stepped input[type="range"]::-webkit-slider-runnable-track { height: 24px; background: transparent; }
+.stepped input[type="range"]::-moz-range-track { height: 24px; background: transparent; }
+.stepped input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: var(--thumb); height: var(--thumb); margin-top: 4px; border-radius: 50%; background: var(--green); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--green); }
+.stepped input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--green); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--green); }
+.stepped input[type="range"]:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 12px; }
+.stepped input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); box-shadow: 0 0 0 1px var(--muted); }
+.stepped input[type="range"]:disabled::-moz-range-thumb { background: var(--muted); box-shadow: 0 0 0 1px var(--muted); }

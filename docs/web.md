@@ -57,6 +57,13 @@ under **Device preferences**. Switching languages keeps the current inputs.
 Device language and volume controls are dimmed and disabled until the device is
 connected and its settings have been read. They disable again on disconnect,
 without discarding drafts. Firmware without volume control keeps that slider disabled.
+**Screen off after** and **Power off after** are two stepped sliders in the same group, one
+tick per choice: screen off at 15 s, 30 s or 1/2/5/10 min; power off at 5/10/15/30 min,
+1/2 h or **Never**. Power off is always at least 1 minute later than screen off: moving
+screen off past power off pushes power off to the next allowed step, power off cannot be
+dragged earlier than screen off, and **Never** stays **Never**. Both are written with
+**Save configuration**. Firmware without this setting keeps the sliders disabled and asks
+for a firmware update first.
 
 ## Start locally
 

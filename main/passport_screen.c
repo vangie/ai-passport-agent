@@ -34,6 +34,27 @@ LV_IMAGE_DECLARE(passport_hermes_22);
 #define KEY_PADDING 5
 #define KEY_WORD_WIDTH 18
 #define KEY_SOURCE_WIDTH 80
+/* The content column: 8 px margins on both sides, between the left edge and
+ * the key column at x = 212. Every centred element is placed from its axis,
+ * so pages cannot drift apart by a few pixels. */
+#define CONTENT_LEFT  8
+#define CONTENT_RIGHT 204
+#define CONTENT_WIDTH (CONTENT_RIGHT - CONTENT_LEFT)
+#define CONTENT_AXIS  ((CONTENT_LEFT + CONTENT_RIGHT) / 2)
+#define ORBIT_SIZE 80
+#define WAVE_PITCH 5
+#define WAVE_SPAN  ((PASSPORT_WAVEFORM_BARS - 1) * WAVE_PITCH + 3)
+/* The idle group (ring, headline, caption) sits centred between the rule
+ * under the status line and the bottom of the screen. */
+#define IDLE_ORBIT_TOP 112
+/* The idle page's ring, headline and caption sit halfway between the content
+ * axis (106) and the centre of the screen (120). The three keys are small, so
+ * the eye frames the whole screen and a group centred in the column looks
+ * pushed left; centring on the screen instead would leave the caption only
+ * 5 px from the keys. Pages with a card or full-width content keep the
+ * content axis. */
+#define IDLE_AXIS 113
+#define IDLE_TEXT_WIDTH 182
 
 typedef enum { IDLE, CAPTURE, WORK, FAILURE, CANCELLING, DETAILS, READER, CALL, TRANSCRIPT } layout_t;
 static lv_obj_t *s_status, *s_headline, *s_body, *s_hint, *s_card, *s_network_name;
@@ -208,6 +229,30 @@ static void text(lv_obj_t *o, const char *value) {
     if (strcmp(lv_label_get_text(o), shown)) lv_label_set_text(o, shown);
 }
 
+/* Full-width punctuation carries its ink in the left half of a 20 px cell, so
+ * a centred headline ending in one looks shifted left. Shift the label right
+ * by half of the last glyph's empty right side to centre the visible ink. */
+static int trailing_gap(const char *value, const lv_font_t *font) {
+    uint32_t last = 0;
+    for (const unsigned char *cursor = (const unsigned char *)value; *cursor;) {
+        unsigned bytes = *cursor < 0x80 ? 1 : *cursor < 0xE0 ? 2 : *cursor < 0xF0 ? 3 : 4;
+        uint32_t cp = bytes == 1 ? *cursor : *cursor & (0xFFu >> (bytes + 1));
+        for (unsigned index = 1; index < bytes && cursor[index]; index++) cp = cp << 6 | (cursor[index] & 0x3F);
+        last = cp;
+        while (bytes-- && *cursor) cursor++;
+    }
+    lv_font_glyph_dsc_t glyph = {0};
+    if (!last || !lv_font_get_glyph_dsc(font, &glyph, last, 0)) return 0;
+    int gap = (int)glyph.adv_w - glyph.ofs_x - glyph.box_w;
+    return gap > 2 ? gap : 0;
+}
+
+static void centred_headline(const char *value, int top) {
+    text(s_headline, value);
+    int x = IDLE_AXIS - IDLE_TEXT_WIDTH / 2 + trailing_gap(value, lv_obj_get_style_text_font(s_headline, 0)) / 2;
+    if (lv_obj_get_x(s_headline) != x || lv_obj_get_y(s_headline) != top) lv_obj_set_pos(s_headline, x, top);
+}
+
 static void network_name(const char *value) {
     /* LV_LABEL_LONG_DOT shortens its own text buffer. Compare the source,
      * otherwise a long SSID is reset and redraws on every app iteration. */
@@ -316,14 +361,14 @@ static void layout(layout_t mode, bool zh, int call) {
     }
     bool reader = mode == READER || mode == TRANSCRIPT, details = mode == DETAILS;
     bool quiet = mode == IDLE;
-    lv_obj_set_width(s_status, quiet || call == CALL_COMPACT_MUTED ? 184 : compact ? 116 : 124);
+    lv_obj_set_width(s_status, quiet || call == CALL_COMPACT_MUTED ? CONTENT_WIDTH - 16 : compact ? 116 : 124);
     visible(s_card, reader || details || mode == CALL);
     visible(s_orbit, !reader && !details && mode != CALL);
     /* Failure: bar over the middle dot. Finishing: three dots in a row. */
     visible(s_mark_bar, mode == FAILURE);
     for (int dot = 0; dot < 3; dot++) {
         visible(s_mark_dots[dot], mode == CANCELLING || (mode == FAILURE && dot == 1));
-        lv_obj_set_pos(s_mark_dots[dot], mode == FAILURE ? 105 : 91 + dot * 14, mode == FAILURE ? 151 : 135);
+        lv_obj_set_pos(s_mark_dots[dot], mode == FAILURE ? CONTENT_AXIS - 3 : CONTENT_AXIS - 17 + dot * 14, mode == FAILURE ? 151 : 135);
     }
     visible(s_headline, !reader && !compact);
     visible(s_page_count, mode == READER || details);
@@ -365,9 +410,14 @@ static void layout(layout_t mode, bool zh, int call) {
         lv_obj_set_style_text_color(s_body, lv_color_hex(WHITE), 0);
         lv_obj_set_style_text_line_space(s_body, 3, 0);
     } else {
-        lv_obj_set_pos(s_headline, 14, quiet ? 191 : 196); lv_obj_set_size(s_headline, 188, 28);
+        /* The idle page has a short caption, so its group moves down to sit
+         * centred in the free space; busy pages keep room for longer text. */
+        int orbit_top = quiet ? IDLE_ORBIT_TOP : 98;
+        int axis = quiet ? IDLE_AXIS : CONTENT_AXIS, width = quiet ? IDLE_TEXT_WIDTH : CONTENT_WIDTH;
+        lv_obj_set_pos(s_orbit, axis - ORBIT_SIZE / 2, orbit_top);
+        lv_obj_set_pos(s_headline, axis - width / 2, quiet ? orbit_top + ORBIT_SIZE + 18 : 196); lv_obj_set_size(s_headline, width, 28);
         lv_obj_set_style_text_align(s_headline, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_pos(s_body, 20, quiet ? 231 : 236); lv_obj_set_size(s_body, 178, 62);
+        lv_obj_set_pos(s_body, axis - width / 2, quiet ? orbit_top + ORBIT_SIZE + 56 : 236); lv_obj_set_size(s_body, width, 62);
         lv_obj_set_style_text_align(s_body, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(s_body, lv_color_hex(MUTED), 0);
         lv_obj_set_style_text_line_space(s_body, 3, 0);
@@ -377,8 +427,8 @@ static void layout(layout_t mode, bool zh, int call) {
             (mode == CALL && call != CALL_COMPACT_MUTED));
         /* Capture fills the width; a call keeps a compact meter above its
          * captions; the resting mark sits inside the ring. */
-        lv_obj_set_x(s_waveform[i], mode == CAPTURE ? 32 + (int)i * 13 : compact ? 138 + (int)i * 5
-            : mode == CALL ? 54 + (int)i * 9 : 80 + (int)i * 5);
+        lv_obj_set_x(s_waveform[i], mode == CAPTURE ? CONTENT_AXIS - (11 * 13 + 5) / 2 + (int)i * 13 : compact ? 138 + (int)i * 5
+            : mode == CALL ? CONTENT_AXIS - (11 * 9 + 4) / 2 + (int)i * 9 : (mode == IDLE ? IDLE_AXIS : CONTENT_AXIS) - WAVE_SPAN / 2 + (int)i * WAVE_PITCH);
         lv_obj_set_width(s_waveform[i], mode == CAPTURE ? 5 : mode == CALL && !compact ? 4 : 3);
         s_last_wave[i] = -1;
     }
@@ -406,7 +456,7 @@ static void update_waveform(const passport_view_t *v, layout_t mode) {
             : mode == CALL ? 4 + resting[i] / 3 + level * 30 / 100 : mode == CAPTURE ? 6 + level * 72 / 100 : mode == WORK ? resting[i] / 2 + 3 : resting[i];
         if (s_last_wave[i] == height) continue;
         lv_obj_set_height(s_waveform[i], height);
-        lv_obj_set_y(s_waveform[i], (compact ? 53 : mode == CALL ? 102 : 138) - height / 2);
+        lv_obj_set_y(s_waveform[i], (compact ? 53 : mode == CALL ? 102 : mode == IDLE ? IDLE_ORBIT_TOP + ORBIT_SIZE / 2 : 138) - height / 2);
         s_last_wave[i] = height;
     }
 }
@@ -703,28 +753,28 @@ void passport_screen_open(void) {
     lv_obj_set_pos(s_logo, 20, 3);
     s_title = label(screen, &lv_font_montserrat_14, 45, 7, 88, 18, WHITE);
     text(s_title, "Agent"); add_status_icons(screen);
-    box(screen, 16, 69, 180, 1, EDGE, 0);
-    s_status = label(screen, &passport_font_16, 16, 42, 124, 21, MUTED);
+    box(screen, CONTENT_LEFT + 8, 69, CONTENT_WIDTH - 16, 1, EDGE, 0);
+    s_status = label(screen, &passport_font_16, CONTENT_LEFT + 8, 42, 124, 21, MUTED);
     lv_label_set_long_mode(s_status, LV_LABEL_LONG_DOT);
     s_page_count = label(screen, &lv_font_montserrat_14, 143, 44, 54, 18, FAINT);
     lv_obj_set_style_text_align(s_page_count, LV_TEXT_ALIGN_RIGHT, 0);
     s_card = box(screen, 12, 79, 190, 214, SURFACE, 12);
-    s_orbit = lv_arc_create(screen); lv_obj_set_pos(s_orbit, 68, 98); lv_obj_set_size(s_orbit, 80, 80);
+    s_orbit = lv_arc_create(screen); lv_obj_set_pos(s_orbit, CONTENT_AXIS - ORBIT_SIZE / 2, 98); lv_obj_set_size(s_orbit, ORBIT_SIZE, ORBIT_SIZE);
     lv_obj_remove_flag(s_orbit, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_arc_opa(s_orbit, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_orbit, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_border_width(s_orbit, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_orbit, 0, LV_PART_MAIN);
     lv_obj_remove_style(s_orbit, NULL, LV_PART_KNOB);
-    s_mark_bar = box(screen, 105, 119, 6, 26, AMBER, 3);
-    for (int dot = 0; dot < 3; dot++) s_mark_dots[dot] = box(screen, 91 + dot * 14, 135, 6, 6, MUTED, LV_RADIUS_CIRCLE);
+    s_mark_bar = box(screen, CONTENT_AXIS - 3, 119, 6, 26, AMBER, 3);
+    for (int dot = 0; dot < 3; dot++) s_mark_dots[dot] = box(screen, CONTENT_AXIS - 17 + dot * 14, 135, 6, 6, MUTED, LV_RADIUS_CIRCLE);
     for (size_t i = 0; i < PASSPORT_WAVEFORM_BARS; i++)
-        s_waveform[i] = box(screen, 80 + (int)i * 5, 136, 3, 4, MINT, 3);
-    s_headline = label(screen, &passport_font_20, 14, 191, 188, 28, WHITE);
+        s_waveform[i] = box(screen, CONTENT_AXIS - WAVE_SPAN / 2 + (int)i * WAVE_PITCH, 136, 3, 4, MINT, 3);
+    s_headline = label(screen, &passport_font_20, CONTENT_LEFT, 191, CONTENT_WIDTH, 28, WHITE);
     s_body_view = box(screen, 0, 0, PASSPORT_LCD_W, PASSPORT_LCD_H, INK, 0);
     lv_obj_set_style_bg_opa(s_body_view, LV_OPA_TRANSP, 0);
     lv_obj_set_scrollbar_mode(s_body_view, LV_SCROLLBAR_MODE_OFF);
-    s_body = label(s_body_view, &passport_font_16, 20, 231, 178, 62, MUTED);
+    s_body = label(s_body_view, &passport_font_16, CONTENT_LEFT, 231, CONTENT_WIDTH, 62, MUTED);
     s_focus = box(s_body_view, 18, LIST_TOP - 3, 178, LIST_ROW_HEIGHT, EDGE, 7);
     s_focus_edge = box(s_focus, 0, 5, 3, LIST_ROW_HEIGHT - 10, CORAL, 2);
     visible(s_focus, false);
@@ -931,7 +981,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                 snprintf(value, sizeof(value), tr(s, "助手：%s", "AI: %s"), agent->name);
                 text(s_status, value);
             } else text(s_status, tr(s, "对话", "VOICE"));
-            text(s_headline, tr(s, "想聊点什么？", "Let's talk"));
+            centred_headline(tr(s, "想聊点什么？", "Let's talk"), IDLE_ORBIT_TOP + ORBIT_SIZE + 18);
             bool local_error = strstr(v->reply,"失败") || strstr(v->reply,"不可用") || strstr(v->reply,"忙") || strstr(v->reply,"重试") || strstr(v->reply,"没有录音") || strstr(v->reply,"No speech");
             text(s_body, v->network_state == PASSPORT_NETWORK_CONNECTING ?
                 passport_network_feedback(v->network_state, passport_lang_zh(s), v->wifi_online)

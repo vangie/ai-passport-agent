@@ -17,7 +17,7 @@ This page defines the user-facing product specifications. Firmware pin assignmen
 | NFC | Passive NTAG213 tag supporting ordinary NDEF read/write |
 | Function input | UP, DOWN, and OK buttons on a GPIO0 ADC resistor ladder |
 | Power input | Dedicated hardware power button |
-| Power behavior | Hold power for 0.5 seconds to start and about 2 seconds to shut down; press a function button to wake after automatic screen-off |
+| Power behavior | Hold power for 0.5 seconds to start and about 2 seconds to shut down; press a function button to wake after automatic screen-off; a longer idle period enters deep sleep, and a function button restarts the device |
 | Audio | Built-in microphone and speaker with ES8311 codec |
 | Charging | USB Type-C 2.0, 5 V input |
 | Battery | Built-in 500 mAh rechargeable lithium battery with CW2017 fuel gauge |
