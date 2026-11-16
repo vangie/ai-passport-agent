@@ -1,6 +1,6 @@
 {
   "name": "ai-passport-openclaw",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Upgradeable AI Passport transport for native OpenClaw Talk",
   "license": "MIT",
   "keywords": ["openclaw", "ai-passport", "realtime", "voice"],

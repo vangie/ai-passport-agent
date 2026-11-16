@@ -32,7 +32,7 @@ export async function checkCompatibility({config, getProvider, WebSocket, api, v
     const audio = config?.tools?.media?.audio;
     const audioLanguage = typeof audio?.language === 'string' && audio.language.trim() ? audio.language.trim() : 'auto';
     const audioPromptConfigured = typeof audio?.prompt === 'string' && audio.prompt.trim().length > 0;
-    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.7.4',
+    return {status: 'compatible', openclawVersion: version, pluginVersion: '0.7.5',
         protocol: PASSPORT_PROTOCOL, path: PASSPORT_PATH, upstreamProvider: upstreamId,
         checks: ['public-plugin-sdk', 'native-provider-contract', 'native-device-challenge'],
         credentials: 'checked by the running gateway, not exported to the doctor',
