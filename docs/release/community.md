@@ -2,10 +2,10 @@
 
 # Community submission · v0.7.5
 
-Prepared for an update to existing play **2236** only, using its target-bound
-`update_once` grant. The GitHub and community submissions are separate; a pending
-community revision must be checked before uploading. This record is updated with
-the actual revision and review status after submission.
+Submitted as an update to existing play **2236** only, using its target-bound
+`update_once` grant. The new revision is **5782** and is **pending review**;
+the approved public revision remains 5707. This is not a claim that v0.7.5 is
+public in the community.
 
 ## Title
 
@@ -50,3 +50,10 @@ Call needs a realtime voice service, billed by your provider. Independent open-s
 - Preserve both approved titles from the paired documents. Do not change other plays.
 - Generate materials with `node tools/community_materials.mjs`; output: `build/community-market/v0.7.5/materials/`.
 - Inspect the final cover and optional images before uploading the same files. All demo data must remain fictional.
+
+## Submission receipt
+
+- GitHub Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.5
+- Verified full-image SHA-256: `8f36693c27e250120108427e61c6d575612ba9c7444f119319f3e1f486535930`
+- Community revision: **5782**, status **pending review**.
+- The grant was consumed; future updates require a fresh target-bound authorization.

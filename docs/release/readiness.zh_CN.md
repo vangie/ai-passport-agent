@@ -31,4 +31,8 @@ v0.7.4 增加了设备端闲置设置和自动关机。维护设备实测中，�
 
 ## 回执
 
-GitHub 标签、Release 附件、Pages 部署和社区修订号将在发布流程完成后补充。
+- GitHub 标签：`v0.7.5`，提交 `8fb2e9e8013ecef5cc654f1a57a002a6542ab46d`。
+- Release：https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.5
+- 已核验完整固件 SHA-256：`8f36693c27e250120108427e61c6d575612ba9c7444f119319f3e1f486535930`。
+- Pages 清单报告 v0.7.5 和相同提交，完整固件与应用镜像均与 Release 一致。
+- 社区玩法 2236 更新：修订 **5782**，状态为**待审核**；公开修订仍是 5707。

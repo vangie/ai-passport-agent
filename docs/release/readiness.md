@@ -31,4 +31,8 @@ The existing play is **2236**, titled **Agent Talk**. The v0.7.5 update requires
 
 ## Receipts
 
-GitHub tag, Release assets, Pages deployment and community revision are pending until the release workflow completes.
+- GitHub tag: `v0.7.5` at commit `8fb2e9e8013ecef5cc654f1a57a002a6542ab46d`.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.5
+- Verified full-image SHA-256: `8f36693c27e250120108427e61c6d575612ba9c7444f119319f3e1f486535930`.
+- Pages manifest reports v0.7.5 and the same commit; its full and application images match the Release.
+- Community play 2236 update: revision **5782**, status **pending review**. Public revision remains 5707.
