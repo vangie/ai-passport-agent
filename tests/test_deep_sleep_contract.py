@@ -53,6 +53,25 @@ class DeepSleepContractTest(unittest.TestCase):
         cls.battery = read("components/bsp/src/bsp_battery.c")
         cls.display = read("components/bsp/src/bsp_display.c")
         cls.i2c = read("components/bsp/src/bsp_i2c.c")
+        cls.poweroff = read("main/passport_poweroff.c")
+
+    def test_automatic_power_off_wakes_only_on_a_key(self) -> None:
+        """Automatic light sleep leaves a timer wake armed during standby. A device that
+        entered deep sleep with it still armed woke 0.24 s later, reset reason deep sleep,
+        wake cause timer, and so appeared never to power off (seen on hardware, v0.7.4)."""
+        body = function_body(self.poweroff, "passport_power_off")
+        clear = body.find("esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL)")
+        arm = body.find("esp_deep_sleep_enable_gpio_wakeup(")
+        sleep = body.find("esp_deep_sleep_start()")
+        self.assertGreaterEqual(clear, 0, "stale wake sources are not cleared before power-off")
+        self.assertGreater(arm, clear, "the key wake must be armed after stale sources are cleared")
+        self.assertGreater(sleep, arm, "deep sleep must start after the key wake is armed")
+        self.assertEqual(body.count("esp_sleep_disable_wakeup_source("), 1)
+        # Nothing between clearing and sleeping may arm another source.
+        armed = re.findall(r"\b(esp_sleep_enable_\w+|esp_deep_sleep_enable_\w+)\s*\(", body[clear:sleep])
+        self.assertEqual(armed, ["esp_deep_sleep_enable_gpio_wakeup"])
+        self.assertIn("1ULL << BSP_BTN_GPIO", body)
+        self.assertIn("ESP_GPIO_WAKEUP_GPIO_LOW", body)
 
     def test_es8311_force_sleep_sequence_is_complete_and_ordered(self) -> None:
         expected = [

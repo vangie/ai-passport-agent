@@ -25,6 +25,11 @@ void passport_power_off(void) {
     int level = 1;
     if (bsp_button_prepare_deep_sleep(&level) != ESP_OK) esp_restart();
     if (level != 1) esp_restart();
+    /* Automatic light sleep arms a timer wake every time the device idles in
+     * standby and leaves it armed. Deep sleep honours every armed source, so
+     * without this the device wakes a fraction of a second after powering off
+     * and looks as if it never did. Only the key may start it again. */
+    power_off_step("stale wake sources", esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL));
     power_off_step("key wake", esp_deep_sleep_enable_gpio_wakeup(1ULL << BSP_BTN_GPIO, ESP_GPIO_WAKEUP_GPIO_LOW));
     power_off_step("fuel gauge", bsp_battery_sleep());
     power_off_step("codec", bsp_audio_sleep());
