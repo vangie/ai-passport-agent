@@ -14,6 +14,10 @@
 
 No pending changes.
 
+## v0.7.5 - 2026-11-16
+
+- Keep the device asleep after automatic power-off by clearing the standby timer wake source and leaving only the physical-key wake source armed.
+
 ## v0.7.4 - 2026-11-15
 
 - Add **Screen off** and **Power off** to the device's Settings list. Each opens a page where the top key moves the time one step later and the middle key one step earlier, in the same steps as the web studio; a key greys out at the end of its scale. Leaving the page saves and applies the change.

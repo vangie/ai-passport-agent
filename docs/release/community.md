@@ -1,19 +1,11 @@
 <p align="right"><a href="community.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# Community submission · v0.7.4
+# Community submission · v0.7.5
 
-Submitted on 2026-11-15 to existing play **2236** only, using its target-bound
-`update_once` grant. Before submission, `projects` / `publishedRevision` confirmed
-revision **5674** (v0.7.3) was approved and public, with no draft or pending conflict.
-The response and readback identify revision **5707**, **pending review**; the approved
-revision remains public. This is not a claim that v0.7.4 is public in the community.
-GitHub v0.7.4's verified merged image was submitted. The cover and the three optional images were
-regenerated at this version and each was inspected before submitting.
-Descriptions are unchanged, step 3 of the instructions now points to the device's Settings for the
-screen-off and power-off times, and the changelog is this release's own. The firmware hash and
-independent text fields were confirmed by readback.
-The grant is consumed. Future updates need fresh authorization and a current-state check;
-stop on draft/pending or version conflicts, without withdrawing or creating a duplicate.
+Prepared for an update to existing play **2236** only, using its target-bound
+`update_once` grant. The GitHub and community submissions are separate; a pending
+community revision must be checked before uploading. This record is updated with
+the actual revision and review status after submission.
 
 ## Title
 
@@ -36,8 +28,7 @@ once configured, Passport connects to your gateway over Wi-Fi without using the 
 
 Bring a working OpenClaw or Hermes with a usable model. Choose its backend in the web studio and send the setup
 prompt to an agent with access to that host, to prepare the plugin, secure reachable ingress and limited pairing code.
-Remote access may require your own tunnel resources; Call needs a realtime voice service, billed by your provider.
-Independent open-source community project. Images are actual UI renders with fictional data, not device photographs.
+Call needs a realtime voice service, billed by your provider. Independent open-source community project.
 
 ## Quick-start instructions
 
@@ -48,19 +39,14 @@ Independent open-source community project. Images are actual UI renders with fic
 
 ## Update notes
 
-- Set the screen-off and power-off times on Passport itself: Settings gains Screen off and Power off. The top key makes the time longer, the middle key shorter, and Back saves. No computer or web page needed.
-- The choices match the web studio: screen-off from 15 seconds to 10 minutes, power-off from 5 minutes to 2 hours, or never.
-- The Settings list now has six items, scrolls with the selection and shows which item you are on in the top right.
+- Fix automatic power-off waking immediately from a leftover standby timer; the device now stays off until a function key is pressed.
 
 ## Files and provenance
 
 - Source: https://github.com/vangie/ai-passport-agent
-- Version: v0.7.4. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.4
+- Version: v0.7.5. Use only the verified `agent-talk-full.bin` from its completed GitHub release.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.5
 - Use the full-image hash in that release's `release-manifest.json`; upload the same file to the community, not a local candidate.
 - Preserve both approved titles from the paired documents. Do not change other plays.
-- Generate materials with `node tools/community_materials.mjs`; output:
-  `build/community-market/v0.7.4/materials/`. Cover `00-cover.png` plus three optional posters are 1152 × 1536.
-- All network names, assistant names and endpoints are fictional. Inspect the final PNG files and independent UTF-8
-  description, instructions and update-note files before uploading the same files. Generation does not submit anything.
-- Before uploading, compare the live public revision and trim update notes accordingly. Submit only the inspected cover and verified release firmware.
+- Generate materials with `node tools/community_materials.mjs`; output: `build/community-market/v0.7.5/materials/`.
+- Inspect the final cover and optional images before uploading the same files. All demo data must remain fictional.
