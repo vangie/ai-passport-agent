@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location('passport_plugin_manager', ROOT / 'tools/openclaw/manage-plugin.py')
+SPEC = importlib.util.spec_from_file_location('passport_plugin_manager', ROOT / 'integrations/valet-gateway/tools/openclaw/manage-plugin.py')
 manager = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(manager)
 

@@ -19,6 +19,7 @@ preview-ui:
 	build/ui-preview/preview sim/shots/ui-redesign
 
 plugin-test:
+	python3 tools/gateway_source.py
 	node tests/test_passport_plugin.mjs
 	node tests/test_passport_relay.mjs
 	PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_relay_install.py
@@ -26,5 +27,4 @@ plugin-test:
 	PYTHONDONTWRITEBYTECODE=1 python3 tests/test_passport_plugin_package.py
 
 plugin-package: plugin-test
-	mkdir -p build/openclaw
-	cd tools/openclaw && npm pack --ignore-scripts --pack-destination ../../build/openclaw
+	python3 tools/release.py openclaw-package build/openclaw

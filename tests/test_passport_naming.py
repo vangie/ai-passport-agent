@@ -28,13 +28,14 @@ class PassportNamingTests(unittest.TestCase):
                 self.assertNotIn('https://github.com/vangie/ai-passport-openclaw', source)
 
     def test_openclaw_plugin_identity_is_preserved(self):
-        package = json.loads((ROOT / 'tools/openclaw/package.json').read_text())
-        plugin = json.loads((ROOT / 'tools/openclaw/openclaw.plugin.json').read_text())
+        package = json.loads((ROOT / 'integrations/valet-gateway/tools/openclaw/package.json').read_text())
+        plugin = json.loads((ROOT / 'integrations/valet-gateway/tools/openclaw/openclaw.plugin.json').read_text())
         self.assertEqual(package['name'], 'ai-passport-openclaw')
         self.assertEqual(plugin['id'], package['name'])
         self.assertEqual(plugin['name'], 'AI Passport Agent — OpenClaw')
-        for relative in ('tools/openclaw/index.mjs', 'tools/openclaw/manage-plugin.py',
-                         'tools/openclaw/doctor.mjs'):
+        for relative in ('integrations/valet-gateway/tools/openclaw/index.mjs',
+                         'integrations/valet-gateway/tools/openclaw/manage-plugin.py',
+                         'integrations/valet-gateway/tools/openclaw/doctor.mjs'):
             self.assertIn('ai-passport-openclaw', (ROOT / relative).read_text())
 
     def test_existing_device_protocol_and_local_data_are_preserved(self):

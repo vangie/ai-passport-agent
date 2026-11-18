@@ -10,6 +10,9 @@ import shutil
 import subprocess
 import tarfile
 import zipfile
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gateway_source import gateway_root, repository_files, PIN, REPOSITORY
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,27 +22,17 @@ HERMES_FILES = {'__init__.py', 'adapter.py', 'passport_auth.py', 'passport_ima.p
 
 
 def check_version(tag=None):
-    version = json.loads((ROOT / 'tools/openclaw/package.json').read_text())['version']
+    version = json.loads((ROOT / 'web/package.json').read_text())['version']
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
         raise ValueError('Release version must be a stable semantic version')
     if tag is not None and tag != f'v{version}':
         raise ValueError('Release tag does not match the product version')
-    lock = json.loads((ROOT / 'tools/openclaw/package-lock.json').read_text())
-    if lock['version'] != version or lock['packages']['']['version'] != version:
-        raise ValueError('Plugin lockfile version mismatch')
+    gateway_versions()
     web = json.loads((ROOT / 'web/package.json').read_text())
     web_lock = json.loads((ROOT / 'web/package-lock.json').read_text())
     if any(value != version for value in [web['version'], web_lock['version'],
                                           web_lock['packages']['']['version']]):
         raise ValueError('Web version mismatch')
-    hermes_versions = re.findall(r'^version: (\S+)$',
-                                (ROOT / 'tools/hermes/plugin.yaml').read_text(), re.MULTILINE)
-    if hermes_versions != [version]:
-        raise ValueError('Hermes plugin version mismatch')
-    for name in ['index.mjs', 'doctor.mjs']:
-        versions = re.findall(r"pluginVersion: '([^']+)'", (ROOT / 'tools/openclaw' / name).read_text())
-        if versions != [version]:
-            raise ValueError(f'Plugin runtime version mismatch: {name}')
     for name in ['notes.md', 'notes.zh_CN.md']:
         if f'# AI Passport Agent v{version}' not in (ROOT / 'docs/release' / name).read_text().splitlines():
             raise ValueError(f'Release notes version mismatch: {name}')
@@ -50,8 +43,27 @@ def check_version(tag=None):
     return version
 
 
+def gateway_versions():
+    directory = gateway_root(ROOT)
+    metadata = json.loads((directory / 'tools/openclaw/package.json').read_text())
+    version = metadata['version']
+    lock = json.loads((directory / 'tools/openclaw/package-lock.json').read_text())
+    if lock['version'] != version or lock['packages']['']['version'] != version:
+        raise ValueError('Plugin lockfile version mismatch')
+    for name in ['index.mjs', 'doctor.mjs']:
+        versions = re.findall(r"pluginVersion: '([^']+)'", (directory / 'tools/openclaw' / name).read_text())
+        if versions != [version]:
+            raise ValueError(f'Plugin runtime version mismatch: {name}')
+    hermes = re.findall(r'^version: (\S+)$', (directory / 'tools/hermes/plugin.yaml').read_text(), re.MULTILINE)
+    if len(hermes) != 1 or not all(re.fullmatch(r'\d+\.\d+\.\d+', item) for item in [version, *hermes]):
+        raise ValueError('Invalid gateway adapter version')
+    return version, hermes[0]
+
+
 def asset_names(version):
-    return {f'ai-passport-openclaw-{version}.tgz', f'ai-passport-hermes-{version}.tar.gz',
+    openclaw, hermes = gateway_versions()
+    return {f'ai-passport-openclaw-{openclaw}.tgz', f'ai-passport-hermes-{hermes}.tar.gz',
+            'ai-passport-agent-source.tar.gz',
             'ai-passport-agent-firmware.tar.gz',
             'agent-talk-full.bin',
             'agent-talk.bin', 'LICENSE.txt'}
@@ -59,11 +71,13 @@ def asset_names(version):
 
 def prepare_assets(source, destination, tag, commit):
     version = check_version(tag)
+    openclaw, hermes = gateway_versions()
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Release source commit must be a full Git SHA')
     inputs = {
-        f'ai-passport-openclaw-{version}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{version}.tgz',
-        f'ai-passport-hermes-{version}.tar.gz': source / 'release-hermes' / f'ai-passport-hermes-{version}.tar.gz',
+        f'ai-passport-openclaw-{openclaw}.tgz': source / 'release-plugin' / f'ai-passport-openclaw-{openclaw}.tgz',
+        f'ai-passport-hermes-{hermes}.tar.gz': source / 'release-hermes' / f'ai-passport-hermes-{hermes}.tar.gz',
+        'ai-passport-agent-source.tar.gz': source / 'release-source/ai-passport-agent-source.tar.gz',
         'ai-passport-agent-firmware.tar.gz': source / 'release-firmware/ai-passport-agent-firmware.tar.gz',
         'agent-talk-full.bin': source / 'release-firmware/firmware/agent-talk-full.bin',
         'agent-talk.bin': source / 'release-firmware/firmware/agent-talk.bin',
@@ -83,7 +97,9 @@ def prepare_assets(source, destination, tag, commit):
     for name, path in sorted(inputs.items()):
         shutil.copy2(path, destination / name)
         records[name] = {'size': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
-    manifest = {'schema_version': 1, 'tag': tag, 'version': version, 'commit_sha': commit, 'assets': records}
+    manifest = {'schema_version': 1, 'tag': tag, 'version': version, 'commit_sha': commit, 'assets': records,
+                'gateway': {'repository': REPOSITORY, 'commit': PIN, 'openclaw_version': openclaw,
+                            'hermes_version': hermes}}
     (destination / 'release-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     checksums = [f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n'
                  for path in sorted(destination.iterdir())]
@@ -100,6 +116,10 @@ def verify_assets(directory, tag, commit):
         if not path.is_file() or path.is_symlink() or path.stat().st_size == 0:
             raise ValueError('Release contains an empty or unsafe asset')
     manifest = json.loads((directory / 'release-manifest.json').read_text())
+    openclaw, hermes = gateway_versions()
+    if manifest.get('gateway') != {'repository': REPOSITORY, 'commit': PIN,
+                                    'openclaw_version': openclaw, 'hermes_version': hermes}:
+        raise ValueError('Release gateway provenance mismatch')
     if (manifest.get('schema_version') != 1 or manifest.get('tag') != tag
             or manifest.get('version') != version or manifest.get('commit_sha') != commit
             or not re.fullmatch(r'[0-9a-f]{40}', commit)
@@ -177,8 +197,8 @@ def licenses(destination):
 
 
 def hermes_package(destination):
-    version = check_version()
-    directory = ROOT / 'tools/hermes'
+    _, version = gateway_versions()
+    directory = gateway_root(ROOT) / 'tools/hermes'
     sources = {name: directory / name for name in HERMES_FILES}
     sources['LICENSE'] = ROOT / 'LICENSE'
     for name, source in sources.items():
@@ -200,6 +220,39 @@ def hermes_package(destination):
     with target.open('xb') as output:
         output.write(contents.getvalue())
     print(target)
+
+
+def openclaw_package(destination):
+    gateway_versions()
+    destination.mkdir(parents=True, exist_ok=True)
+    subprocess.run(['npm', 'pack', '--ignore-scripts', '--pack-destination', str(destination.resolve())],
+                   cwd=gateway_root(ROOT) / 'tools/openclaw', check=True)
+
+
+def source_package(destination):
+    """Flatten the pinned Git submodule into a complete, reproducible source kit."""
+    gateway = gateway_root(ROOT)
+    actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=gateway, text=True).strip()
+    if actual != PIN:
+        raise ValueError('Shared gateway checkout differs from reviewed pin')
+    sources = {name: ROOT / name for name in repository_files(ROOT, untracked=False) if (ROOT / name).exists()}
+    # Include maintained migration entry points in local pre-commit checks too;
+    # never sweep unrelated untracked files into a distributable archive.
+    for name in ('tools/gateway_source.py', 'tests/test_gateway_source.py'):
+        sources[name] = ROOT / name
+    for name, path in sources.items():
+        if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(ROOT.resolve()):
+            raise ValueError(f'Unsafe source package input: {name}')
+    destination.mkdir(parents=True, exist_ok=True)
+    with (destination / 'ai-passport-agent-source.tar.gz').open('xb') as output:
+        with gzip.GzipFile(fileobj=output, mode='wb', filename='', mtime=0) as compressed:
+            with tarfile.open(fileobj=compressed, mode='w') as archive:
+                for name, path in sorted(sources.items()):
+                    data = path.read_bytes()
+                    record = tarfile.TarInfo('ai-passport-agent/' + name)
+                    record.size = len(data)
+                    record.mode = 0o755 if path.stat().st_mode & 0o111 else 0o644
+                    archive.addfile(record, io.BytesIO(data))
 
 
 def firmware(destination):
@@ -263,6 +316,10 @@ def main():
     bundle.add_argument('destination', type=Path)
     hermes = commands.add_parser('hermes-package')
     hermes.add_argument('destination', type=Path)
+    plugin = commands.add_parser('openclaw-package')
+    plugin.add_argument('destination', type=Path)
+    source = commands.add_parser('source-package')
+    source.add_argument('destination', type=Path)
     mac = commands.add_parser('mac-resources')
     mac.add_argument('application', type=Path)
     mac.add_argument('firmware', type=Path)
@@ -283,6 +340,10 @@ def main():
         firmware(args.destination.resolve())
     elif args.command == 'hermes-package':
         hermes_package(args.destination.absolute())
+    elif args.command == 'openclaw-package':
+        openclaw_package(args.destination.absolute())
+    elif args.command == 'source-package':
+        source_package(args.destination.absolute())
     elif args.command == 'mac-resources':
         mac_resources(args.application.resolve(), args.firmware.resolve())
     elif args.command == 'ios-source':

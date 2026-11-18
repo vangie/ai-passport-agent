@@ -34,6 +34,12 @@ class PublicAuditTests(unittest.TestCase):
         team = 'DEVELOPMENT_TEAM: ' + 'A' * 10
         self.assertTrue(audit.findings('mac/project.yml', team))
 
+    def test_shared_gateway_has_the_same_privacy_rules(self):
+        prefix = 'integrations/valet-gateway/'
+        self.assertTrue(audit.findings(prefix + 'tools/hermes/adapter.py', 'wss://private-gateway.test'))
+        self.assertEqual(audit.findings(prefix + 'tools/hermes/passport_talk.py',
+                                        'wss://api.openai.com/v1/realtime'), [])
+
     def test_browser_endpoints_require_placeholders(self):
         self.assertTrue(audit.findings('web/prompts/hermes-zh.txt', 'wss://gateway.customer.net'))
         self.assertEqual(audit.findings('web/prompts/hermes-en.txt', 'wss://gateway.example'), [])

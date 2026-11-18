@@ -8,6 +8,17 @@ source-only alternatives. CI does not build, sign, run Simulator UI tests or
 package them. Their marketing versions no longer gate releases. Local development
 scripts and native source unit tests remain available.
 
+## Shared backend dependency
+
+Every CI checkout initializes `integrations/valet-gateway` recursively. Plugin tests,
+doctor and packaging read that pinned source rather than a duplicate implementation.
+Firmware versions come from product/web metadata; adapter package, lock and runtime
+versions are checked independently. Release provenance records the shared repository,
+commit and adapter versions. A complete source asset expands tracked submodule files,
+excluding Git metadata, caches, credentials and runtime state. GitHub automatic source
+archives omit submodules and are not complete offline source kits. Valet Gateway v0.1.0 is released separately; prompts use its verified
+packages or reviewed commit and never invent downloadable assets.
+
 ## Pull requests and main
 
 - `static-checks.yml`: repository rules, private endpoint audit, pinned Gitleaks,
@@ -29,32 +40,32 @@ private NVS, pairing material, configuration, local logs or old local firmware.
 
 `.github/workflows/release.yml` builds from the pushed tag:
 
-1. Audit repository, private endpoints, secrets and workflows. The tag, plugin
-   package/runtime, Hermes manifest, web/lockfile versions, bilingual notes and dated changelogs
-   must agree. Native app versions are independent.
+1. Audit repository, private endpoints, secrets and workflows. The tag, web/lockfile
+   versions, bilingual notes and dated changelogs must agree. Validate shared adapter
+   metadata independently and record its pin. Native app versions are independent.
 2. Run host checks through the reusable static workflow, without app builds.
 3. Build fresh firmware, verify layout/hashes and package from its verified
    content-addressed archive. Public artifacts exclude ELF/MAP.
 4. Build the OpenClaw package using locked dependencies. Package Hermes from an
    explicit code/docs/license allowlist, excluding caches, credentials and state;
    reject missing/empty/symlinked inputs. Run web unit and browser UI tests.
-5. After all gates succeed, collect six payloads: OpenClaw TGZ, versioned Hermes
-   TAR.GZ, firmware TAR.GZ, application and merged BINs, and `LICENSE.txt`.
+5. After all gates succeed, collect seven payloads: OpenClaw TGZ, versioned Hermes
+   TAR.GZ, complete source TAR.GZ, firmware TAR.GZ, application and merged BINs, and `LICENSE.txt`.
    Reject missing, empty or unsafe inputs. Add `release-manifest.json` with source
-   commit, version, sizes and SHA-256 hashes, then `SHA256SUMS.txt`: eight files total.
+   commit, version, sizes and SHA-256 hashes, then `SHA256SUMS.txt`: nine files total.
 6. Create or resume the same tag's draft, upload, download and verify the full
    filename set, provenance and hashes before publishing as latest. Failures leave
    a draft; reruns never overwrite an already published release.
 
 No macOS ZIP, iOS source kit, Simulator ZIP or IPA is required or published.
-Native code remains in the repository and GitHub's source archives. Existing
+Native code remains in the repository and the complete source release asset. Existing
 historical tag workflows are not rewritten. Retired GitHub Releases may be removed
 after the replacement is verified; retain their tags and verified entries in
 `web/release-builds.json` so installed firmware still has a recognizable version.
 Optional `mac-resources`
 and `ios-source` helpers are local tools, not CI steps.
 
-Align plugin versions and bilingual notes/changelogs, then run
+Align product versions and bilingual notes/changelogs, then run
 `python3 tools/release.py check-version --tag v0.7.0` with the intended version.
 Run the static gate and relevant firmware/plugin/web tests, merge reviewed source
 and push an immutable tag at that exact commit. Monitor Release to completion;

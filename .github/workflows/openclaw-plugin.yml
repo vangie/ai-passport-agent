@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - "tools/openclaw/**"
+      - "integrations/valet-gateway"
+      - ".gitmodules"
+      - "tools/gateway_source.py"
+      - "tools/release.py"
       - "tests/test_passport_plugin*"
       - "tests/test_passport_relay*"
       - "Makefile"
@@ -13,6 +17,10 @@ on:
       - main
     paths:
       - "tools/openclaw/**"
+      - "integrations/valet-gateway"
+      - ".gitmodules"
+      - "tools/gateway_source.py"
+      - "tools/release.py"
       - "tests/test_passport_plugin*"
       - "tests/test_passport_relay*"
       - "Makefile"
@@ -35,13 +43,15 @@ jobs:
         node: [22, 24, 26]
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          submodules: recursive
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-          cache-dependency-path: tools/openclaw/package-lock.json
+          cache-dependency-path: integrations/valet-gateway/tools/openclaw/package-lock.json
       - name: Install locked transport dependency without a second gateway
-        run: npm ci --prefix tools/openclaw --omit=peer --ignore-scripts --no-audit --no-fund
+        run: npm ci --prefix integrations/valet-gateway/tools/openclaw --omit=peer --ignore-scripts --no-audit --no-fund
       - name: Test and package plugin without gateway credentials
         run: make plugin-package
       - name: Upload installable plugin

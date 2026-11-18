@@ -7,6 +7,10 @@ or iOS App configures it; neither app forwards conversations. Install the
 [project plugin](../tools/openclaw/README.md) on the gateway host first. Examples
 use reserved placeholders, not a working shared service.
 
+Gateway adapters and their wire/binding contract are maintained in
+[Valet Gateway](../integrations/valet-gateway/protocol/README.md). This page covers
+Passport networking only; existing device identities and tokens remain valid.
+
 ## Choose an ingress
 
 | Option | Device endpoint | When to use |
@@ -22,11 +26,20 @@ one cipher, `aes-256-cfb`; the server must be configured with the same one.
 Use direct routing to a reliable regional endpoint when possible. Never disable
 certificate checks, expose an unauthenticated gateway, or publish credentials.
 
-The first connection after power-on performs a full TLS handshake, which takes
-about three to four seconds on this chip. Later connections to the same gateway
-resume that TLS session and skip the key exchange and certificate check. The
-session is kept in RAM only, is offered for up to 12 hours, and a gateway that
-no longer accepts it gets a full handshake instead.
+The device keeps an authenticated gateway connection while its radio and power
+policy permit it. Reusing that connection avoids TLS and gateway authentication.
+If it must reconnect, it can offer a saved TLS session ticket to the same host,
+port and trust configuration. The server can accept it or perform a full
+handshake; `ticket_offered=1` in the log does not prove resumption succeeded.
+Tickets stay in RAM and are offered for up to 12 hours, never across a reboot.
+
+TLS 1.3 and TLS 1.2 are both enabled. ESP-IDF 5.5.3 requires
+`CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE=y` for TLS 1.3; disabling it silently
+removes TLS 1.3 from generated configuration. The build rejects this downgrade
+and missing client ticket support. Keeping the peer certificate costs additional
+heap, so recording and upload memory must also be checked on the physical device.
+Actual latency depends on the ingress, proxy, network and negotiated protocol;
+use the logged TLS version and connection-stage timings to compare builds.
 
 The apps' **Copy Prompt** can ask an agent on the gateway host to install a
 missing plugin and establish a missing public ingress using authorized resources.

@@ -1,0 +1,3 @@
+[submodule "integrations/valet-gateway"]
+	path = integrations/valet-gateway
+	url = https://github.com/vangie/valet-gateway.git

@@ -14,6 +14,12 @@
 
 No pending changes.
 
+## v0.7.6 - 2026-11-18
+
+- Restore TLS 1.3 by retaining its ESP-IDF peer-certificate dependency, reject silent build downgrades, and distinguish ticket offers from actual resumption in logs.
+- Consume OpenClaw and Hermes adapters from pinned Valet Gateway v0.1.0 while preserving plugin IDs, device pairing, tokens and the existing wire protocol.
+- Update setup prompts, CI and package paths to the shared source; add a complete source release archive and independently record firmware and adapter versions.
+
 ## v0.7.5 - 2026-11-16
 
 - Keep the device asleep after automatic power-off by clearing the standby timer wake source and leaving only the physical-key wake source armed.

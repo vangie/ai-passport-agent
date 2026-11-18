@@ -2,6 +2,35 @@
 
 # Configuration and everyday use
 
+## Shared gateway source
+
+OpenClaw and Hermes adapters are maintained only in
+[Valet Gateway](https://github.com/vangie/valet-gateway), consumed at reviewed
+commit `40cbd826504bbf65a26f50bcea604ab5a0335351` under `integrations/valet-gateway` (adapter 0.7.5).
+Hardware, USB/BLE settings and audio remain in this firmware repository.
+
+```sh
+git submodule update --init --recursive
+```
+
+Use a recursive clone or the complete `ai-passport-agent-source.tar.gz` release
+asset. GitHub's automatic source ZIP/TAR omits submodule contents. A missing
+checkout produces a clear error rather than fetching or upgrading implicitly.
+Use [Valet Gateway v0.1.0](https://github.com/vangie/valet-gateway/releases/tag/v0.1.0)
+or its reviewed commit; verify actual package checksums and source provenance. Installed compatible adapters can stay in
+place. Plugin IDs, `/passport/v1`, signed proof, pairing format and device tokens
+are preserved, so extraction does not require re-pairing. Firmware updates do not
+automatically update or restart a gateway.
+
+The maintained [OpenClaw](../integrations/valet-gateway/tools/openclaw/README.md)
+and [Hermes](../integrations/valet-gateway/tools/hermes/README.md) guides are in the
+submodule. Old `tools/openclaw` commands are compatibility forwarders;
+`tools/hermes` is a documentation-only migration path. Install runtime files from
+the shared checkout or the complete adapter packages. Adapter versions are
+independent of firmware versions, recorded with the gateway commit in release
+provenance. The original MIT license is retained; there are no local adapter patches.
+
+
 ## Project name and compatibility
 
 AI Passport Agent is the product name; `vangie/ai-passport-agent` is its source

@@ -6,6 +6,15 @@
 和 `shared/` 中的源码作为可选方案。CI 不再构建、签名、运行模拟器 UI 测试或打包 App，
 其营销版本也不再阻塞发布。本地开发脚本及原生源码单元测试保留。
 
+## 共享后端依赖
+
+所有 CI checkout 都递归初始化 `integrations/valet-gateway`。插件测试、doctor 和打包
+读取这个固定提交，不维护第二份实现。固件版本由 web/product 元数据确定；共享插件
+各自校验 package、lockfile 和运行时版本，不要求等于固件版本。Release provenance
+额外记录共享仓库、提交和两套插件版本。Release 新增完整源码包，展开 submodule
+中的跟踪文件；排除 `.git`、缓存、密钥和运行状态。GitHub 自动源码包不含 submodule，
+不能作为完整离线源码包。Valet Gateway v0.1.0 已独立发布，提示词仅引用核验过的包或固定提交，不编造资源。
+
 ## PR 与主分支
 
 - `static-checks.yml`：仓库规则、私人地址检查、固定版本 Gitleaks、actionlint
@@ -23,25 +32,24 @@
 
 `.github/workflows/release.yml` 从推送的标签构建：
 
-1. 仓库、私人地址、密钥和工作流检查。标签、OpenClaw 包／运行时、Hermes 清单、网页及锁文件版本、双语说明和
-   带日期日志必须一致；原生 App 版本独立。
+1. 仓库、私人地址、密钥和工作流检查。标签、网页及锁文件版本、双语说明和
+   带日期日志必须一致；共享适配器独立校验元数据并记录提交；原生 App 版本独立。
 2. 通过可复用工作流运行主机检查，不构建 App。
 3. 全新构建固件并校验布局和哈希，从内容寻址的已验证归档打包；公开产物不含 ELF／MAP。
 4. 按锁定依赖构建 OpenClaw 插件；Hermes 按代码／文档／许可白名单打包，排除缓存、凭据和状态，
    拒绝缺失、空文件与符号链接。运行网页单元及浏览器界面测试。
-5. 所有检查通过后，收集六个有效载荷：OpenClaw TGZ、版本化 Hermes TAR.GZ、固件 TAR.GZ、
+5. 所有检查通过后，收集七个有效载荷：OpenClaw TGZ、版本化 Hermes TAR.GZ、完整源码 TAR.GZ、固件 TAR.GZ、
    应用和合并 BIN、`LICENSE.txt`。缺失、空文件或不安全路径会中止。
    再生成记录源码提交、版本、大小和 SHA-256 的 `release-manifest.json` 与
-   `SHA256SUMS.txt`，合计八个文件。
+   `SHA256SUMS.txt`，合计九个文件。
 6. 创建或复用同标签草稿，上传后重新下载，核对文件全集、来源和哈希，全部通过才公开并设为最新版。
    失败保留草稿，重跑不会覆盖已公开版本。
 
-不再要求或发布 macOS ZIP、iOS 源码包、模拟器 ZIP 或 IPA；原生代码可从仓库和 GitHub
-自动生成的源码归档取得。历史标签工作流不改写。替代版本验证通过后可删除旧 Release，
+不再要求或发布 macOS ZIP、iOS 源码包、模拟器 ZIP 或 IPA；原生代码可从仓库和完整源码 Release 包取得。历史标签工作流不改写。替代版本验证通过后可删除旧 Release，
 保留其标签与 `web/release-builds.json` 中的已验证身份，确保旧设备仍可识别版本。
 可选的 `mac-resources`、`ios-source` 只是本地工具，不再由 CI 调用。
 
-对齐插件版本和双语说明／日志，以目标版本执行
+对齐产品版本和双语说明／日志，以目标版本执行
 `python3 tools/release.py check-version --tag v0.7.0`。完成静态门禁及相关固件／插件／网页测试，
 合并检查过的源码，再在准确提交上推送不可变标签。必须观察 Release 完成，不能把标签或构建成功
 当成发布完成。草稿失败先检查同标签草稿并重跑失败任务，不移动标签或另建版本重试。

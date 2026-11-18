@@ -15,7 +15,7 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**v0.7.5：自动关机后会保持关机，按键才会重新启动。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
+**v0.7.6：共用 Valet Gateway 插件，并恢复 TLS 1.3 支持。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
 项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
@@ -23,6 +23,10 @@
 
 这是基于 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport) 的独立社区项目，
 不是 FoloToy 官方固件或 OpenClaw 发行版。安装后会替换原厂应用，不承诺保留原有全部功能。
+
+后端插件已迁为 [Valet Gateway](https://github.com/vangie/valet-gateway) submodule，
+开发克隆后先运行 `git submodule update --init --recursive`。现有设备不需重新配对。
+安装来源和完整源码包见[共享网关](docs/configuration.zh_CN.md#共享网关源码)。
 
 ## 语音问答与实时通话
 

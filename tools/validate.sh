@@ -16,6 +16,7 @@ run_static_checks() {
     python3 tools/check_public.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_public_audit.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_release.py
+    PYTHONDONTWRITEBYTECODE=1 python3 tests/test_gateway_source.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_preview.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_firmware.py
     PYTHONDONTWRITEBYTECODE=1 python3 tests/test_web_public.py
@@ -246,6 +247,7 @@ run_firmware_checks() (
 )
 
 cd "${repo_root}"
+python3 tools/gateway_source.py >/dev/null
 case "${mode}" in
     --all)
         run_static_checks

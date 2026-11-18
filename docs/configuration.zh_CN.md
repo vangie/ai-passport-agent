@@ -2,6 +2,30 @@
 
 # 配置与日常使用
 
+## 共享网关源码
+
+OpenClaw 和 Hermes 适配器的唯一维护源是
+[Valet Gateway](https://github.com/vangie/valet-gateway)，固定在已审查提交
+`40cbd826504bbf65a26f50bcea604ab5a0335351`，位于 `integrations/valet-gateway`（适配器 0.7.5）。
+硬件、USB／蓝牙配置和音频实现仍在固件仓库。
+
+```sh
+git submodule update --init --recursive
+```
+
+请递归克隆，或使用 Release 中完整的 `ai-passport-agent-source.tar.gz`。
+GitHub 自动生成的源码 ZIP／TAR 不包含 submodule 内容。缺少共享源码时会明确报错，
+不会隐式下载或升级。使用 [Valet Gateway v0.1.0](https://github.com/vangie/valet-gateway/releases/tag/v0.1.0)
+或其固定提交，核对真实安装包、校验清单与来源。现有兼容插件可继续运行；插件 ID、`/passport/v1`、签名、配对格式和
+设备凭据都保持兼容，源码迁移不需要重新配对。更新固件不会自动替换或重启网关。
+
+维护中的 [OpenClaw](../integrations/valet-gateway/tools/openclaw/README.zh_CN.md)
+和 [Hermes](../integrations/valet-gateway/tools/hermes/README.zh_CN.md) 安装说明位于
+共享仓库。旧 `tools/openclaw` 命令转到共享实现；`tools/hermes` 仅保留迁移说明，
+应从共享源码或完整插件包安装。适配器版本与固件版本独立，Release 记录固定共享提交
+和适配器版本。保留原 MIT 许可证，本仓库不维护适配器补丁副本。
+
+
 ## 项目名称与兼容性
 
 AI Passport Agent 是产品名称，源码仓库为 `vangie/ai-passport-agent`。

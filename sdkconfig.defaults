@@ -35,8 +35,9 @@ CONFIG_LV_FONT_FMT_TXT_LARGE=y
 CONFIG_MBEDTLS_DYNAMIC_BUFFER=n
 # Keep the legal 16 KB inbound TLS record size; client writes fit in 4 KB.
 CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=4096
-# Verify certificates during the handshake without retaining the peer chain afterward.
-CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE=n
+# ESP-IDF 5.5.3 requires this for TLS 1.3. Disabling it silently drops
+# TLS 1.3 even when SSL_PROTO_TLS1_3=y is requested below.
+CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE=y
 CONFIG_MBEDTLS_SSL_RENEGOTIATION=n
 CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS=y
 CONFIG_MBEDTLS_TLS_CLIENT_ONLY=y
