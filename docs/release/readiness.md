@@ -44,7 +44,7 @@ will be rebuilt from the immutable v0.7.7 tag and independently downloaded/verif
 
 No existing gateway is automatically upgraded. Fresh physical-device pairing,
 long-run network reliability and microphone/speaker quality are not established by
-these tests. Release artifact and Pages receipts are recorded after publication.
+these tests. Published artifact and Pages receipts are below.
 
 ## Release-blocking regression
 
@@ -54,3 +54,26 @@ before any v0.7.6 Release was published. Its tag is retained as a failed candida
 The v0.7.7 fix moves the 1440-byte rotated-caption scratch into a shared LVGL-locked
 buffer, keeps that helper out of line, and limits main/UI frames to 768 bytes.
 Compiler stack usage for screen rendering falls from 1952 to 528 bytes.
+
+## Published receipts
+
+- Passport tag `v0.7.7`: `22b1f4f3dd499438c90662eaece1ff419547926f`.
+- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.7
+- Release workflow `44304121642`, attempt 2: all jobs passed. A queued macOS
+  runner was cancelled and rescheduled; no checks were waived.
+- Pages workflow `44305621293`: build and deploy passed. Live manifest reports
+  v0.7.7 at the same commit; both served binaries match the downloaded Release.
+- Full image SHA-256: `4fbbc12fcac52c6da79d339a634723b7830172a9e22c2fac3f35d675978b1884`.
+- Application SHA-256: `cd982c56bb6ed5b7bbf75d69e3c3fcd0ed5578aed7ee555c8ce266d1d06517cf`.
+- ELF identity: `ab3f4f3c9c218c100f5cbe5764e031c6457c5b71caa0d437b183c57ca1f4b833`.
+- The exact CI application was flashed on the maintainer device; the public
+  application was downloaded and proven byte-identical. No data partitions were written.
+- Final-image regression: synthetic Live completed (250 appends), ready in 2564 ms
+  on a reused socket, followed by retrieval and rendering of the existing Ask reply.
+  No reboot or allocation failure; minimum internal heap 10832 bytes, heap intact.
+- The fixed candidate also passed ten reply/navigation loops and four language
+  switches, finishing in Chinese. The three networks and three assistant grants remain.
+- Valet Gateway v0.1.0: `40cbd826504bbf65a26f50bcea604ab5a0335351`;
+  its public packages and receipt were re-downloaded and verified independently.
+- v0.7.6 was never published as a Release. Its cancelled candidate tag remains
+  for provenance. Existing kyan/Elise gateway installations were not replaced/restarted.
