@@ -16,7 +16,7 @@ Turn FoloToy AI Passport into a dedicated voice interface for your personal agen
 Ask a question, read the answer, or have a spoken conversation. The device connects
 over Wi-Fi; a phone is not an audio relay.
 
-**v0.7.6: shared gateway packages and restored TLS 1.3 support.** Supports OpenClaw and Hermes; use the matching external plugin for your backend.
+**v0.7.7: shared gateway packages and restored TLS 1.3 support.** Supports OpenClaw and Hermes; use the matching external plugin for your backend.
 Other agent integrations are not available yet.
 The project was previously named `ai-passport-openclaw`; existing devices and
 OpenClaw plugin installations remain compatible. The web studio is now at

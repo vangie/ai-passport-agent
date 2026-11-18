@@ -1,11 +1,12 @@
 **English** · [简体中文](notes.zh_CN.md)
 
-# AI Passport Agent v0.7.6
+# AI Passport Agent v0.7.7
 
 Shared gateway source and restored TLS 1.3 · 2026-11-18
 
 ## Highlights
 
+- **Keep reply rendering within its stack budget.** Reuse a caption scratch bitmap under the LVGL lock and reject main/UI stack frames larger than 768 bytes.
 - **One maintained gateway for multiple devices.** OpenClaw and Hermes adapters now
   come from the pinned Valet Gateway v0.1.0 submodule. Existing plugin IDs,
   `/passport/v1`, device signatures and pairing credentials remain compatible.

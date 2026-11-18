@@ -183,7 +183,7 @@ class ReleaseTests(unittest.TestCase):
                      'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
             original = path.read_text()
-            path.write_text(re.sub(r'0\.7\.[56]\b', '0.0.0', original))
+            path.write_text(re.sub(r'\d+\.\d+\.\d+', '0.0.0', original))
             with self.subTest(name=name), patch.object(release, 'ROOT', self.root):
                 with self.assertRaises(ValueError):
                     release.check_version()

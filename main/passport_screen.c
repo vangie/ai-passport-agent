@@ -84,6 +84,9 @@ static lv_obj_t *s_mark_bar, *s_mark_dots[3];
 static lv_obj_t *s_keys[3], *s_key_words[3], *s_markers[3];
 static lv_image_dsc_t s_key_word_dsc[3];
 static uint8_t s_key_word_px[3][KEY_HEIGHT * KEY_WORD_WIDTH];
+/* One reusable source bitmap, protected by the same LVGL lock as the screen.
+ * Never reserve 1.4 KB on the main task's 3.5 KB stack for a key caption. */
+static uint8_t s_key_source_px[KEY_SOURCE_WIDTH * KEY_WORD_WIDTH];
 static char s_key_word_text[3][12];
 static lv_obj_t *s_title, *s_wifi, *s_bluetooth, *s_battery, *s_battery_fill, *s_battery_tip, *s_battery_text;
 static lv_obj_t *s_bluetooth_symbol;
@@ -618,14 +621,17 @@ static int raw_alpha(const uint8_t *bitmap, int bpp, int x, int y, int box_w) {
 /* Draw the whole English caption horizontally, then store it rotated a
  * quarter turn counter-clockwise. LVGL object rotation needs an off-screen
  * layer and stalls this display. */
-static void set_rotated_caption(int index, const char *caption, uint32_t color) {
+/* Keep this scratch-heavy path out of passport_screen_show's stack frame.
+ * Inlining reserves the English bitmap even on Chinese reply pages, leaving
+ * too little of the 3.5 KB main-task stack for LVGL label/layout calls. */
+static __attribute__((noinline)) void set_rotated_caption(int index, const char *caption, uint32_t color) {
     const lv_font_t *font = &lv_font_montserrat_14;
     lv_point_t measured;
     lv_text_get_size(&measured, caption, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
     const int width = measured.x > KEY_SOURCE_WIDTH ? KEY_SOURCE_WIDTH : measured.x;
     const int height = KEY_WORD_WIDTH;
-    uint8_t pixels[KEY_SOURCE_WIDTH * KEY_WORD_WIDTH];
-    memset(pixels, 0, sizeof(pixels));
+    uint8_t *pixels = s_key_source_px;
+    memset(pixels, 0, sizeof(s_key_source_px));
     int pen = 0;
     int baseline = font->line_height - font->base_line;
     for (const char *p = caption; *p && pen < width; p++) {
