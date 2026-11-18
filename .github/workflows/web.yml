@@ -2,7 +2,7 @@ name: Web configuration studio
 
 on:
   pull_request:
-    paths: &web-paths ['web/**', 'assets/logo/logo.png', 'assets/images/passport-lobster.svg', 'tools/web.py', 'tools/web_preview.py', 'tools/legacy_site.py', 'tools/legacy-site/**', 'tools/check_public.py', 'tools/check_web_public.py', 'tools/check-secrets.sh', 'tests/test_public_audit.py', 'tests/test_web_public.py', 'tests/test_web_preview.py', 'tests/test_web_firmware.py', 'tests/test_legacy_site.mjs', 'Makefile', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
+    paths: &web-paths ['integrations/valet-gateway', '.gitmodules', 'tools/gateway_source.py', 'web/**', 'assets/logo/logo.png', 'assets/images/passport-lobster.svg', 'tools/web.py', 'tools/web_preview.py', 'tools/legacy_site.py', 'tools/legacy-site/**', 'tools/check_public.py', 'tools/check_web_public.py', 'tools/check-secrets.sh', 'tests/test_public_audit.py', 'tests/test_web_public.py', 'tests/test_web_preview.py', 'tests/test_web_firmware.py', 'tests/test_legacy_site.mjs', 'Makefile', 'shared/PairPrompt.swift', '.github/workflows/web.yml']
   push:
     branches: [main]
     paths: *web-paths
@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          submodules: recursive
       - name: Audit source privacy before building
         run: |
           python3 tools/check_public.py

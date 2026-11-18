@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {encodeIma, decodeIma} from '../tools/openclaw/passport-ima.mjs';
+import {encodeIma, decodeIma} from '../integrations/valet-gateway/tools/openclaw/passport-ima.mjs';
 
 for (const samples of [1, 2, 256, 479, 480, 481, 960, 1920]) {
     const pcm = Buffer.alloc(samples * 2);

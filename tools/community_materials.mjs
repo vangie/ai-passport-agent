@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { extractCommunityCopy, renderCommunityCopy } from './community_copy.mjs';
 
 const root = resolve(import.meta.dirname, '..');
-const version = JSON.parse(await readFile(resolve(root, 'tools/openclaw/package.json'), 'utf8')).version;
+const version = JSON.parse(await readFile(resolve(root, 'web/package.json'), 'utf8')).version;
 if (!/^\d+\.\d+\.\d+$/u.test(version)) throw new Error('Invalid materials version');
 const output = resolve(root, `build/community-market/v${version}/materials`);
 const shots = resolve(root, 'assets/images/screenshots');

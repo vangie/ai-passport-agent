@@ -5,6 +5,8 @@ import re
 import subprocess
 import sys
 from urllib.parse import urlsplit
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gateway_source import repository_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +22,7 @@ SERVICE_ENDPOINTS = {'tools/hermes/passport_talk.py': {'wss://api.openai.com/v1/
 
 
 def findings(name, data):
+    name = name.removeprefix("integrations/valet-gateway/")
     errors = []
     for label, pattern in PATTERNS.items():
         if pattern.search(data):
@@ -48,7 +51,7 @@ def findings(name, data):
 
 
 def main():
-    names = subprocess.check_output(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=ROOT).decode().split('\0')
+    names = repository_files(ROOT)
     errors = []
     count = 0
     for name in names:

@@ -8,7 +8,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN = ROOT / 'tools/openclaw'
+PLUGIN = ROOT / 'integrations/valet-gateway/tools/openclaw'
 PACKAGE_FILES = {
     'package.json', 'openclaw.plugin.json', 'index.mjs', 'passport-plugin.mjs',
     'passport-proxy.mjs', 'passport-relay.mjs', 'passport-ima.mjs', 'passport-transcript.mjs', 'doctor.mjs',

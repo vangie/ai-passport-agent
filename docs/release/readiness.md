@@ -1,38 +1,47 @@
 <p align="right"><a href="readiness.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# v0.7.5 release readiness
+# v0.7.6 release readiness
 
-2026-11-16: the user authorized merging and releasing v0.7.5, including the automatic power-off fix and the update of existing community play 2236.
+The user authorized physical validation and publication of a new version on
+2026-11-18. This release combines the shared-gateway source migration and the
+verified TLS 1.3 configuration correction. Existing remote gateway installations
+are not replaced or restarted by this release.
 
-## Required checks
+## Shared gateway
 
-- Align plugin/web versions, bilingual notes and changelogs.
-- Run repository/host gates, complete firmware build/archive verification, web unit/browser tests, plugin packaging and privacy checks.
-- Push immutable tag `v0.7.5`, wait for successful Release and verify all downloaded assets and source provenance.
-- Wait for Pages and verify its firmware matches Release.
-- Query community play 2236 before submission and stop on any pending or draft conflict.
+- Valet Gateway v0.1.0: `40cbd826504bbf65a26f50bcea604ab5a0335351`.
+- Release: <https://github.com/vangie/valet-gateway/releases/tag/v0.1.0>.
+- OpenClaw and Hermes adapter versions remain 0.7.5; IDs, `/passport/v1`, signed
+  device authentication, bootstrap/device tokens and database formats remain compatible.
+- Node 22/24/26 CI and package download verification passed. The actual Hermes
+  v0.23.1 runtime passed all 31 adapter tests using a disposable workspace.
+- E-Ink4 signed identity support is additive; no E-Ink4 firmware is included here.
 
-## Change and basis
+## Physical candidate
 
-v0.7.4 added device-side idle settings and automatic power-off. On the maintainer device, automatic power-off entered deep sleep but a standby timer wake source remained armed, causing an immediate timer wake and apparent reboot. v0.7.5 clears all wake sources before arming the function-key wake source.
+The pre-release candidate is archive `576130cf705f978d68d62c37d9d2987cdc5443d361b63908ed6effbcfdaf81ed`,
+ELF `589c8f86086444b91cbe1df940f6976df7f3b1e16d1eb95cb78e157ab254d82a`.
+Only the application was written; partition identity, settings and device grants
+were preserved. The device retained three networks and three assistants.
 
-The fix was reproduced with shortened timers: the device entered deep sleep and stayed off for more than 150 seconds, then remained off for about 27 minutes until a physical key woke it. The normal settings were restored to 60 seconds / 1800 seconds afterwards.
+- TLS 1.3: cold handshake about 2.7 s through the configured Shadowsocks route.
+- Three warm gateway probes: about 0.25 s each, existing socket reused.
+- Three microphone capture/stop tests: valid PCM, successful worker cleanup.
+- Bluetooth on/off: socket closes, ticket is cached and offered again; reconnect
+  took about 2.75 s. Offering the ticket did not establish a measurable speedup.
+- Actual Ask: audio uploaded, request accepted, final response retrieved. Upstream
+  model 502 retries delayed completion; the provider fallback eventually succeeded.
+- Synthetic Live: 250 appends, 956672 audio bytes, ready in 2881 ms with an existing
+  gateway connection, clean close. Minimum free internal heap 12848 bytes,
+  no allocation failures and heap integrity intact.
 
-## Validation
+## Gates
 
-- The complete local gate passed with the Hermes test environment and Homebrew mbedTLS path configured.
-- The automatic power-off contract test covers wake-source ordering and the regression case.
-- Device validation covered the diagnostic reproduction, key wake, restored settings, normal boot, Wi-Fi and saved configuration.
-- Physical-key and long-term battery behavior should still be checked on each hardware revision.
+Complete static/host and isolated firmware gates passed for the candidate; web
+protocol/browser and retained native-client checks passed. Source archive extraction,
+plugin package allowlists, privacy and secret scanning passed. Release artifacts
+will be rebuilt from the immutable v0.7.6 tag and independently downloaded/verified.
 
-## Community
-
-The existing play is **2236**, titled **Agent Talk**. The v0.7.5 update requires a fresh target-bound `update_once` grant. Submission status and revision will be recorded here after the upload.
-
-## Receipts
-
-- GitHub tag: `v0.7.5` at commit `8fb2e9e8013ecef5cc654f1a57a002a6542ab46d`.
-- Release: https://github.com/vangie/ai-passport-agent/releases/tag/v0.7.5
-- Verified full-image SHA-256: `8f36693c27e250120108427e61c6d575612ba9c7444f119319f3e1f486535930`.
-- Pages manifest reports v0.7.5 and the same commit; its full and application images match the Release.
-- Community play 2236 update: revision **5782**, status **pending review**. Public revision remains 5707.
+No existing gateway is automatically upgraded. Fresh physical-device pairing,
+long-run network reliability and microphone/speaker quality are not established by
+these tests. Release artifact and Pages receipts are recorded after publication.

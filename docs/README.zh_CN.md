@@ -202,7 +202,7 @@ LICENSE                  仓库许可证
 | 入口 | 你可以找到 |
 | --- | --- |
 | [Agent 配置](configuration.zh_CN.md) | 网页 USB／蓝牙配置、已存网络、个人热点和 NFC 技巧 |
-| [Hermes 插件](../tools/hermes/README.zh_CN.md) | 原生 Agent 提问／通话、外置安装、安全配对与验证范围 |
+| [Hermes 插件](../integrations/valet-gateway/tools/hermes/README.zh_CN.md) | 原生 Agent 提问／通话、外置安装、安全配对与验证范围 |
 | [发布检查](release/readiness.zh_CN.md) | 候选范围、待验收项目与社区更新前提 |
 | [开发指南](development/README.zh_CN.md) | AI 工作流、工程规范、CI 与发布流程 |
 | [AI 技能](../skills/README.zh_CN.md) | 开发、环境准备、构建、真机测试与故障诊断 |

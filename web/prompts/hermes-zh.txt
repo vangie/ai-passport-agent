@@ -3,10 +3,10 @@
 授权边界：可以安装缺少的本项目外置插件、补齐当前用户的配置，并使用本机已有资源建立安全、持久的公网入口。先检查并复用正常的部署；改动前备份到仓库外的私有位置。不覆盖其他平台、助手人设、模型、记忆或会话，不放宽工具权限，不改 Hermes 核心，不自动升级，不删除数据，不购买资源。重启只走正常网关生命周期，确认没有重要任务或通话后进行；不要启动占用相同配置目录的第二个网关。缺少登录、凭据或资源时，只提出最小必要操作。
 
 1. 确认当前 Hermes 环境
-确认实际运行的网关、Hermes 版本、活动 profile/home、托管 Python 和现有模型、语音转写服务。项目源码是 https://github.com/vangie/ai-passport-agent，先阅读匹配版本的 tools/hermes/README.zh_CN.md 和 docs/networking.zh_CN.md。Hermes 需要 v0.7.0 或更新版本；v0.6.0 不包含它。优先用匹配 Release 的版本化 ai-passport-hermes 包，核对 SHA256SUMS.txt 与 release-manifest.json。核实所选版本确实包含 tools/hermes 及兼容的完整固件，不要捏造 Release 下载地址，也不要把旧版宣称为支持 Hermes。需要预览代码时仅使用已审查的固定版本，记录实际完整提交，不追踪浮动源码自动升级。
+确认实际运行的网关、Hermes 版本、活动 profile/home、托管 Python 和现有模型、语音转写服务。固件源码是 https://github.com/vangie/ai-passport-agent；后端唯一维护源为 https://github.com/vangie/valet-gateway，当前固件验证的固定提交为 40cbd826504bbf65a26f50bcea604ab5a0335351（适配器 0.7.5）。先阅读该提交 tools/hermes/README.zh_CN.md 和 docs/networking.zh_CN.md。Hermes 需固件 v0.7.0 或更新版本；v0.6.0 不包含它。共享网关正式版 v0.1.0 位于 https://github.com/vangie/valet-gateway/releases/tag/v0.1.0 。核对真实的 ai-passport-hermes-0.7.5.tar.gz、SHA256SUMS.txt 和 release-manifest.json 的提交与插件版本，不得编造下载资源。检出这个固定提交并核对 git rev-parse HEAD，不追踪浮动 main。以后有真实兼容 Release 才按其校验清单核验。
 
 2. 安装或检查外置插件
-把所选版本完整的 tools/hermes 目录放到活动 Hermes home 下的 plugins/ai-passport-hermes，保留原有配置和配对数据。使用该活动 profile 对应的正常 Hermes 命令运行：
+把所选版本完整的 tools/hermes 目录放到活动 Hermes home 下的 plugins/ai-passport-hermes，保留原有配置和配对数据、ai-passport-hermes 插件 ID、/passport/v1、v3 签名和 bootstrapToken/deviceToken；源码迁移不需要重新配对。使用该活动 profile 对应的正常 Hermes 命令运行：
 hermes plugins doctor <实际插件目录> --ci
 hermes plugins enable ai-passport-hermes
 依赖由 Hermes 正常插件安装流程管理，不擅自改核心 Python 环境。按插件文档，在活动 config.yaml 的 gateway.platforms.ai_passport 中启用平台，extra.host 设为 127.0.0.1，选择空闲的本地端口（默认 18790），speech_language 设为 zh。不要改全局语音语言或覆盖现有平台。

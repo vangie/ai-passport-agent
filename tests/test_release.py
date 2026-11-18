@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import tarfile
@@ -128,26 +129,29 @@ class ReleaseTests(unittest.TestCase):
                 release.ios_source(self.root / 'symlink.zip')
 
     def test_release_versions_match(self):
-        version = json.loads((ROOT / 'tools/openclaw/package.json').read_text())['version']
-        lock = json.loads((ROOT / 'tools/openclaw/package-lock.json').read_text())
+        version = json.loads((ROOT / 'integrations/valet-gateway/tools/openclaw/package.json').read_text())['version']
+        product = json.loads((ROOT / 'web/package.json').read_text())['version']
+        lock = json.loads((ROOT / 'integrations/valet-gateway/tools/openclaw/package-lock.json').read_text())
         self.assertEqual(lock['version'], version)
         self.assertEqual(lock['packages']['']['version'], version)
         for name in ['index.mjs', 'doctor.mjs']:
-            self.assertIn(f"pluginVersion: '{version}'", (ROOT / 'tools/openclaw' / name).read_text())
-        self.assertEqual(release.check_version(f'v{version}'), version)
+            self.assertIn(f"pluginVersion: '{version}'", (ROOT / 'integrations/valet-gateway/tools/openclaw' / name).read_text())
+        self.assertEqual(release.check_version(f'v{product}'), product)
         with self.assertRaises(ValueError):
             release.check_version('v99.0.0')
 
     def release_identity(self):
-        for name in ['tools/openclaw/package.json', 'tools/openclaw/package-lock.json',
-                     'tools/openclaw/index.mjs', 'tools/openclaw/doctor.mjs',
-                     'tools/hermes/plugin.yaml', 'web/package.json', 'web/package-lock.json',
+        for name in ['integrations/valet-gateway/tools/openclaw/package.json', 'integrations/valet-gateway/tools/openclaw/package-lock.json',
+                     'integrations/valet-gateway/tools/openclaw/index.mjs', 'integrations/valet-gateway/tools/openclaw/doctor.mjs',
+                     'integrations/valet-gateway/tools/hermes/plugin.yaml',
+                     'integrations/valet-gateway/tools/hermes/__init__.py',
+                     'integrations/valet-gateway/LICENSE', 'web/package.json', 'web/package-lock.json',
                      'docs/release/notes.md', 'docs/release/notes.zh_CN.md',
                      'docs/CHANGELOG.md', 'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes((ROOT / name).read_bytes())
-        return json.loads((ROOT / 'tools/openclaw/package.json').read_text())['version']
+        return json.loads((ROOT / 'web/package.json').read_text())['version']
 
     def release_downloads(self):
         version = self.release_identity()
@@ -157,6 +161,8 @@ class ReleaseTests(unittest.TestCase):
                 relative = f'release-plugin/{name}'
             elif name.startswith('ai-passport-hermes-'):
                 relative = f'release-hermes/{name}'
+            elif '-source.tar.gz' in name:
+                relative = f'release-source/{name}'
             elif '-firmware.tar.gz' in name:
                 relative = f'release-firmware/{name}'
             elif name.endswith('.bin'):
@@ -171,13 +177,13 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_identity_rejects_mismatch(self):
         version = self.release_identity()
-        for name in ['tools/openclaw/package-lock.json', 'tools/openclaw/index.mjs',
-                     'tools/hermes/plugin.yaml', 'web/package.json', 'web/package-lock.json',
+        for name in ['integrations/valet-gateway/tools/openclaw/package-lock.json', 'integrations/valet-gateway/tools/openclaw/index.mjs',
+                     'web/package.json', 'web/package-lock.json',
                      'docs/release/notes.md',
                      'docs/CHANGELOG.zh_CN.md']:
             path = self.root / name
             original = path.read_text()
-            path.write_text(original.replace(version, '0.0.0'))
+            path.write_text(re.sub(r'0\.7\.[56]\b', '0.0.0', original))
             with self.subTest(name=name), patch.object(release, 'ROOT', self.root):
                 with self.assertRaises(ValueError):
                     release.check_version()
@@ -189,7 +195,7 @@ class ReleaseTests(unittest.TestCase):
         with patch.object(release, 'ROOT', self.root):
             release.prepare_assets(source, destination, tag, commit)
             release.verify_assets(destination, tag, commit)
-            self.assertEqual(len(list(destination.iterdir())), 8)
+            self.assertEqual(len(list(destination.iterdir())), 9)
             with self.assertRaises(ValueError):
                 release.prepare_assets(source, destination, tag, commit)
             with self.assertRaises(ValueError):
@@ -227,21 +233,31 @@ class ReleaseTests(unittest.TestCase):
 
     def test_release_assets_exclude_native_apps(self):
         version = self.release_identity()
+        openclaw, hermes = release.gateway_versions()
         self.assertEqual(release.asset_names(version), {
-            f'ai-passport-openclaw-{version}.tgz', 'ai-passport-agent-firmware.tar.gz',
-            f'ai-passport-hermes-{version}.tar.gz',
+            f'ai-passport-openclaw-{openclaw}.tgz', 'ai-passport-agent-firmware.tar.gz',
+            f'ai-passport-hermes-{hermes}.tar.gz', 'ai-passport-agent-source.tar.gz',
             'agent-talk-full.bin', 'agent-talk.bin', 'LICENSE.txt',
         })
 
+    def test_gateway_versions_are_independent_of_firmware(self):
+        product = self.release_identity()
+        plugin = self.root / 'integrations/valet-gateway/tools/hermes/plugin.yaml'
+        plugin.write_text(re.sub(r'^version: .*$', 'version: 99.0.0', plugin.read_text(), flags=re.MULTILINE))
+        with patch.object(release, 'ROOT', self.root):
+            self.assertEqual(release.check_version(f'v{product}'), product)
+            self.assertIn('ai-passport-hermes-99.0.0.tar.gz', release.asset_names(product))
+
     def test_hermes_package_is_allowlisted_and_reproducible(self):
-        version = self.release_identity()
+        self.release_identity()
+        _, version = release.gateway_versions()
         for name in release.HERMES_FILES:
-            path = self.root / 'tools/hermes' / name
+            path = self.root / 'integrations/valet-gateway/tools/hermes' / name
             if not path.exists():
                 path.write_text(f'fixture {name}')
         (self.root / 'LICENSE').write_text('MIT fixture')
-        (self.root / 'tools/hermes/private.key').write_text('not for release')
-        (self.root / 'tools/hermes/devices.sqlite3').write_text('private state')
+        (self.root / 'integrations/valet-gateway/tools/hermes/private.key').write_text('not for release')
+        (self.root / 'integrations/valet-gateway/tools/hermes/devices.sqlite3').write_text('private state')
         with patch.object(release, 'ROOT', self.root):
             release.hermes_package(self.root / 'first')
             release.hermes_package(self.root / 'second')
@@ -254,7 +270,7 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(set(archive.getnames()),
                              {f'ai-passport-hermes/{name}' for name in release.HERMES_FILES | {'LICENSE'}})
             self.assertTrue(all(member.isfile() and member.mode == 0o644 for member in archive))
-        path = self.root / 'tools/hermes/adapter.py'
+        path = self.root / 'integrations/valet-gateway/tools/hermes/adapter.py'
         for invalid in ['missing', 'empty', 'symlink']:
             if path.exists():
                 path.unlink()

@@ -211,7 +211,7 @@ provide reference material. Choose the entry that matches your task.
 | Resource | What you will find |
 | --- | --- |
 | [Agent configuration](configuration.md) | Browser USB/Bluetooth setup, saved networks, personal hotspots and NFC tips |
-| [Hermes plugin](../tools/hermes/README.md) | Native-agent Ask/Call, external installation, secure pairing and validation limits |
+| [Hermes plugin](../integrations/valet-gateway/tools/hermes/README.md) | Native-agent Ask/Call, external installation, secure pairing and validation limits |
 | [Release readiness](release/readiness.md) | Candidate scope, acceptance gaps and community submission prerequisites |
 | [Development](development/README.md) | AI workflow, engineering conventions, CI, and release guidance |
 | [AI skills](../skills/README.md) | Development, environment setup, builds, device testing, and debugging |

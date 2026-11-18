@@ -17,6 +17,12 @@
 #include <string.h>
 #ifdef ESP_PLATFORM
 #include "esp_random.h"
+#if !defined(CONFIG_MBEDTLS_SSL_PROTO_TLS1_3) || !defined(CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE)
+#error "Passport requires TLS 1.3 and its ESP-IDF peer-certificate dependency; regenerate sdkconfig"
+#endif
+#if !defined(CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS)
+#error "Passport requires client session tickets; regenerate sdkconfig"
+#endif
 #else
 static void esp_fill_random(void *buf, size_t len) { memset(buf, 0x11, len); }
 #endif
@@ -345,7 +351,8 @@ int __wrap_esp_tls_conn_new_sync(const char *host,int hostlen,int port,
             int flags=fcntl(fd,F_GETFL,0);
             if (flags<0 || fcntl(fd,F_SETFL,flags & ~O_NONBLOCK)<0) break;
             mbedtls_ssl_context *ssl=esp_tls_get_ssl_context(tls);
-            if (ssl) ESP_LOGI("passport_tls","version=%s cipher=%s resumed=%d elapsed=%lldms",mbedtls_ssl_get_version(ssl),
+            /* Offering a ticket does not prove the server accepted it. */
+            if (ssl) ESP_LOGI("passport_tls","version=%s cipher=%s ticket_offered=%d elapsed=%lldms",mbedtls_ssl_get_version(ssl),
                        mbedtls_ssl_get_ciphersuite(ssl),ticket,(long long)((esp_timer_get_time()-start)/1000));
 #ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
             if (cacheable) {

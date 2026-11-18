@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,7 +37,7 @@ ROOT_MARKDOWN_ALLOWLIST = {
 }
 # Register only concrete, vendored component directories, e.g. "components/foo".
 # These exemptions never change the input to sensitive-content/conflict checks.
-VENDORED_DOC_ROOTS: tuple[str, ...] = ()
+VENDORED_DOC_ROOTS: tuple[str, ...] = ("integrations/valet-gateway",)
 
 
 def vendored_document_roots(errors: list[str]) -> tuple[Path, ...]:
@@ -80,14 +81,8 @@ def is_vendored_document(path: Path, roots: tuple[Path, ...]) -> bool:
 
 
 def git_files() -> list[Path]:
-    result = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return [ROOT / line for line in result.stdout.splitlines() if line]
+    from gateway_source import repository_files
+    return [ROOT / name for name in repository_files(ROOT)]
 
 
 def text_files() -> list[Path]:
