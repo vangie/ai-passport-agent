@@ -36,6 +36,11 @@ idf_component_register(
              tcp_transport esp-tls mbedtls json passport_crypto passport_transport passport_vad
 )
 
+# The UI and application loop run on the small main-task stack. Fail the
+# firmware build if scratch-heavy helpers are inlined back into those frames.
+set_source_files_properties(passport_screen.c passport_app.c PROPERTIES
+    COMPILE_OPTIONS "-Wframe-larger-than=768;-Werror=frame-larger-than=768")
+
 target_link_options(${COMPONENT_LIB} INTERFACE
     "-Wl,--wrap=esp_tls_conn_new_sync" "-Wl,--undefined=__wrap_esp_tls_conn_new_sync"
     "-Wl,--wrap=esp_tls_conn_destroy"

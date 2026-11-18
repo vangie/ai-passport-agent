@@ -1,6 +1,6 @@
 <p align="right"><a href="readiness.zh_CN.md">简体中文</a> · <strong>English</strong></p>
 
-# v0.7.6 release readiness
+# v0.7.7 release readiness
 
 The user authorized physical validation and publication of a new version on
 2026-11-18. This release combines the shared-gateway source migration and the
@@ -40,8 +40,17 @@ were preserved. The device retained three networks and three assistants.
 Complete static/host and isolated firmware gates passed for the candidate; web
 protocol/browser and retained native-client checks passed. Source archive extraction,
 plugin package allowlists, privacy and secret scanning passed. Release artifacts
-will be rebuilt from the immutable v0.7.6 tag and independently downloaded/verified.
+will be rebuilt from the immutable v0.7.7 tag and independently downloaded/verified.
 
 No existing gateway is automatically upgraded. Fresh physical-device pairing,
 long-run network reliability and microphone/speaker quality are not established by
 these tests. Release artifact and Pages receipts are recorded after publication.
+
+## Release-blocking regression
+
+The first CI candidate exposed a main-task stack overflow when a synthetic Live
+run was followed by history retrieval and reply rendering. Publication was cancelled
+before any v0.7.6 Release was published. Its tag is retained as a failed candidate.
+The v0.7.7 fix moves the 1440-byte rotated-caption scratch into a shared LVGL-locked
+buffer, keeps that helper out of line, and limits main/UI frames to 768 bytes.
+Compiler stack usage for screen rendering falls from 1952 to 528 bytes.

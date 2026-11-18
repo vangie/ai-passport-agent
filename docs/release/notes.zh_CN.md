@@ -1,11 +1,12 @@
 [English](notes.md) · **简体中文**
 
-# AI Passport Agent v0.7.6
+# AI Passport Agent v0.7.7
 
 统一网关源码，恢复 TLS 1.3 · 2026-11-18
 
 ## 主要变化
 
+- **控制回复渲染的栈用量。** 在 LVGL 锁内复用旋转按键位图，构建拒绝主循环和界面代码超过 768 字节的栈帧。
 - **多设备共用一份网关实现。** OpenClaw 与 Hermes 适配器迁为固定的 Valet Gateway
   v0.1.0 submodule。插件 ID、`/passport/v1`、设备签名和配对凭据继续兼容。
 - **实际构建恢复 TLS 1.3。** 保留 ESP-IDF 必需依赖，缺少 TLS 1.3 或客户端票据

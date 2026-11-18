@@ -14,8 +14,9 @@
 
 No pending changes.
 
-## v0.7.6 - 2026-11-18
+## v0.7.7 - 2026-11-18
 
+- Fix reply-page stack overflow by reusing caption scratch under the LVGL lock and enforcing a 768-byte per-frame budget for the main loop and screen code.
 - Restore TLS 1.3 by retaining its ESP-IDF peer-certificate dependency, reject silent build downgrades, and distinguish ticket offers from actual resumption in logs.
 - Consume OpenClaw and Hermes adapters from pinned Valet Gateway v0.1.0 while preserving plugin IDs, device pairing, tokens and the existing wire protocol.
 - Update setup prompts, CI and package paths to the shared source; add a complete source release archive and independently record firmware and adapter versions.
