@@ -63,6 +63,6 @@ bool passport_muse_paired(void) {
 
 void passport_muse_node_id(char node[16]) {
     uint8_t address[6] = {0};
-    (void)esp_read_mac(address, ESP_MAC_BT);
+    (void)esp_read_mac(address, ESP_MAC_WIFI_STA);
     snprintf(node, 16, "homelink-%02x%02x%02x", address[3], address[4], address[5]);
 }

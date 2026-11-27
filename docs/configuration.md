@@ -34,7 +34,8 @@ provenance. The original MIT license is retained; there are no local adapter pat
 ## Project name and compatibility
 
 AI Passport Agent is the product name; `vangie/ai-passport-agent` is its source
-repository. v0.7.0 supports OpenClaw and Hermes; v0.6.0 supports OpenClaw only.
+repository. v0.8.0+ supports Muse, OpenClaw and Hermes; v0.7.0 supports OpenClaw
+and Hermes; v0.6.0 supports OpenClaw only.
 The OpenClaw plugin keeps
 the package/ID `ai-passport-openclaw`, including existing configuration entries
 and versioned `.tgz` packages; this is an integration name, not the product name.
@@ -97,27 +98,21 @@ interactive approval is not supported. Assistant profiles select connections.
 
 ### Muse
 
-1. Use a Passport Agent build with **Muse direct** support. Connect the badge by
+1. Use a Passport Agent build with **Muse** support. Connect Passport by
    USB and use Device Studio to save a Wi-Fi network that can reach Muse.
-2. In **Add agent → Muse direct**, paste your personal Gadget SDK token and
-   choose **Write SDK token**. Get the token from your [Muse account][muse-token].
-3. On the badge, open **Settings → Pair Muse**. In the Muse app, enable
-   **Settings → Devices → Developer mode** and add the badge. Press the button
-   next to **Confirm** on the badge when prompted. Leave one slot free in Agents.
+2. In **Add an agent → Muse**, paste your personal Gadget SDK token and
+   choose **Save settings**. Get the token from your [Muse account][muse-token].
+3. On Passport, open **Settings → Agent → Pair Muse**. In the Muse app, enable
+   **Settings → Devices → Developer mode** and add Passport. Press the button
+   next to **Confirm** on Passport when prompted. Leave one slot free in Agents.
 4. Select **Muse** in Agents and use **Ask** to send a voice question and read the
-   reply. The badge uses its own Wi-Fi. This connection supports Ask with text
+   reply. Passport uses its own Wi-Fi. This connection supports Ask with text
    replies. In the Muse agent's **Connection settings**, choose Direct or
    Shadowsocks independently of other agents when its service requires a proxy.
 
 The firmware incorporates the official SDK's Link setup and Noise transport
 source at [commit c8453082][muse-sdk], including the upstream license files.
 Passport Agent uses its existing flash layout and settings.
-
-**Valet Gateway connection.** This project's build also offers a **Muse
-gateway** option in Web Studio for switching between Muse, OpenClaw and Hermes
-in the same firmware. Link the adapter running on a Linux host in the official
-Muse app, then paste the adapter's Passport pairing JSON into Web Studio. The
-adapter is available in Valet Gateway development sources containing `tools/muse`.
 
 [muse-sdk]: https://github.com/facebookincubator/muse-gadget-sdk/tree/c84530820658ca50116a88877371ce14b4e44026
 [muse-token]: https://gadgets.muse.ai/settings/sdk-tokens
@@ -154,14 +149,12 @@ is preserved. Cancel and re-record controls are unchanged.
 Call sends silence instead of unconfirmed microphone noise and keeps up to
 171 ms of compressed pre-roll to retain the beginning of speech. Mute and
 playback protection clear pre-roll. Voice interruption also requires speech
-confirmation during its echo-checking probe. Candidate v0.7.0 pauses the playback
+confirmation during its echo-checking probe. The probe briefly pauses the playback
 cursor without consuming queued reply audio, waits 100 ms after the in-flight
 write finishes for speaker/DMA echo to settle, and confirms continued speech
 before cancelling output. An unconfirmed probe resumes at the same cursor within
 350 ms; it does not discard reply syllables. Button interruption remains immediate.
-Finer echo matching reduces probes but is not sufficient by itself: a device
-recording confirmed false voice cancellation in the previous candidate. Tests
-cover unmatched echo, genuine speech, PCM/IMA pause/resume and real VAD confirmation.
+Tests cover unmatched echo, genuine speech, PCM/IMA pause/resume and real VAD confirmation.
 Diagnostics expose
 separate voice/button interruption counts without recording microphone content.
 The OpenClaw Passport plugin disables upstream automatic audio interruption while
@@ -198,7 +191,7 @@ audio is not included in the firmware. [Source and notices](../assets/README.md#
 
 Passport is authoritative for up to **eight networks**, **four assistant profiles**,
 language and volume. Credentials are stored on the device; model/provider keys
-stay on OpenClaw. The web studio has no application backend: configuration goes
+stay on the gateway. The web studio has no application backend: configuration goes
 straight over USB/Bluetooth. Secret drafts stay in page memory, not persistent
 browser storage; refreshing/closing discards them. Static hosting may retain
 ordinary IP/time access logs, not configuration the page never uploads.

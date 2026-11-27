@@ -20,6 +20,7 @@ idf_component_register(
          "../assets/fonts/passport_font_20.c"
          "../assets/images/passport_lobster_22.c"
          "../assets/images/passport_hermes_22.c"
+         "../assets/images/passport_muse_22.c"
          "../app/passport_store.c"
          "../app/passport_network.c"
          "../app/passport_proxy.c"

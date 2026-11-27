@@ -2,8 +2,9 @@
 
 # 网关连接与内网穿透
 
-Passport 通过 Wi-Fi 直接连接自己的 OpenClaw 网关。macOS App／iOS App 负责
-配置，不中转对话。先在网关主机安装[本项目插件](../tools/openclaw/README.zh_CN.md)。
+Passport 通过 Wi-Fi 直接连接自己的 OpenClaw／Hermes 网关，或直连 Muse 进行语音提问。
+网页配置台只负责配置，不中转对话。使用 OpenClaw 或 Hermes 时，先在网关主机安装
+[OpenClaw 插件](../tools/openclaw/README.zh_CN.md)或 [Hermes 适配器](../tools/hermes/README.zh_CN.md)。
 以下均使用保留的示例地址，不提供共享网关或私人部署参数。
 
 网关适配器与协议／绑定约定由
@@ -35,9 +36,9 @@ TLS 1.3。构建会拒绝这种降级和缺少客户端票据支持的配置。�
 堆占用，因此也需要在真机检查录音和上传时的内存。实际速度取决于入口、代理、
 网络和协商协议，应按日志中的 TLS 版本和连接分段耗时比较。
 
-App 的「复制提示词」可让网关主机上的 agent 检查并安装缺少的插件，利用已有
+网页的「复制配置提示词」可让网关主机上的 agent 检查并安装缺少的插件或适配器，利用已有
 授权资源建立缺少的公网入口，复用正常入口并保留鉴权。缺账户授权、域名、证书
-或配额时仍需用户完成必要操作，见[agent 辅助接入](configuration.zh_CN.md#让-openclaw-完成网关接入准备)。
+或配额时仍需用户完成必要操作，见[agent 辅助接入](configuration.zh_CN.md#让配置-agent-完成网关接入准备)。
 下面也提供手动配置路径。
 
 ## Cloudflare Tunnel

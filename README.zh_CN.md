@@ -2,7 +2,7 @@
 
 <p align="center"><img src="assets/logo/logo.png" alt="AI Passport Agent" width="104" /></p>
 <h1 align="center">AI Passport Agent</h1>
-<p align="center"><strong>个人 Agent 的随身语音终端</strong><br />语音问答与实时通话，连接 OpenClaw 或 Hermes</p>
+<p align="center"><strong>个人 Agent 的随身语音终端</strong><br />语音问答与实时通话，连接 OpenClaw、Hermes 或 Muse</p>
 <p align="center">
   <a href="https://ai-passport-agent.codelife.me/">打开网页配置</a> ·
   <a href="#开始使用">开始使用</a> ·
@@ -15,19 +15,15 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**v0.8.0：新增 Muse 直连和助手独立代理线路。** 支持 Muse、OpenClaw 与 Hermes。
-Muse 直连通过官方 Gadget SDK 路径发送语音提问并阅读文字回复，已有网关助手和配对继续兼容。
-项目原名为 `ai-passport-openclaw`，
-更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
-原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
-参见[命名与兼容性](docs/configuration.zh_CN.md#项目名称与兼容性)。
+**v0.8.1：完成 Muse 真机配对、代理自动继承、状态栏图标与语音识别修复。** 支持 Muse、OpenClaw 与 Hermes。
+Muse 通过官方 Gadget SDK 路径发送语音提问并阅读文字回复，已有网关助手和配对继续兼容。
 
 这是基于 [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport) 的独立社区项目，
 不是 FoloToy 官方固件或 OpenClaw 发行版。安装后会替换原厂应用，不承诺保留原有全部功能。
 
-后端插件已迁为 [Valet Gateway](https://github.com/vangie/valet-gateway) submodule，
-开发克隆后先运行 `git submodule update --init --recursive`。现有设备不需重新配对。
-安装来源和完整源码包见[共享网关](docs/configuration.zh_CN.md#共享网关源码)。
+OpenClaw 与 Hermes 网关插件由固定的 [Valet Gateway](https://github.com/vangie/valet-gateway) submodule 维护，
+开发克隆后请先运行 `git submodule update --init --recursive`。
+安装来源和完整源码包见[共享网关源码](docs/configuration.zh_CN.md#共享网关源码)。
 
 ## 语音问答与实时通话
 
@@ -45,19 +41,23 @@ Muse 直连通过官方 Gadget SDK 路径发送语音提问并阅读文字回复
 
 ## 选择自己的个人 Agent
 
-| 后端 | 提问 | 通话 | 安装 |
+| 后端 | 提问 | 通话 | 安装与接入 |
 | --- | --- | --- | --- |
 | OpenClaw | 专属 `passport` agent 及已授权工具 | 实时语音，按需委托 Agent | [OpenClaw 插件](tools/openclaw/README.zh_CN.md) |
 | Hermes | 原生个人 Agent、工具与记忆，每台设备独立会话 | 实时语音，按需委托原生 Agent | [Hermes 外置插件](tools/hermes/README.zh_CN.md) |
+| Muse | 官方 Gadget SDK 直连，支持语音提问与文字回复 | 仅提问（文字回复） | [Muse 配置](docs/configuration.zh_CN.md#muse) · 个人 Gadget SDK token＋Muse App 蓝牙配对 |
 
-可在同一份固件的助手列表切换 Muse、OpenClaw 和 Hermes。Muse 直连支持语音提问和文字回复，
-并可单独选择直连或 Shadowsocks 线路。[Muse 配置](docs/configuration.zh_CN.md#muse)
+可在设备「设置 → 助手」列表中随时切换 Muse、OpenClaw 和 Hermes。每个助手都可单独选择直连或 Shadowsocks 代理线路。
 
-通话中的日常交流由实时语音模型应答，需要任务、实时信息或私人上下文时可委托个人 Agent，
-并非每句话都执行完整 Agent 任务。两种后端都需要自行配置可用模型；通话另需实时语音服务，
-模型与服务商费用另计。
+OpenClaw 与 Hermes 通话中的日常交流由实时语音模型应答，需要任务、实时信息或私人上下文时可委托个人 Agent，
+并非每句话都执行完整 Agent 任务。OpenClaw 和 Hermes 需自行配置可用模型（通话另需实时语音服务）；
+Muse 直接连接你的 Muse 账号。模型与服务商费用另计。
 
-<p align="center"><img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes 后端的实际界面渲染，助手数据为虚构" width="240" /></p>
+<p align="center">
+  <img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes 后端的实际界面渲染，助手数据为虚构" width="240" />
+  &nbsp;&nbsp;
+  <img src="assets/images/screenshots/firmware-muse.png" alt="Muse 后端的实际界面渲染，助手数据为虚构" width="240" />
+</p>
 
 ## 在浏览器里配置
 
@@ -84,21 +84,26 @@ Muse 直连通过官方 Gadget SDK 路径发送语音提问并阅读文字回复
 
 ## 开始使用
 
-准备 AI Passport、USB 数据线、可连接的 **2.4 GHz Wi-Fi** 或兼容热点，以及已运行、
-有可用模型的 OpenClaw 或 Hermes。首次刷机需要电脑上的 Chrome／Edge。
+准备 AI Passport、USB 数据线、可连接的 **2.4 GHz Wi-Fi** 或兼容热点，以及 Muse 账号（含个人 Gadget SDK token 与 Muse App）或已运行、
+有可用模型的 OpenClaw／Hermes。首次刷机需要电脑上的 Chrome／Edge。
 插件已验证基线为 **OpenClaw 2026.10.5**，升级前请检查兼容性；通话另需实时语音服务凭据。
 
 1. **安装固件。** USB 连接设备，打开[配置网页](https://ai-passport-agent.codelife.me/)，选择串口。
    首次安装取消「保留配置」，点击「安装固件」并确认；兼容更新保留勾选，点击「更新固件」。
    替换其他固件前请阅读[数据策略](docs/development/engineering/firmware-layout.zh_CN.md)，没有自动还原原厂固件的功能。
-2. **准备个人 Agent。** 在网页「新增助手」中选择 OpenClaw 或 Hermes，点击「复制提示词」，
-   发给能够操作网关主机的 Agent。它检查／安装对应插件、准备该后端的助手和安全可达入口，
-   再返回地址与受限配对码。
-   优先复用已有资源；缺少账号、授权或凭据时，仍需你完成必要操作。
-3. **配网并保存。** 扫描或输入 Wi-Fi 名称与密码，填入网关地址、配对码，点击「保存配置」。
-   等设备显示 Wi-Fi 图标，可先测试设备连接再提问。失败修改后重试即可，无需重新刷机；配对码过期需重新生成。
-4. **开始对话。** 在设备选择「提问」或「通话」，按屏幕提示操作；配置网页可以关闭。
-   换网在设备「设置 → Wi-Fi」中选择；新增网络或改密码，再连接网页配置。
+2. **准备个人 Agent。**
+   - **OpenClaw 或 Hermes：** 在网页「新增助手」中选择 OpenClaw 或 Hermes，点击「复制配置提示词」，
+     发给能够操作网关主机的 Agent。它检查／安装对应插件、准备该后端的助手和安全可达入口，
+     再返回地址与受限配对码。优先复用已有资源；缺少账号、授权或凭据时，仍需你完成必要操作。详见[网关准备与配置](docs/configuration.zh_CN.md#让配置-agent-完成网关接入准备)。
+   - **Muse：** 通过电脑 USB 连接工牌（确保助手列表至少留 1 个空位），在网页「新增助手」中选择 **Muse**，粘贴个人
+     [Muse Gadget SDK token](https://gadgets.muse.ai/settings/sdk-tokens) 并点击「保存配置」。
+     随后在工牌打开「设置 → 助手 → Muse 配对」，在手机 Muse App 的「设置 → 设备」开启开发者模式并添加工牌，
+     再按工牌屏幕提示按下「确认」旁的实体键。配对成功后，设备会自动新增 `Muse` 助手；若所在网络需要代理，回到网页展开 `Muse` 的「连接设置」选择 Shadowsocks 并保存。详见 [Muse 接入指南](docs/configuration.zh_CN.md#muse)。
+3. **配网并保存。** 扫描或输入 Wi-Fi 名称与密码；使用 OpenClaw 或 Hermes 时填入网关地址、配对码，点击「保存配置」。
+   若助手需要代理访问，展开该助手的「连接设置」配置 Shadowsocks。等设备显示 Wi-Fi 图标，可先测试设备连接再提问。
+   失败修改后重试即可，无需重新刷机；配对码过期需重新生成。
+4. **开始对话。** 在设备选择「提问」（OpenClaw／Hermes 还可使用「通话」），按屏幕提示操作；配置网页可以关闭。
+   在设备「设置 → 助手」或「设置 → Wi-Fi」中可随时切换已存助手和网络；新增网络或改密码，再连接网页配置。
 
 使用 iPhone 热点时，打开 **「允许其他人加入」** 和 **「最大兼容性」**。
 如果扫描不到，请停留在「个人热点」设置页再扫描。新网络首次保存时必须可达。
@@ -111,13 +116,13 @@ Muse 直连通过官方 Gadget SDK 路径发送语音提问并阅读文字回复
 
 ```text
 配置网页 ── USB／蓝牙 ──> Passport 配置
-Passport ── Wi-Fi／WSS ──> OpenClaw 或 Hermes＋插件 ──> 你的模型服务
+Passport ── Wi-Fi／WSS ───> OpenClaw 或 Hermes＋插件 ──> 你的模型服务
+Passport ── Wi-Fi／Noise ─> Muse（直连或 Shadowsocks）
 ```
 
-网页不是云端助手，也不中转对话。模型 API Key 留在网关。
-两种插件均通过原生扩展接入，不修改核心文件。Hermes 插件和设备授权独立保存在核心目录之外，
-常规核心升级不会覆盖；未来 API 是否兼容仍需验证。升级后的 Hermes v0.23.1 已通过插件发现与
-适配器测试，该版本的实机麦克风／扬声器验收仍待完成。安装方法见对应后端指南。
+网页不是云端助手，也不中转对话。Muse 使用设备保存的配对凭据直接连接；OpenClaw 与 Hermes 的模型 API Key 留在网关。
+两种网关插件均通过原生扩展接入，不修改核心文件。Hermes 插件和设备授权独立保存在核心目录之外，
+常规核心升级不会覆盖。安装方法见对应后端指南。
 
 外网访问的[网络与安全指南](docs/networking.zh_CN.md)介绍了 **Cloudflare Tunnel**、
 **SakuraFrp 配合 TLS**、局域网、代理、配对与撤销。
@@ -144,17 +149,16 @@ iOS 自动化表现随系统版本变化，这不是设备认证。参见[NFC �
 
 ## 版本与开发
 
-v0.7.5 同时提供 `ai-passport-hermes-0.7.5.tar.gz`。
-原生 App 不参与构建或发布。
-
-Release 包含应用／完整固件、固件打包文件、OpenClaw 插件、`release-manifest.json`、
-`SHA256SUMS.txt` 与许可说明。网页从同一站点提供验证过的固件，浏览器不跳转到 GitHub Release
-下载地址；GitHub Pages 本身仍可能受网络影响。哈希能发现传输损坏，不能防止发布者被入侵。
+Release 包含应用固件与完整固件、固件打包文件、完整源码包、OpenClaw 插件包、Hermes 外置插件包、
+`release-manifest.json`、`SHA256SUMS.txt` 与许可说明。网页从同一站点直接提供验证过的固件，
+浏览器不跳转到 GitHub Release 下载地址；GitHub Pages 本身仍可能受网络影响。
+哈希能发现传输损坏，不能防止发布者被入侵。
 
 | 组成 | 源码／指南 |
 | --- | --- |
 | 配置网页 | `web/` · [浏览器指南](docs/web.zh_CN.md) |
 | 固件 | `app/`、`main/`、`components/bsp/` · [构建与测试](docs/development/engineering/build-and-test.zh_CN.md) |
+| Muse 直连 | `main/passport_muse*`、`components/passport_muse/` · [Muse 配置](docs/configuration.zh_CN.md#muse) |
 | OpenClaw 插件 | [`tools/openclaw/`](tools/openclaw/README.zh_CN.md) |
 | Hermes 插件 | [`tools/hermes/`](tools/hermes/README.zh_CN.md) |
 | 网络接入 | [网络与安全](docs/networking.zh_CN.md) |

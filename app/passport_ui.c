@@ -407,9 +407,10 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
         }
         case PASSPORT_SCREEN_SETTINGS:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_NEXT_AGENT : btn == PASSPORT_BTN_OK ? PASSPORT_ACT_BACK
-                : s->agent_count && v->cursor >= 0 && (size_t)v->cursor < s->agent_count &&
+                : v->cursor == (int)s->agent_count ? PASSPORT_ACT_MUSE_PAIR
+                : v->cursor >= 0 && (size_t)v->cursor < s->agent_count &&
                   v->cursor != s->active_agent ? PASSPORT_ACT_SELECT_AGENT : PASSPORT_ACT_NONE;
-            key.enabled = btn == PASSPORT_BTN_UP ? s->agent_count > 1
+            key.enabled = btn == PASSPORT_BTN_UP ? s->agent_count > 0
                 : btn == PASSPORT_BTN_OK || (key.action != PASSPORT_ACT_NONE && !busy);
             break;
         case PASSPORT_SCREEN_ADD:
@@ -474,7 +475,6 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             : v->preference_cursor == PASSPORT_PREFERENCE_AGENT ? PASSPORT_ACT_AGENTS
             : v->preference_cursor == PASSPORT_PREFERENCE_STANDBY ? PASSPORT_ACT_STANDBY
             : v->preference_cursor == PASSPORT_PREFERENCE_POWEROFF ? PASSPORT_ACT_POWEROFF
-            : v->preference_cursor == PASSPORT_PREFERENCE_MUSE ? PASSPORT_ACT_MUSE_PAIR
             : PASSPORT_ACT_VOLUME;
     }
     v->notice[0] = 0;
@@ -576,7 +576,7 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             v->screen = PASSPORT_SCREEN_ADD;
             break;
         case PASSPORT_ACT_NEXT_AGENT:
-            v->cursor = (v->cursor + 1) % (int)s->agent_count;
+            v->cursor = (v->cursor + 1) % (int)(s->agent_count + 1);
             break;
         case PASSPORT_ACT_CANCEL_SEND:
         case PASSPORT_ACT_RESTART_SEND:
@@ -589,9 +589,9 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
                 v->screen=PASSPORT_SCREEN_CANCELLING;break;
             }
             v->screen = v->screen == PASSPORT_SCREEN_NET_MENU ? PASSPORT_SCREEN_NETS
+                : v->screen == PASSPORT_SCREEN_MUSE_PAIR ? PASSPORT_SCREEN_SETTINGS
                 : v->screen == PASSPORT_SCREEN_ADD ? ((v->setup_parent == PASSPORT_SCREEN_PREFERENCES || v->setup_parent == PASSPORT_SCREEN_SETTINGS || v->setup_parent == PASSPORT_SCREEN_NET_MENU || v->setup_parent == PASSPORT_SCREEN_NETS) ? v->setup_parent : PASSPORT_SCREEN_HOME)
                 : v->screen == PASSPORT_SCREEN_NETS || v->screen == PASSPORT_SCREEN_SETTINGS || v->screen == PASSPORT_SCREEN_VOLUME ||
-                  v->screen == PASSPORT_SCREEN_MUSE_PAIR ||
                   v->screen == PASSPORT_SCREEN_STANDBY || v->screen == PASSPORT_SCREEN_POWEROFF ? PASSPORT_SCREEN_PREFERENCES
                 : PASSPORT_SCREEN_HOME;
             break;
@@ -633,6 +633,7 @@ void passport_finish_send(passport_view_t *v, bool success, bool retained_clip, 
         v->chat_evicted = false;
         memset(&v->chat[PASSPORT_CHAT_TURNS], 0, sizeof(v->chat[0]));
     }
+    if (!success && !retained_clip) chat_discard_pending(v);
     v->sending = false;
     v->retry_send = !success && retained_clip;
     copy_cap(v->reply, sizeof(v->reply), text);

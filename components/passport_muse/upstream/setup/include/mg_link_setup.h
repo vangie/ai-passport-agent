@@ -106,6 +106,10 @@ typedef struct mgls_credentials {
 	size_t access_len;
 	const char *refresh_token;
 	size_t refresh_len;
+	const char *ssid;
+	size_t ssid_len;
+	const char *password;
+	size_t password_len;
 	const uint8_t *k; /* the token proof key K, 32 bytes */
 	uint8_t flags;    /* MGLS_CRED_* */
 } mgls_credentials_t;
@@ -159,9 +163,9 @@ typedef struct mgls_config {
 	const char *device_id;
 	const char *mac;
 	const char *firmware_version;
+	const char *build_sha;
 	/* device_info.mgcommands: 1 when the gadget serves the musegadgets
-	 * service (MG_SERVICE_UUID), 0 to omit the field. wifi is always
-	 * "none": this core provisions tokens only. */
+	 * service (MG_SERVICE_UUID), 0 to omit the field and wifi:"none" (Wi-Fi Link setup). */
 	uint8_t mgcommands;
 
 	/* Lends the workspace: at least `need` (= sizeof(mgls_workspace_t))
@@ -198,6 +202,8 @@ typedef struct mgls_config {
 	int (*erase)(void *ctx);
 	/* The SDK token (mgst_...), or NULL / *len 0 without one. May be NULL. */
 	const char *(*sdk_token)(void *ctx, size_t *len);
+	/* Optional JSON payload for wifi_scan: e.g. {"type":"wifi_scan_result","networks":[...]}. */
+	const char *(*wifi_scan)(void *ctx);
 
 	/* UI and integration events (enum mgls_event). May be NULL. */
 	void (*event)(void *ctx, enum mgls_event ev);
@@ -243,9 +249,9 @@ typedef struct mgls_config {
 #define MGLS_RX_CAP MGLS__ALIGN4(192 + MGLS__B64LEN(MGLS_PROVISION_MAX) + 16 + 1)
 
 /* TX: pairing_ready with the longest identity strings, or an encrypted
- * status (with sdk_token) and its plaintext staged behind it; 3 bytes of
- * chunk header room in front. */
-#define MGLS__ENC_PT_CAP  (62 + MGLS_SDK_TOKEN_MAX)
+ * status (with sdk_token) / wifi_scan_result and its plaintext staged behind it;
+ * 3 bytes of chunk header room in front. */
+#define MGLS__ENC_PT_CAP  (512 + MGLS_SDK_TOKEN_MAX)
 #define MGLS__ENC_MAX     (137 + MGLS__B64LEN(MGLS__ENC_PT_CAP) + MGLS__ENC_PT_CAP + 16)
 #define MGLS__READY_MAX   (440 + 4 * MGLS_ID_MAX)
 #define MGLS__MAX(a, b)   ((a) > (b) ? (a) : (b))

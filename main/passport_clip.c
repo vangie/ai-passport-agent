@@ -13,10 +13,9 @@ static size_t s_erased;
 static char s_id[33];
 
 #define CLIP_SECTOR 4096
-/* Erase ahead in 16 KB steps: about 5 ms each, well inside the I2S DMA
- * buffering, and 32 steps for a full 30 s clip instead of one 0.45 s stall
- * that froze the screen at the moment the user pressed record. */
-#define CLIP_ERASE_STEP (4 * CLIP_SECTOR)
+/* Erase 16 KB up front before capture begins, then one 4 KB sector at a time
+ * (~25 ms) so incremental erases stay inside the I2S DMA buffering window. */
+#define CLIP_INITIAL_ERASE (4 * CLIP_SECTOR)
 
 esp_err_t passport_clip_begin(void) {
     s_size = 0;
@@ -24,9 +23,9 @@ esp_err_t passport_clip_begin(void) {
     for (int i = 0; i < 4; i++) snprintf(s_id + i * 8, 9, "%08lx", (unsigned long)esp_random());
     if (!s_partition) s_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0x41, "audio");
     if (!s_partition || s_partition->size < PASSPORT_CLIP_MAX_BYTES) return ESP_ERR_NOT_FOUND;
-    /* Only the first step up front; the rest is erased as the clip grows. */
-    esp_err_t err = esp_partition_erase_range(s_partition, 0, CLIP_ERASE_STEP);
-    if (err == ESP_OK) s_erased = CLIP_ERASE_STEP;
+    /* Only the initial window up front; the rest is erased sector by sector as the clip grows. */
+    esp_err_t err = esp_partition_erase_range(s_partition, 0, CLIP_INITIAL_ERASE);
+    if (err == ESP_OK) s_erased = CLIP_INITIAL_ERASE;
     return err;
 }
 
@@ -34,7 +33,7 @@ esp_err_t passport_clip_append(const void *samples, size_t bytes) {
     if (!s_partition || bytes % 2 || bytes > PASSPORT_CLIP_MAX_BYTES - s_size) return ESP_ERR_INVALID_SIZE;
     while (s_size + bytes > s_erased) {
         size_t limit = (PASSPORT_CLIP_MAX_BYTES + CLIP_SECTOR - 1) & ~(size_t)(CLIP_SECTOR - 1);
-        size_t step = limit - s_erased < CLIP_ERASE_STEP ? limit - s_erased : CLIP_ERASE_STEP;
+        size_t step = limit - s_erased < CLIP_SECTOR ? limit - s_erased : CLIP_SECTOR;
         if (!step) return ESP_ERR_INVALID_SIZE;
         esp_err_t err = esp_partition_erase_range(s_partition, s_erased, step);
         if (err != ESP_OK) return err;

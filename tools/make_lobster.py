@@ -46,7 +46,7 @@ def export(name):
 
 
 def main():
-    for name in ("lobster", "hermes"):
+    for name in ("lobster", "hermes", "muse"):
         export(name)
 
 

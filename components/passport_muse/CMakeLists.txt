@@ -12,4 +12,5 @@ idf_component_register(
     PRIV_INCLUDE_DIRS "${setup}/src" "${setup}/src/crypto"
     PRIV_REQUIRES mbedtls
 )
+target_compile_definitions(${COMPONENT_LIB} PRIVATE MGLS_ENABLE_LOG=1)
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)

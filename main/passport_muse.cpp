@@ -31,11 +31,15 @@ using namespace musegadgets::noise::core;
 constexpr char api[] = "https://api.muse.ai";
 constexpr char host[] = "hatch.metaaivm.com";
 constexpr char registration_id[] = "passport-register";
-constexpr size_t frame_capacity = 12 * 1024;
+constexpr size_t http_capacity = 6 * 1024;
+constexpr size_t bytes_capacity = 14 * 1024;
+constexpr size_t line_capacity = 2048;
 constexpr size_t upload_chunk = 768;  // A multiple of 3 keeps intermediate base64 chunks unpadded.
 constexpr int control_stream = 1;
 constexpr int note_stream = 16;
 constexpr int reply_stream = 17;
+constexpr int64_t settle_us = 1500000;
+constexpr int64_t busy_hold_us = 15000000;
 using Json = std::unique_ptr<cJSON, decltype(&cJSON_Delete)>;
 
 struct SecretFree {
@@ -74,7 +78,7 @@ esp_err_t http_event(esp_http_client_event_t *event) {
     auto &buffer = *static_cast<HttpBuffer *>(event->user_data);
     if (event->event_id != HTTP_EVENT_ON_DATA || event->data_len <= 0) return ESP_OK;
     size_t length = event->data_len;
-    if (length > frame_capacity - buffer.used) {
+    if (length > http_capacity - buffer.used) {
         buffer.overflow = true;
         return ESP_FAIL;
     }
@@ -92,8 +96,9 @@ int api_request(const char *path, const char *authorization, const char *body, H
     config.url = url;
     config.crt_bundle_attach = esp_crt_bundle_attach;
     config.disable_auto_redirect = true;
-    config.timeout_ms = 8000;
-    config.buffer_size = 1024;
+    config.timeout_ms = 12000;
+    config.buffer_size = 4096;
+    config.buffer_size_tx = 4096;
     config.event_handler = http_event;
     config.user_data = &buffer;
     auto client = esp_http_client_init(&config);
@@ -119,11 +124,11 @@ struct Vm {
 };
 
 int fetch_vm(const char *access, HttpBuffer &buffer, Vm &vm) {
-    char authorization[1032];
     if (!bearer_value(access, 1025)) return 0;
-    snprintf(authorization, sizeof(authorization), "Bearer %s", access);
-    int status = api_request("/fetch_vms", authorization, nullptr, buffer);
-    mbedtls_platform_zeroize(authorization, sizeof(authorization));
+    std::unique_ptr<char, SecretFree> authorization(static_cast<char *>(malloc(1032)), {1032});
+    if (!authorization) return 0;
+    snprintf(authorization.get(), 1032, "Bearer %s", access);
+    int status = api_request("/fetch_vms", authorization.get(), nullptr, buffer);
     if (status != 200) return status;
     Json json(cJSON_ParseWithLength(buffer.data, buffer.used), cJSON_Delete);
     const cJSON *item;
@@ -146,18 +151,17 @@ int refresh(passport_muse_credentials_t &credentials, const char *node, HttpBuff
     const char *raw = strrchr(credentials.refresh, ':');
     raw = raw ? raw + 1 : credentials.refresh;
     if (!bearer_value(raw, sizeof(credentials.refresh))) return 0;
-    char authorization[2072];
-    snprintf(authorization, sizeof(authorization), "Bearer hatch_refresh:%s", raw);
+    std::unique_ptr<char, SecretFree> authorization(static_cast<char *>(malloc(2072)), {2072});
+    if (!authorization) return 0;
+    snprintf(authorization.get(), 2072, "Bearer hatch_refresh:%s", raw);
     char sdk[49];
     if (!passport_muse_token_load(sdk)) {
-        mbedtls_platform_zeroize(authorization, sizeof(authorization));
         return 0;
     }
     char body[104];
     snprintf(body, sizeof(body), "{\"device_id\":\"%s\",\"sdk_token\":\"%s\"}", node, sdk);
     mbedtls_platform_zeroize(sdk, sizeof(sdk));
-    int status = api_request("/device_token/refresh", authorization, body, buffer);
-    mbedtls_platform_zeroize(authorization, sizeof(authorization));
+    int status = api_request("/device_token/refresh", authorization.get(), body, buffer);
     mbedtls_platform_zeroize(body, sizeof(body));
     if (status != 200) return status;
     Json json(cJSON_ParseWithLength(buffer.data, buffer.used), cJSON_Delete);
@@ -196,12 +200,20 @@ public:
         passport_tls_forget_socket();
         if (ws_) { esp_transport_close(ws_); esp_transport_destroy(ws_); }
         if (parent_) esp_transport_destroy(parent_);
-        mbedtls_platform_zeroize(bytes_.data(), bytes_.size());
-        mbedtls_platform_zeroize(decoded_.data(), decoded_.size());
-        mbedtls_platform_zeroize(assembled_.data(), assembled_.size());
+        if (bytes_) mbedtls_platform_zeroize(bytes_.get(), bytes_capacity);
+        if (scratch_) mbedtls_platform_zeroize(scratch_.get(), scratch_capacity);
+        if (envelope_) mbedtls_platform_zeroize(envelope_.get(), scratch_capacity);
+    }
+
+    bool allocate() {
+        bytes_.reset(static_cast<uint8_t *>(calloc(1, bytes_capacity)));
+        scratch_.reset(static_cast<uint8_t *>(calloc(1, scratch_capacity)));
+        envelope_.reset(static_cast<uint8_t *>(calloc(1, scratch_capacity)));
+        return bytes_ && scratch_ && envelope_;
     }
 
     bool connect(const Vm &vm) {
+        if (!allocate()) return false;
         char path[408];
         if (!path_for_vm(vm.id, path)) return false;
         parent_ = esp_transport_ssl_init();
@@ -219,36 +231,42 @@ public:
         if (result < 0) return false;
         passport_tls_track_socket(esp_transport_get_socket(ws_));
 
-        auto first = noise_.WriteHandshakeMessage1(bytes_);
+        auto first = noise_.WriteHandshakeMessage1({bytes_.get(), bytes_capacity});
         if (!first.ok() || !send(first.size())) return false;
         int length = receive(8000);
         uint8_t peer[256];
         size_t used = 0;
-        if (length <= 0 || !noise_.ReadHandshakeMessage2({bytes_.data(), static_cast<size_t>(length)}, peer, used).ok())
+        if (length <= 0 || !noise_.ReadHandshakeMessage2({bytes_.get(), static_cast<size_t>(length)}, peer, used).ok())
             return false;
-        auto third = noise_.WriteHandshakeMessage3({}, bytes_);
+        auto third = noise_.WriteHandshakeMessage3({}, {bytes_.get(), bytes_capacity});
         return third.ok() && send(third.size()) && noise_.isEstablished();
     }
 
     bool request(ServiceType service, int id, const char *path, ConstByteSpan body, bool end) {
         bool control = id == control_stream;
+        char request_id[40];
+        snprintf(request_id, sizeof(request_id), "muse-%08lx-%08lx",
+                 static_cast<unsigned long>(esp_random()), static_cast<unsigned long>(esp_random()));
         const HeaderView headers[] = {
-            {"x-app-id", "hatch-web"}, {"content-type", "application/json"},
+            {"x-request-id", request_id},
+            {"x-app-id", "hatch-web"},
+            {"Content-Type", "application/json"},
             {"accept", id == reply_stream ? "application/x-ndjson" : "application/json"},
         };
         ApplicationRequestView request{"POST", path, control ? Span<const HeaderView>{} : Span<const HeaderView>{headers}, body, end};
-        return noise_.StartOutboundApplicationRequest(service, id, request, scratch_, envelope_).ok() && flush();
+        return noise_.StartOutboundApplicationRequest(service, id, request, {scratch_.get(), scratch_capacity}, {envelope_.get(), scratch_capacity}).ok() && flush();
     }
 
     bool body(ServiceType service, int id, ConstByteSpan data, bool end = false) {
-        return noise_.StartOutboundBodyChunk(service, id, {data, end}, scratch_, envelope_).ok() && flush();
+        return noise_.StartOutboundBodyChunk(service, id, {data, end}, {scratch_.get(), scratch_capacity}, {envelope_.get(), scratch_capacity}).ok() && flush();
     }
 
     int next(ServiceFrameView &frame, unsigned wait_ms) {
         int length = receive(wait_ms);
         if (length <= 0) return length;
-        auto result = noise_.ProcessInboundWebSocketPayload({bytes_.data(), static_cast<size_t>(length)},
-                                                             decoded_, assembled_, headers_);
+        auto result = noise_.ProcessInboundWebSocketPayload({bytes_.get(), static_cast<size_t>(length)},
+                                                             {bytes_.get(), bytes_capacity},
+                                                             {}, headers_);
         if (!result.ok()) return -1;
         if (result.frame_status != InboundFrameStatus::Complete) return 0;
         frame = result.frame;
@@ -256,16 +274,18 @@ public:
     }
 
 private:
+    static constexpr size_t scratch_capacity = 1536;
+
     bool send(size_t length) {
         if (passport_tls_cancelled()) return false;
         return passport_transport_ws_send_raw(ws_,
             static_cast<ws_transport_opcodes_t>(WS_TRANSPORT_OPCODES_FIN | WS_TRANSPORT_OPCODES_BINARY),
-            reinterpret_cast<const char *>(bytes_.data()), length, 5000) == static_cast<int>(length);
+            reinterpret_cast<const char *>(bytes_.get()), length, 5000) == static_cast<int>(length);
     }
 
     bool flush() {
         while (noise_.HasOutboundWebSocketPayload()) {
-            auto payload = noise_.WriteNextOutboundWebSocketPayload(bytes_);
+            auto payload = noise_.WriteNextOutboundWebSocketPayload({bytes_.get(), bytes_capacity});
             if (!payload.ok() || !send(payload.size())) return false;
         }
         return true;
@@ -274,7 +294,7 @@ private:
     int receive(unsigned wait_ms) {
         int64_t deadline = esp_timer_get_time() + static_cast<int64_t>(wait_ms) * 1000;
         do {
-            if (passport_tls_cancelled() || received_ == bytes_.size()) return -1;
+            if (passport_tls_cancelled() || received_ == bytes_capacity) return -1;
             int64_t remaining = (deadline - esp_timer_get_time()) / 1000;
             int timeout = static_cast<int>(std::clamp<int64_t>(remaining, 0, 100));
             if (!frame_left_ && !received_) {
@@ -282,15 +302,15 @@ private:
                 if (ready < 0) return -1;
                 if (!ready) continue;
             }
-            int n = esp_transport_read(ws_, reinterpret_cast<char *>(bytes_.data() + received_),
-                                       bytes_.size() - received_, timeout);
+            int n = esp_transport_read(ws_, reinterpret_cast<char *>(bytes_.get() + received_),
+                                       bytes_capacity - received_, timeout);
             if (n < 0) return -1;
             if (!n) continue;
             int opcode = passport_transport_ws_get_read_opcode(ws_) & 0x0f;
             if (!frame_left_) {
-                if (opcode != (received_ ? WS_TRANSPORT_OPCODES_CONT : WS_TRANSPORT_OPCODES_BINARY)) return -1;
                 int length = passport_transport_ws_get_read_payload_len(ws_);
-                if (length < n || static_cast<size_t>(length) > bytes_.size() - received_) return -1;
+                if (opcode != (received_ ? WS_TRANSPORT_OPCODES_CONT : WS_TRANSPORT_OPCODES_BINARY) ||
+                    length < n || static_cast<size_t>(length) > bytes_capacity - received_) return -1;
                 frame_left_ = length;
             }
             if (static_cast<size_t>(n) > frame_left_) return -1;
@@ -305,12 +325,11 @@ private:
         return 0;
     }
 
+    struct FreeDeleter { void operator()(void *p) const { free(p); } };
     esp_transport_handle_t parent_ = nullptr, ws_ = nullptr;
     MbedtlsCryptoBackend crypto_;
     ClientSession noise_;
-    std::array<uint8_t, frame_capacity + 1024> bytes_{};
-    std::array<uint8_t, frame_capacity> decoded_{}, assembled_{};
-    std::array<uint8_t, 1536> scratch_{}, envelope_{};
+    std::unique_ptr<uint8_t[], FreeDeleter> bytes_, scratch_, envelope_;
     HeaderView headers_[32]{};
     size_t received_ = 0, frame_left_ = 0;
 };
@@ -336,7 +355,7 @@ bool register_device(Session &session, const char *node) {
     int length = snprintf(message + 4, sizeof(message) - 4,
         "{\"type\":\"req\",\"id\":\"%s\",\"method\":\"link.register\",\"params\":{"
         "\"node_id\":\"%s\",\"display_name\":\"AI Passport\",\"platform\":\"esp32\","
-        "\"version\":\"1.0.0\",\"device_family\":\"gadget\",\"model_id\":\"muse-gadget-ai-passport\","
+        "\"version\":\"999.0.0\",\"device_family\":\"gadget\",\"model_id\":\"muse-gadget-ai-passport\","
         "\"metadata\":{\"model_name\":\"FoloToy AI Passport\"},"
         "\"is_wakeup_supported\":false,\"commands_v2\":{}}}", registration_id, node);
     if (length < 0 || length >= static_cast<int>(sizeof(message) - 4)) return false;
@@ -391,9 +410,31 @@ bool send_recording(Session &session, bool &submission_started) {
     if (!session.request(ServiceType::Daemon, note_stream, "/chat/stream", {}, false) ||
         !session.body(ServiceType::Daemon, note_stream, span(head))) return false;
 
-    const uint32_t pcm = passport_clip_size();
+    const size_t raw_pcm = passport_clip_size() & ~size_t(1);
+    const size_t start_offset = raw_pcm > 16000 ? 3840 : 0;
+    const size_t peak_end = raw_pcm > 16000 ? raw_pcm - 1920 : raw_pcm;
+    const size_t end_offset = raw_pcm;
+    const uint32_t pcm = static_cast<uint32_t>(end_offset - start_offset);
     uint8_t chunk[upload_chunk] = {};
     unsigned char encoded[upload_chunk / 3 * 4 + 1];
+
+    int32_t x1 = 0, y1 = 0, peak = 1;
+    for (size_t offset = start_offset; offset < peak_end;) {
+        size_t size = std::min<size_t>(sizeof(chunk), peak_end - offset);
+        if (passport_clip_read_pcm(offset, chunk, size) != ESP_OK) return false;
+        for (size_t i = 0; i + 1 < size; i += 2) {
+            int32_t x = static_cast<int16_t>(chunk[i] | (chunk[i + 1] << 8));
+            if (offset == start_offset && i == 0) x1 = x;
+            int32_t y = (31 * (y1 + x - x1)) / 32;
+            x1 = x;
+            y1 = y;
+            int32_t mag = y < 0 ? -y : y;
+            if (mag > peak) peak = mag;
+        }
+        offset += size;
+    }
+    const int32_t gain_q8 = std::clamp<int32_t>((22000 * 256) / peak, 256, 2048);
+
     memcpy(chunk, "RIFF", 4);
     put_le(chunk + 4, pcm + 36, 4);
     memcpy(chunk + 8, "WAVEfmt ", 8);
@@ -407,18 +448,31 @@ bool send_recording(Session &session, bool &submission_started) {
     memcpy(chunk + 36, "data", 4);
     put_le(chunk + 40, pcm, 4);
 
+    x1 = 0;
+    y1 = 0;
     size_t header = 44;
-    for (size_t offset = 0; offset < pcm;) {
-        size_t size = std::min<size_t>(sizeof(chunk) - header, pcm - offset);
+    for (size_t offset = start_offset; offset < end_offset;) {
+        size_t size = std::min<size_t>(sizeof(chunk) - header, end_offset - offset);
         size_t written = 0;
-        if (passport_clip_read_pcm(offset, chunk + header, size) != ESP_OK ||
-            mbedtls_base64_encode(encoded, sizeof(encoded), &written, chunk, size + header) ||
+        if (passport_clip_read_pcm(offset, chunk + header, size) != ESP_OK) return false;
+        for (size_t i = 0; i + 1 < size; i += 2) {
+            uint8_t *p = chunk + header + i;
+            int32_t x = static_cast<int16_t>(p[0] | (p[1] << 8));
+            if (offset == start_offset && i == 0) x1 = x;
+            int32_t y = (31 * (y1 + x - x1)) / 32;
+            x1 = x;
+            y1 = y;
+            int32_t v = std::clamp<int32_t>((y * gain_q8) >> 8, -32768, 32767);
+            p[0] = static_cast<uint8_t>(v);
+            p[1] = static_cast<uint8_t>(v >> 8);
+        }
+        if (mbedtls_base64_encode(encoded, sizeof(encoded), &written, chunk, size + header) ||
             !session.body(ServiceType::Daemon, note_stream, {encoded, written})) return false;
         offset += size;
         header = 0;
     }
-    if (!session.request(ServiceType::Daemon, reply_stream, "/chat/subscribe", span("{}"), true)) return false;
-    if (passport_tls_cancelled()) return false;
+    if (passport_tls_cancelled() ||
+        !session.request(ServiceType::Daemon, reply_stream, "/chat/subscribe", span("{}"), true)) return false;
     submission_started = true;
     return session.body(ServiceType::Daemon, note_stream, span("\"}]}"), true);
 }
@@ -429,13 +483,23 @@ public:
     using Transcript = void (*)(const char *);
     explicit Replies(Show show, Transcript transcript) : show_(show), transcript_(transcript) {}
 
+    bool allocate() {
+        line_.reset(static_cast<char *>(calloc(1, line_capacity)));
+        ack_.reset(static_cast<char *>(calloc(1, ack_capacity)));
+        return line_ && ack_;
+    }
+
     bool read(Session &session) {
+        if (!line_ || !ack_) return false;
         int64_t deadline = esp_timer_get_time() + 90000000;
         while (esp_timer_get_time() < deadline) {
             ServiceFrameView frame;
             int result = session.next(frame, 100);
             if (result < 0) return answer_[0];
-            if (result == 0) continue;
+            if (result == 0) {
+                if (ready()) return true;
+                continue;
+            }
             if (frame.stream_id == note_stream) {
                 if (!acknowledge(frame)) return false;
             } else if (frame.stream_id == reply_stream) {
@@ -443,28 +507,51 @@ public:
             } else if (frame.stream_id == control_stream && frame.kind == ServiceFrameKind::Reset) {
                 return answer_[0];
             }
-            if (answer_[0]) return true;
+            if (ready()) return true;
         }
-        return false;
+        return answer_[0];
     }
 
     const char *answer() const { return answer_; }
 
 private:
+    static constexpr size_t ack_capacity = 512;
+    struct FreeDeleter { void operator()(void *p) const { free(p); } };
     struct Message {
         char id[80] = {};
         char parent[80] = {};
         char text[PASSPORT_TEXT_MAX] = {};
         bool final = false;
         bool transcript = false;
+        bool pushed = false;
     };
 
     bool belongs(const Message &message) const {
-        return note_[0] && message.parent[0] &&
-            (!strcmp(message.parent, note_) || (parent_[0] && !strcmp(message.parent, parent_)));
+        if (!note_[0] || message.transcript) return false;
+        const char *parent = message.parent;
+        for (size_t depth = 0; depth < messages_.size(); ++depth) {
+            if (!*parent) return true;
+            if (!strcmp(parent, note_) || (parent_[0] && !strcmp(parent, parent_))) return true;
+            auto next = std::find_if(messages_.begin(), messages_.end(),
+                                     [&](const Message &entry) { return entry.id[0] && !strcmp(entry.id, parent); });
+            if (next == messages_.end() || !strcmp(next->parent, parent)) return false;
+            parent = next->parent;
+        }
+        return false;
     }
 
-    void publish(const Message &message) {
+    bool ready() const {
+        if (!answer_[0]) return false;
+        for (const auto &entry : messages_) {
+            if (entry.id[0] && belongs(entry) && !entry.final) return false;
+        }
+        int64_t now = esp_timer_get_time();
+        if (now - last_event_us_ < settle_us) return false;
+        if (agent_busy_ && now - last_content_us_ < busy_hold_us) return false;
+        return true;
+    }
+
+    void publish(Message &message) {
         if (!message.text[0]) return;
         if (message.transcript) {
             if (strcmp(message.id, note_) && (!parent_[0] || strcmp(message.id, parent_))) return;
@@ -473,8 +560,22 @@ private:
             if (char *attachment = strstr(text, "\n[file:")) *attachment = 0;
             if (strcmp(text, "[Voice note]")) transcript_(text);
         } else if (belongs(message)) {
-            if (message.final) passport_reply_live_apply(answer_, sizeof(answer_), message.text, true);
-            else show_(PASSPORT_SEND_PARTIAL, message.text);
+            if (message.final) {
+                if (!message.pushed) {
+                    if (answer_[0]) passport_reply_live_apply(answer_, sizeof(answer_), "\n\n", false);
+                    passport_reply_live_apply(answer_, sizeof(answer_), message.text, false);
+                    message.pushed = true;
+                }
+                show_(PASSPORT_SEND_PARTIAL, answer_);
+            } else if (answer_[0]) {
+                char preview[PASSPORT_TEXT_MAX];
+                snprintf(preview, sizeof(preview), "%s", answer_);
+                passport_reply_live_apply(preview, sizeof(preview), "\n\n", false);
+                passport_reply_live_apply(preview, sizeof(preview), message.text, false);
+                show_(PASSPORT_SEND_PARTIAL, preview);
+            } else {
+                show_(PASSPORT_SEND_PARTIAL, message.text);
+            }
         }
     }
 
@@ -482,11 +583,11 @@ private:
         ConstByteSpan data;
         bool end = false;
         if (!frame_body(frame, note_status_, data, end) || note_status_ >= 300 ||
-            data.size() > sizeof(ack_) - ack_length_) return false;
-        if (data.size()) memcpy(ack_ + ack_length_, data.data(), data.size());
+            data.size() > ack_capacity - ack_length_) return false;
+        if (data.size()) memcpy(ack_.get() + ack_length_, data.data(), data.size());
         ack_length_ += data.size();
         if (!end) return true;
-        Json json(cJSON_ParseWithLength(ack_, ack_length_), cJSON_Delete);
+        Json json(cJSON_ParseWithLength(ack_.get(), ack_length_), cJSON_Delete);
         const cJSON *root = member(json.get(), "result");
         if (!cJSON_IsObject(root)) root = json.get();
         const char *id = str(root, "message_id");
@@ -494,7 +595,8 @@ private:
         if (!*id || strlen(id) >= sizeof(note_) || strlen(parent) >= sizeof(parent_)) return false;
         strcpy(note_, id);
         strcpy(parent_, parent);
-        for (const auto &entry : messages_) publish(entry);
+        last_event_us_ = esp_timer_get_time();
+        for (auto &entry : messages_) publish(entry);
         return true;
     }
 
@@ -502,17 +604,37 @@ private:
         ConstByteSpan data;
         bool end = false;
         if (!frame_body(frame, reply_status_, data, end) || reply_status_ >= 300) return false;
-        for (size_t i = 0; i < data.size(); ++i) {
-            uint8_t byte = data[i];
-            if (byte == '\n') {
-                if (!overflow_ && used_) event();
+        const char *cursor = reinterpret_cast<const char *>(data.data());
+        size_t remaining = data.size();
+        while (remaining) {
+            const char *newline = static_cast<const char *>(memchr(cursor, '\n', remaining));
+            size_t chunk = newline ? static_cast<size_t>(newline - cursor) : remaining;
+            if (!newline) {
+                if (end && !used_ && !overflow_) {
+                    event(cursor, chunk);
+                } else if (!overflow_ && chunk <= line_capacity - used_) {
+                    memcpy(line_.get() + used_, cursor, chunk);
+                    used_ += chunk;
+                } else {
+                    overflow_ = true;
+                }
+                break;
+            }
+            if (!used_ && !overflow_) {
+                if (chunk) event(cursor, chunk);
+            } else {
+                if (!overflow_ && chunk <= line_capacity - used_) {
+                    memcpy(line_.get() + used_, cursor, chunk);
+                    used_ += chunk;
+                    if (used_) event(line_.get(), used_);
+                }
                 used_ = 0;
                 overflow_ = false;
-            } else if (used_ < sizeof(line_)) {
-                line_[used_++] = byte;
-            } else overflow_ = true;
+            }
+            cursor += chunk + 1;
+            remaining -= chunk + 1;
         }
-        if (end && !overflow_ && used_) event();
+        if (end && !overflow_ && used_) event(line_.get(), used_);
         if (end) {
             used_ = 0;
             overflow_ = false;
@@ -520,24 +642,33 @@ private:
         return !end || !note_[0];
     }
 
-    void event() {
-        Json json(cJSON_ParseWithLength(line_, used_), cJSON_Delete);
+    void event(const char *raw, size_t length) {
+        Json json(cJSON_ParseWithLength(raw, length), cJSON_Delete);
         if (strcmp(str(json.get(), "type"), "event")) return;
         const char *event = str(json.get(), "event_name");
         if (!*event) event = str(json.get(), "event");
+        const cJSON *payload = member(json.get(), "payload");
+        if (!strcmp(event, "agent.status") || !strcmp(event, "task.status")) {
+            const char *code = str(payload, "activity_code");
+            const char *status = str(payload, "status");
+            if (*code) agent_busy_ = strcmp(code, "online") != 0 && strcmp(code, "idle") != 0;
+            else if (*status) agent_busy_ = strcmp(status, "completed") != 0 && strcmp(status, "failed") != 0;
+            last_event_us_ = esp_timer_get_time();
+            return;
+        }
         bool start = !strcmp(event, "delta.message_start");
         bool delta = !strcmp(event, "delta.text_append");
         bool done = !strcmp(event, "delta.message_done");
         bool full = !strcmp(event, "message.assistant");
         bool user = !strcmp(event, "message.user");
         if (!start && !delta && !done && !full && !user) return;
-        const cJSON *payload = member(json.get(), "payload");
         const char *id = str(payload, "message_id");
         if (!*id) id = str(payload, "id");
         if (!*id) id = str(json.get(), "message_id");
         const char *parent = str(payload, "reply_to_message_id");
         if (!*parent) parent = str(payload, "parent_message_id");
         if (!*parent) parent = str(json.get(), "reply_to_message_id");
+        if (!user && !strcmp(parent, id)) parent = "";
         if (!*id || strlen(id) >= sizeof(Message::id) || strlen(parent) >= sizeof(Message::parent)) return;
         const cJSON *seq = member(json.get(), "seq");
         if (cJSON_IsNumber(seq) && seq->valuedouble > 0) {
@@ -547,14 +678,14 @@ private:
         if (user) strcpy(last_user_, id);
         auto found = std::find_if(messages_.begin(), messages_.end(), [&](const Message &entry) { return !strcmp(entry.id, id); });
         if (found == messages_.end()) {
-            if (!user && !*parent) parent = last_user_;
-            if (!user && !*parent) return;
+            if (!user && !*parent) parent = note_[0] ? note_ : last_user_;
             found = messages_.begin() + (next_++ % messages_.size());
             *found = {};
             strcpy(found->id, id);
             found->transcript = user;
         }
         if (*parent) strcpy(found->parent, parent);
+        last_event_us_ = last_content_us_ = esp_timer_get_time();
         if (full && cJSON_IsFalse(member(payload, "display_text_ready"))) return;
         const char *text = str(payload, "display_text");
         if (!*text) text = str(payload, "content");
@@ -567,12 +698,13 @@ private:
     Show show_;
     Transcript transcript_;
     std::array<Message, 4> messages_{};
-    char line_[frame_capacity], ack_[2048];
+    std::unique_ptr<char[], FreeDeleter> line_, ack_;
     char note_[80]{}, parent_[80]{}, last_user_[80]{}, answer_[PASSPORT_TEXT_MAX]{};
     size_t next_ = 0, used_ = 0, ack_length_ = 0;
     double last_sequence_ = 0;
+    int64_t last_event_us_ = 0, last_content_us_ = 0;
     int note_status_ = 0, reply_status_ = 0;
-    bool overflow_ = false;
+    bool overflow_ = false, agent_busy_ = false;
 };
 }  // namespace
 
@@ -580,7 +712,8 @@ void passport_muse_run(bool probe, void (*state)(passport_send_state_t, const ch
                        void (*transcript)(const char *)) {
     char node[16];
     passport_muse_node_id(node);
-    Vm vm;
+    std::unique_ptr<Vm, SecretFree> vm(static_cast<Vm *>(calloc(1, sizeof(Vm))), {sizeof(Vm)});
+    if (!vm) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return; }
     int status;
     {
         std::unique_ptr<passport_muse_credentials_t, SecretFree> credentials(
@@ -594,31 +727,35 @@ void passport_muse_run(bool probe, void (*state)(passport_send_state_t, const ch
             state(PASSPORT_SEND_FAILED, "时间同步失败，请重试");
             return;
         }
-        std::unique_ptr<char, SecretFree> body(static_cast<char *>(malloc(frame_capacity)), {frame_capacity});
+        std::unique_ptr<char, SecretFree> body(static_cast<char *>(malloc(http_capacity)), {http_capacity});
         if (!body) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return; }
         HttpBuffer buffer{body.get()};
-        status = fetch_vm(credentials->access, buffer, vm);
+        status = fetch_vm(credentials->access, buffer, *vm);
         if (status == 401 || status == 403) {
             status = refresh(*credentials, node, buffer);
-            if (status == 200) status = fetch_vm(credentials->access, buffer, vm);
+            if (status == 200) status = fetch_vm(credentials->access, buffer, *vm);
         }
     }
     if (status != 200) {
         state(PASSPORT_SEND_FAILED, status == 401 || status == 403 ? "请重新配对 Muse" : "无法连接 Muse，请重试");
         return;
     }
-    auto session = std::unique_ptr<Session>(new (std::nothrow) Session);
+    struct SessionDeleter { void operator()(Session *s) const { if (s) { s->~Session(); free(s); } } };
+    void *raw_session = malloc(sizeof(Session));
+    std::unique_ptr<Session, SessionDeleter> session(raw_session ? new (raw_session) Session() : nullptr);
     if (!session) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return; }
-    bool linked = session->connect(vm);
-    mbedtls_platform_zeroize(&vm, sizeof(vm));
+    bool linked = session->connect(*vm);
+    vm.reset();
     if (!linked || !register_device(*session, node)) {
         state(PASSPORT_SEND_FAILED, "无法连接 Muse，请重试");
         return;
     }
     if (probe) { state(PASSPORT_SEND_DONE, "Muse 已连接"); return; }
 
-    auto replies = std::unique_ptr<Replies>(new (std::nothrow) Replies(state, transcript));
-    if (!replies) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return; }
+    struct RepliesDeleter { void operator()(Replies *r) const { if (r) { r->~Replies(); free(r); } } };
+    void *raw_replies = malloc(sizeof(Replies));
+    std::unique_ptr<Replies, RepliesDeleter> replies(raw_replies ? new (raw_replies) Replies(state, transcript) : nullptr);
+    if (!replies || !replies->allocate()) { state(PASSPORT_SEND_FAILED, "内存不足，请重试"); return; }
     state(PASSPORT_SEND_UPLOAD, "正在发送");
     bool submission_started = false;
     if (!send_recording(*session, submission_started)) {

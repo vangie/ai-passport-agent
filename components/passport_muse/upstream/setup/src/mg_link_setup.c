@@ -107,6 +107,8 @@ enum status {
 	ST_CONFIRM_REQUIRED,
 	ST_PAIRING_CONFIRMED,
 	ST_CONFIRM_TIMEOUT,
+	ST_WIFI_CONNECTING,
+	ST_WIFI_CONNECTED,
 	ST_AUTH_OK,
 	ST_STORAGE,
 	ST_MISSING_CREDENTIALS,
@@ -128,6 +130,8 @@ static const char *const STATUS[] = {
 	"confirm_required",
 	"pairing_confirmed",
 	"pairing_confirm_timeout",
+	"wifi_connecting",
+	"wifi_connected",
 	"auth_ok",
 	"error_storage",
 	"error_missing_credentials",
@@ -243,6 +247,11 @@ static const char *id_device(const mgls_t *s)
 static const char *fw_version(const mgls_t *s)
 {
 	return s->cfg->firmware_version ? s->cfg->firmware_version : "";
+}
+
+static const char *build_sha(const mgls_t *s)
+{
+	return s->cfg->build_sha ? s->cfg->build_sha : "";
 }
 
 /* ---- Workspace ----------------------------------------------------------- */
@@ -689,6 +698,7 @@ enum val {
 	V_NODE,
 	V_MAC,
 	V_FW,
+	V_BUILD_SHA,
 	V_DPUB,
 	V_DNONCE,
 	V_TH,
@@ -734,9 +744,9 @@ static const struct kv DEVICE_INFO[] = {
 	{"pairing_auth", V_AUTH},
 	{"pairing_auth_epoch", V_0 | RAW},
 	{"pairing_policy", V_POLICY},
-	{"build_sha", V_EMPTY},
+	{"build_sha", V_BUILD_SHA},
 	{"wifi", V_AUTH}, /* "none" */
-	{"mgcommands", V_1 | RAW}, /* last: dropped when mgcommands is 0 */
+	{"mgcommands", V_1 | RAW}, /* last two: dropped when mgcommands is 0 */
 };
 
 static const struct kv PAIRING_READY[] = {
@@ -1131,6 +1141,8 @@ static void handle_provision(mgls_t *s, const char *base)
 	const size_t n = ws->nfields;
 	const mgls_jfield_t *at = mgj_get(base, f, n, "access_token");
 	const mgls_jfield_t *rt = mgj_get(base, f, n, "refresh_token");
+	const mgls_jfield_t *ss = mgj_get(base, f, n, "ssid");
+	const mgls_jfield_t *pw = mgj_get(base, f, n, "password");
 	const char *tt = mgj_str(base, f, n, "token_type");
 	mgls_credentials_t cred;
 	uint8_t k[32];
@@ -1142,8 +1154,8 @@ static void handle_provision(mgls_t *s, const char *base)
 		(void)send_status(s, ST_MISSING_CREDENTIALS, 0, AFTER_NONE);
 		return;
 	}
-	/* wifi "none": no Wi-Fi to join; nothing is stored. */
-	if (!absent_or_empty(base, f, n, "ssid") || !absent_or_empty(base, f, n, "password")) {
+	if (s->cfg->mgcommands &&
+	    (!absent_or_empty(base, f, n, "ssid") || !absent_or_empty(base, f, n, "password"))) {
 		(void)send_status(s, ST_WIFI_UNSUPPORTED, 0, AFTER_NONE);
 		return;
 	}
@@ -1167,6 +1179,19 @@ static void handle_provision(mgls_t *s, const char *base)
 	const char *node = id_node(s);
 
 	/* K (mgcommands.h, Token proof): the token proof's own derivation. */
+	memset(&cred, 0, sizeof(cred));
+	if (ss != NULL && ss->type == MGJ_STRING && ss->len > 0) {
+		(void)send_status(s, ST_WIFI_CONNECTING, s->gen, AFTER_NONE);
+		cred.ssid = base + ss->val;
+		cred.ssid_len = ss->len;
+	}
+	if (pw != NULL && pw->type == MGJ_STRING && pw->len > 0) {
+		cred.password = base + pw->val;
+		cred.password_len = pw->len;
+	}
+	if (cred.ssid_len > 0) {
+		(void)send_status(s, ST_WIFI_CONNECTED, s->gen, AFTER_NONE);
+	}
 	err = mgtp_derive_key(base + at->val, at->len, node, strlen(node), k);
 	if (!err) {
 		cred.access_token = base + at->val;
@@ -1174,7 +1199,8 @@ static void handle_provision(mgls_t *s, const char *base)
 		cred.refresh_token = base + rt->val;
 		cred.refresh_len = rt->len;
 		cred.k = k;
-		cred.flags = MGLS_CRED_SETUP_COMPLETE | MGLS_CRED_WIFI_SKIPPED;
+		cred.flags = MGLS_CRED_SETUP_COMPLETE |
+			     (cred.ssid_len == 0 ? MGLS_CRED_WIFI_SKIPPED : 0u);
 		err = s->cfg->commit ? s->cfg->commit(s->cfg->ctx, &cred) : -1;
 	}
 	mglsc_wipe(k, sizeof(k));
@@ -1236,8 +1262,9 @@ static void send_device_info(mgls_t *s)
 	dyn[V_NODE] = id_node(s);
 	dyn[V_MAC] = id_mac(s);
 	dyn[V_FW] = fw_version(s);
+	dyn[V_BUILD_SHA] = build_sha(s);
 	mgj_begin(&w, (char *)&s->ws->tx[CHUNK_HDR], MGLS_TX_CAP - CHUNK_HDR);
-	emit(&w, DEVICE_INFO, s->cfg->mgcommands ? nf : nf - 1, dyn, true);
+	emit(&w, DEVICE_INFO, s->cfg->mgcommands ? nf : nf - 2, dyn, true);
 	n = mgj_end(&w);
 	if (n > 0) {
 		(void)queue_msg(s, (size_t)n, AFTER_NONE);
@@ -1293,8 +1320,8 @@ static void dispatch(mgls_t *s, char *base, size_t len, bool decrypted)
 	} else if (decrypted && sensitive(act) && !confirmed(s)) {
 		(void)send_status(s, ST_CONFIRM_REQUIRED_ERR, 0, AFTER_NONE);
 	} else if (decrypted && strcmp(act, "wifi_scan") == 0) {
-		/* No Wi-Fi radio: an empty list (apps skip the scan for wifi "none"). */
-		send_encrypted_json(s, "{\"type\":\"wifi_scan_result\",\"networks\":[]}");
+		const char *scan = s->cfg->wifi_scan ? s->cfg->wifi_scan(s->cfg->ctx) : NULL;
+		send_encrypted_json(s, scan ? scan : "{\"type\":\"wifi_scan_result\",\"networks\":[]}");
 	} else if (decrypted && strcmp(act, "unpair") == 0) {
 		handle_unpair(s);
 	} else if (decrypted && strcmp(act, "provision_v2") != 0) {
@@ -1726,7 +1753,7 @@ void mgls_abort(mgls_t *s)
 
 uint8_t mgls_adv_flags(bool set_up)
 {
-	return (uint8_t)(MGLS_ADV_FLAG_GADGET | (set_up ? MGLS_ADV_FLAG_SET_UP : 0u));
+	return (uint8_t)(set_up ? MGLS_ADV_FLAG_SET_UP : 0u);
 }
 
 size_t mgls_adv_build(uint8_t *out, size_t cap, bool set_up)
@@ -1755,17 +1782,19 @@ size_t mgls_adv_build(uint8_t *out, size_t cap, bool set_up)
 size_t mgls_format_name(char *out, size_t cap, const char *model, const uint8_t a[6])
 {
 	const size_t pl = sizeof(MGLS_NAME_PREFIX) - 1;
-	size_t ml = strlen(model);
-	size_t n = pl + ml + 1 + 6;
+	size_t ml = model ? strlen(model) : 0;
+	size_t n = pl + (ml ? ml + 1 : 0) + 6;
 
 	if (n + 1 > cap) {
 		return 0;
 	}
 	memcpy(out, MGLS_NAME_PREFIX, pl);
-	memcpy(&out[pl], model, ml);
-	out[pl + ml] = '-';
+	if (ml) {
+		memcpy(&out[pl], model, ml);
+		out[pl + ml] = '-';
+	}
 	for (int i = 0; i < 3; i++) {
-		hex_byte(&out[pl + ml + 1 + i * 2], a[3 + i], 1);
+		hex_byte(&out[pl + (ml ? ml + 1 : 0) + i * 2], a[3 + i], 1);
 	}
 	out[n] = '\0';
 	return n;

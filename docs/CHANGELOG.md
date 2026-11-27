@@ -14,6 +14,14 @@
 
 No pending changes.
 
+## v0.8.1 - 2026-11-27
+
+- Unify the Muse assistant option in the web studio and device UI, save the write-only Gadget SDK token through **Save settings**, and place **Pair Muse** under **Settings → Agent**.
+- Fix Muse BLE Link GATT handles, characteristic properties, gadget category and single-step on-device verification so the Muse app discovers the device and completes pairing without idle-sleep interruption.
+- Add the 22 × 22 Muse status-bar icon and automatically inherit an existing assistant's Shadowsocks route when Muse has no explicit route configured.
+- Fix Muse voice-turn memory pressure and oversized Noise WebSocket frame handling by decoding single-chunk frames and NDJSON lines in place with a 14 KB frame buffer, supporting multi-message reply chains, and discarding empty pending turns on non-retryable failure.
+- Eliminate recording dropouts during incremental SPI Flash erases by erasing one 4 KB sector at a time with a 100 ms I2S DMA buffer, and trim the initial 120 ms ES8311 wake-up transient with an 80 Hz high-pass filter and speech gain normalization before uploading to Muse.
+
 ## v0.8.0 - 2026-11-27
 
 - Add Muse direct support with on-device SDK token storage, BLE pairing and voice questions with text replies.

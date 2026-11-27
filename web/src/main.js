@@ -46,7 +46,7 @@ let actionScope = 'save';
 let promptStatus = 'idle';
 let promptResetTimer;
 let promptBackend = 'openclaw';
-const pairingBackends = { openclaw: 'OpenClaw', hermes: 'Hermes', 'muse-direct': 'Muse', muse: 'Muse' };
+const pairingBackends = { openclaw: 'OpenClaw', hermes: 'Hermes', 'muse-direct': 'Muse' };
 let museToken = '';
 let manifest = null;
 let firmwareReady = false;
@@ -97,7 +97,6 @@ function updatePairingFields() {
   root.querySelector('#muse-token-setup').hidden = !direct;
   root.querySelector('#gateway-setup').hidden = direct;
   root.querySelector('#copy-prompt').hidden = direct;
-  root.querySelector('#muse-setup-note').hidden = promptBackend !== 'muse';
 }
 async function copyPrompt() {
   if (busy || promptStatus === 'copying' || promptBackend === 'muse-direct') return;
@@ -238,18 +237,18 @@ function render() {
     </div></section>
     <section id="agent-card" class="card">${sectionHeader('agent', 'agentTitle', 'agentDetail')}<div class="card-content"><div id="agent-list" class="list">${snapshot?.agents.length ? snapshot.agents.map(agent => agentRow(agent, linked)).join('') : `<p class="empty">${text('noAgents')}</p>`}</div>
       <details id="pairing-details" ${!snapshot?.agents.length || draft.code || promptBackend === 'muse-direct' ? 'open' : ''}><summary>${text('newAgent')}</summary>
-        <div class="agent-setup"><fieldset class="backend-switch"><legend>${text('agentBackend')}</legend><div class="backend-options">${Object.entries(pairingBackends).map(([backend, label]) => `<label><input type="radio" name="prompt-backend" value="${backend}" ${promptBackend === backend ? 'checked' : ''}><span>${backend === 'muse' ? text('museGateway') : backend === 'muse-direct' ? text('museDirect') : label}</span></label>`).join('')}</div></fieldset><button id="copy-prompt" class="quiet small" aria-describedby="copy-prompt-status">${text('prompt')}</button></div>
+        <div class="agent-setup"><fieldset class="backend-switch"><legend>${text('agentBackend')}</legend><div class="backend-options">${Object.entries(pairingBackends).map(([backend, label]) => `<label><input type="radio" name="prompt-backend" value="${backend}" ${promptBackend === backend ? 'checked' : ''}><span>${label}</span></label>`).join('')}</div></fieldset><button id="copy-prompt" class="quiet small" aria-describedby="copy-prompt-status">${text('prompt')}</button></div>
         <div id="muse-token-setup" hidden>
           <p class="hint"><a href="${museTokenURL}" target="_blank" rel="noopener noreferrer">${text('museTokenLink')} ↗</a></p>
-          <label class="field">${text('museToken')}<input id="muse-token" type="password" autocomplete="off" spellcheck="false" ${canWriteMuseToken() && !busy ? '' : 'disabled'}></label>
-          <button id="save-muse-token" class="small" ${canWriteMuseToken() && !busy && museToken ? '' : 'disabled'}>${text('museTokenSave')}</button>
-          <p class="hint">${text(!usbReady ? 'museTokenUSB' : !canWriteMuseToken() ? 'museTokenUpdate' : 'musePairSteps')}</p>
+          <label class="field">${text('museToken')}<input id="muse-token" type="password" autocomplete="off" spellcheck="false" ${busy ? 'disabled' : ''}></label>
+          ${!usbReady ? `<p class="hint warning">${text('museTokenUSB')}</p>` : !canWriteMuseToken() ? `<p class="hint warning">${text('museTokenUpdate')}</p>` : ''}
+          <ol id="muse-pair-steps" class="hint muse-steps"><li>${text('museStep1')}</li><li>${text('museStep2')}</li><li>${text('museStep3')}</li><li>${text('museStep4')}</li></ol>
         </div>
-        <div id="gateway-setup"><p id="muse-setup-note" class="hint" hidden>${text('museSetup')}</p>
+        <div id="gateway-setup">
         <div class="prompt-actions"><span id="copy-prompt-status" class="prompt-status" role="status" aria-live="polite" hidden></span></div>${field('name', 'agentName', 'text', text('namePlaceholder'))}${field('address', 'address', 'url', 'wss://gateway.example')}<label class="field">${text('code')}<textarea id="code" data-field="code" autocomplete="off" spellcheck="false">${escape(draft.code)}</textarea></label><p class="hint">${text('codeHint')}</p></div></details>
       ${feedback('agent')}
     </div></section>
-    <section id="preferences-card" class="card">${sectionHeader('settings', 'settingsTitle')}<fieldset class="card-content preference-fields" ${preferencesDisabled ? 'disabled' : ''}><div class="preferences"><label for="device-language">${text('screenLanguage')}</label><select id="device-language" data-field="language"><option value="zh" ${draft.language === 'zh' ? 'selected' : ''}>${text('chinese')}</option><option value="en" ${draft.language === 'en' ? 'selected' : ''}>${text('english')}</option></select></div><div class="preferences ${snapshot && !snapshot.capabilities.includes('device-control') ? 'is-unavailable' : ''}"><label for="volume">${text('volume')}</label><div class="volume"><input id="volume" data-field="volume" type="range" min="0" max="100" value="${draft.volume}" ${snapshot && !snapshot.capabilities.includes('device-control') ? 'disabled' : ''}><output id="volume-value">${draft.volume}%</output></div></div>${powerSlider('standby', STANDBY_STEPS, 'standbyAfter')}${powerSlider('powerOff', POWEROFF_STEPS, 'powerOffAfter')}<p id="power-note" class="hint power-note">${text(snapshot && !powerSupported() ? 'powerUnavailable' : 'powerHint')}</p></fieldset></section>
+    <section id="preferences-card" class="card">${sectionHeader('settings', 'settingsTitle')}<fieldset class="card-content preference-fields" ${preferencesDisabled ? 'disabled' : ''}><div class="preferences"><label for="device-language">${text('screenLanguage')}</label><select id="device-language" data-field="language"><option value="zh" ${draft.language === 'zh' ? 'selected' : ''}>${text('chinese')}</option><option value="en" ${draft.language === 'en' ? 'selected' : ''}>${text('english')}</option></select></div><div class="preferences ${snapshot && !snapshot.capabilities.includes('device-control') ? 'is-unavailable' : ''}"><label for="volume">${text('volume')}</label><div class="volume"><div class="stepped continuous" style="--position:${draft.volume};--steps:100"><div class="step-track" aria-hidden="true"><span class="step-fill"></span></div><input id="volume" data-field="volume" type="range" min="0" max="100" value="${draft.volume}" ${snapshot && !snapshot.capabilities.includes('device-control') ? 'disabled' : ''}></div><output id="volume-value">${draft.volume}%</output></div></div>${powerSlider('standby', STANDBY_STEPS, 'standbyAfter')}${powerSlider('powerOff', POWEROFF_STEPS, 'powerOffAfter')}<p id="power-note" class="hint power-note">${text(snapshot && !powerSupported() ? 'powerUnavailable' : 'powerHint')}</p></fieldset></section>
     ${supportedSerial() ? `<section id="firmware-card" class="card firmware-card">${sectionHeader('download', 'firmwareTitle', null, '<span class="tag">USB</span>')}<div class="card-content">
       <dl class="firmware-versions"><div><dt>${text('firmwareCurrent')}</dt><dd id="firmware-current">${escape(deviceVersion)}</dd></div><div><dt>${text('firmwareAvailable')}</dt><dd>${escape(manifest?.version || '—')}</dd></div></dl>
       ${snapshot && manifest && ['current', 'update', 'newer'].includes(update.status) ? `<p id="firmware-status" class="firmware-status" data-status="${update.status}">${text(`firmwareStatus_${update.status}`)}</p>` : ''}${!manifest ? `<p class="hint">${text(firmwareReady ? 'firmwareMissing' : 'firmwareLoading')}</p>` : ''}
@@ -285,7 +284,11 @@ function updateSave() {
   document.querySelector('#discard').disabled = busy || !hasChanges;
   root.querySelectorAll('[data-forget], [data-drop], [data-use]').forEach(button => { button.disabled = busy || !connected() || hasChanges; });
   const output = document.querySelector('#volume-value');
-  if (output) output.textContent = `${draft.volume}%`;
+  if (output) {
+    output.textContent = `${draft.volume}%`;
+    const volumeSlider = document.querySelector('#volume');
+    if (volumeSlider) volumeSlider.parentElement.style.setProperty('--position', draft.volume);
+  }
   for (const [key, steps] of [['standby', STANDBY_STEPS], ['powerOff', POWEROFF_STEPS]]) {
     const slider = document.querySelector(`#${key}`), value = document.querySelector(`#${key}-value`);
     if (!slider || !value) continue;
@@ -352,7 +355,7 @@ async function connect(kind, options) {
   try {
     await transport.connect();
     transportKind = kind;
-    const linkedSession = new Session(transport, () => { if (session === linkedSession) { museToken = ''; keepFirmwareSettings = true; say(linkedSession.disconnectReason || 'disconnected', true, 'connection'); if (!busy) render(); } });
+    const linkedSession = new Session(transport, () => { if (session === linkedSession) { museToken = ''; dirty.delete('museToken'); keepFirmwareSettings = true; say(linkedSession.disconnectReason || 'disconnected', true, 'connection'); if (!busy) render(); } });
     session = linkedSession;
     adopt(await session.snapshot(), !dirty.size);
     keepFirmwareSettings = true;
@@ -369,6 +372,10 @@ function validateDraft() {
     if (!draft.name || bytes(draft.name) >= 24 || /[\r\n\0]/.test(draft.name)) throw new Error('nameInvalid');
     pairing(draft.code, draft.address);
   }
+  if (dirty.has('museToken') && museToken) {
+    if (!canWriteMuseToken()) throw new Error('museTokenUSB');
+    if (!/^mgst_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(museToken)) throw new Error('museTokenInvalid');
+  }
   if (dirty.has('route') && draft.routeMode === 'ss') {
     const agent = snapshot.agents.find(value => String(value.id) === draft.selectedAgent);
     if (!draft.proxyHost || bytes(draft.proxyHost) >= 64 || /[\s\0]/.test(draft.proxyHost) || !/^\d+$/.test(String(draft.proxyPort)) || Number(draft.proxyPort) < 1 || Number(draft.proxyPort) > 65535 || bytes(draft.proxySecret) >= 64 || (!draft.proxySecret && !agent?.route?.savedSecret)) throw new Error('proxyInvalid');
@@ -380,11 +387,19 @@ async function save() {
   const mutate = async (command, ending, group) => { adopt(await session.mutate(command, ending)); dirty.delete(group); written = true; };
   try {
     if (dirty.has('wifi')) await mutate(`SAVE ${snapshot.generation} ${encode(draft.ssid)} ${encode(draft.password)}`, 'OK saved', 'wifi');
-    if (dirty.has('agent')) {
+    if (dirty.has('agent') && (draft.name || draft.address || draft.code)) {
       const pair = pairing(draft.code, draft.address);
       await mutate(`AGENT ${snapshot.generation} ${encode(draft.name)} ${encode(pair.code)}`, 'OK agent', 'agent');
       const saved = snapshot.agents.find(agent => agent.name === draft.name);
       if (saved && !dirty.has('route')) routeDraft(saved);
+    } else dirty.delete('agent');
+    if (dirty.has('museToken')) {
+      if (museToken) {
+        await session.request(`MUSE_TOKEN ${museToken}`, 'OK muse-token');
+        museToken = '';
+        written = true;
+      }
+      dirty.delete('museToken');
     }
     if (dirty.has('route')) {
       if (draft.selectedAgent === '') throw new Error('pairing');
@@ -435,12 +450,12 @@ function bind() {
   on('connect-usb', () => run(() => connect('usb'), 'connection'));
   on('connect-ble', () => run(() => connect('ble'), 'connection'));
   on('connect-ble-broad', () => run(() => connect('ble', { broadDiscovery: true }), 'connection'));
-  on('disconnect', () => run(async () => { await session.close(); session = null; snapshot = null; transportKind = ''; keepFirmwareSettings = true; }, 'connection'));
+  on('disconnect', () => run(async () => { await session.close(); session = null; snapshot = null; transportKind = ''; museToken = ''; dirty.delete('museToken'); keepFirmwareSettings = true; }, 'connection'));
   on('refresh', async () => {
     if (dirty.size && !await confirmAction('confirmRefresh')) return;
-    await run(async () => { adopt(await session.snapshot(), true); }, 'connection');
+    await run(async () => { museToken = ''; adopt(await session.snapshot(), true); }, 'connection');
   });
-  on('discard', async () => { if (await confirmAction('confirmDiscard')) { if (snapshot) adopt(snapshot, true); else { draft = blankDraft(); dirty.clear(); } if (notice?.scope === 'save') notice = null; render(); } });
+  on('discard', async () => { if (await confirmAction('confirmDiscard')) { museToken = ''; if (snapshot) adopt(snapshot, true); else { draft = blankDraft(); dirty.clear(); } if (notice?.scope === 'save') notice = null; render(); } });
   on('save', () => run(save));
   on('scan', () => run(async () => {
     wifiScanAttempted = true; scanning = true; nearbyNetworks = [];
@@ -457,22 +472,18 @@ function bind() {
   tokenInput.value = museToken;
   tokenInput.oninput = () => {
     museToken = tokenInput.value.trim();
-    root.querySelector('#save-muse-token').disabled = !museToken;
+    if (museToken) dirty.add('museToken');
+    else dirty.delete('museToken');
+    updateSave();
   };
-  on('save-muse-token', () => run(async () => {
-    if (!canWriteMuseToken()) throw new Error('museTokenUSB');
-    if (!/^mgst_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(museToken)) throw new Error('museTokenInvalid');
-    await session.request(`MUSE_TOKEN ${museToken}`, 'OK muse-token');
-    museToken = '';
-    say('museTokenSaved');
-  }, 'agent'));
   root.querySelectorAll('[name="prompt-backend"]').forEach(input => {
     input.onchange = () => {
       promptBackend = input.value;
       if (promptBackend !== 'muse-direct') {
         museToken = '';
         tokenInput.value = '';
-        root.querySelector('#save-muse-token').disabled = true;
+        dirty.delete('museToken');
+        updateSave();
       }
       updatePairingFields();
       setPromptStatus('idle');

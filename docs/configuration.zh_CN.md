@@ -29,7 +29,7 @@ GitHub 自动生成的源码 ZIP／TAR 不包含 submodule 内容。缺少共享
 ## 项目名称与兼容性
 
 AI Passport Agent 是产品名称，源码仓库为 `vangie/ai-passport-agent`。
-v0.7.0 支持 OpenClaw 与 Hermes；v0.6.0 仅支持 OpenClaw。
+v0.8.0 起支持 Muse、OpenClaw 与 Hermes；v0.7.0 支持 OpenClaw 与 Hermes；v0.6.0 仅支持 OpenClaw。
 OpenClaw 插件的软件包名、ID、已有配置项及版本化 `.tgz` 包继续使用
 `ai-passport-openclaw`，这是后端接入名称，而非产品主名称。
 
@@ -79,18 +79,14 @@ OpenClaw 使用专属 `passport` 助手，Hermes 使用原生个人 Agent 与每
 ### Muse
 
 1. 使用支持 Muse 直连的 Passport Agent 固件。用 USB 连接工牌，在设备配置台保存可访问 Muse 的 Wi-Fi。
-2. 在「添加助手 → Muse 直连」粘贴个人 Gadget SDK token，点击「写入 SDK token」。
+2. 在「新增助手 → Muse」粘贴个人 Gadget SDK token，点击「保存配置」。
    可从 [Muse 账号][muse-token] 获取 token。
-3. 工牌打开「设置 → Muse 配对」。在 Muse App 的「设置 → 设备」开启开发者模式并添加工牌，
+3. 工牌打开「设置 → 助手 → Muse 配对」。在 Muse App 的「设置 → 设备」开启开发者模式并添加工牌，
    根据屏幕提示按下「确认」旁的实体键。助手列表需要留一个空位。
 4. 在助手列表选择 Muse，用「提问」发送语音并阅读文字回复。若 Muse 服务需要代理，展开 Muse 的「连接设置」单独选择直连或 Shadowsocks，不影响其他助手。
 
 固件集成了官方 SDK [提交 c8453082][muse-sdk] 的 Link 配对和 Noise 通信源码及许可证，
 沿用 Passport Agent 的分区和设备设置。
-
-**Valet Gateway 接入。** 本项目的网页配置台提供「Muse 网关」选项，以便在同一固件中
-切换 Muse、OpenClaw 和 Hermes。由官方 Muse App 绑定 Linux 主机上的适配器，再把适配器
-生成的工牌配对 JSON 填入网页。适配器随包含 `tools/muse` 的 Valet Gateway 开发源码提供。
 
 [muse-sdk]: https://github.com/facebookincubator/muse-gadget-sdk/tree/c84530820658ca50116a88877371ce14b4e44026
 [muse-token]: https://gadgets.muse.ai/settings/sdk-tokens
@@ -116,10 +112,9 @@ OpenClaw 使用专属 `passport` 助手，Hermes 使用原生个人 Agent 与每
 
 通话把未确认的麦克风噪声替换为静音，保留最多 171 毫秒的压缩预录，
 尽量保住开头的音节。静音和播放保护会清空预录；语音打断还需要在回声检查
-探测期间确认人声。v0.7.0 候选版短暂停住播放游标，不消费已经排队的回复音频；
+探测期间确认人声。探测会短暂停住播放游标，不消费已经排队的回复音频；
 等待正在进行的播放写入完成，再留出 100 毫秒让扬声器／DMA 回声消退，
 确认仍有人声才取消回复。未确认的探测在 350 毫秒内原位续播，不丢弃音节；按键打断仍立即生效。
-细化回声匹配可以减少探测，但单独使用不足以保证可靠：上一候选版的实机记录确认了误语音打断。
 测试覆盖无法匹配的回声、真正人声、PCM／IMA 暂停续播以及真实 VAD 确认。
 诊断分别记录语音／按键打断次数，不记录麦克风内容。
 OpenClaw Passport 插件保留服务端轮次检测，但关闭上游自动音频打断。
@@ -147,7 +142,7 @@ Hermes 适配器采用相同的设备主导打断策略。OpenClaw 明确的回�
 ## 配置保存在哪里
 
 Passport 是配置的权威来源：最多 **8 套网络、4 套助手连接**，以及语言、音量。
-设备保存连接凭据，模型／服务商 Key 留在 OpenClaw。网页没有应用后台，通过 USB／蓝牙直接配置；
+设备保存连接凭据，模型／服务商 Key 留在网关。网页没有应用后台，通过 USB／蓝牙直接配置；
 密钥草稿只在页面内存，不写浏览器持久存储，刷新／关闭后丢弃。
 静态托管可能记录 IP／时间等常规访问日志，不包括页面未上传的配置。
 

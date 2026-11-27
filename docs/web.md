@@ -165,8 +165,8 @@ remain disabled, while a full firmware installation is available over USB.
    reconnect automatically. Only one client can edit; a second slot is reserved
    for handoff and expires after two minutes without a successful handshake.
    Older firmware requires disconnecting in the phone app before scanning again;
-   saved pairings never need deleting. iPhone Safari and WeChat's webview do not
-   support this route; Bluefy is a candidate requiring real-device acceptance.
+   saved pairings never need deleting. iPhone Safari and WeChat's built-in browser do not
+   support Web Bluetooth; use Bluefy on iPhone.
    If the chooser is empty on Mac, check **System Settings → Privacy & Security →
    Bluetooth** for the browser you are actually using, then reopen it. USB access
    does not grant Bluetooth access. After updating the page, close the old chooser
@@ -188,10 +188,13 @@ remain disabled, while a full firmware installation is available over USB.
    nearby 2.4 GHz networks with Passport, or type a name. Leave the password blank
    only for a saved or explicitly open network. Wi-Fi testing may switch the
    Passport connection, never the computer's Wi-Fi.
-3. Under **Add an agent**, select **OpenClaw** or **Hermes**, then copy the matching
-   setup prompt to an agent with access to that gateway host. Paste its
-   pairing code or QR JSON and name the agent. A conflicting address is rejected,
-   not silently replaced. No camera-based QR reader is included in this version.
+3. Under **Add an agent**, select **OpenClaw**, **Hermes** or **Muse**. For
+   OpenClaw or Hermes, copy the matching setup prompt to an agent with access to
+   that gateway host, then paste its pairing code or QR JSON and name the agent.
+   A conflicting address is rejected, not silently replaced. For Muse, paste your
+   personal Gadget SDK token over USB, choose **Save settings**, and complete
+   **Settings → Agent → Pair Muse** on Passport with the Muse app. No camera-based
+   QR reader is included in this version.
 4. Each agent lists its saved connection method. Choose **Connection settings**
    on that agent to expand its direct or Shadowsocks settings in place. Editing
    another agent does not make it current; unsaved connection changes are marked
@@ -209,13 +212,12 @@ shows **Saved**, without an additional summary line or a taller bar. Editing aga
 restores the unsaved-changes status. Errors and partial-save details can wrap so
 the recovery instructions remain readable on a narrow screen.
 
-The agent type selects the setup instructions only; switching it keeps entered
-names, addresses and pairing codes and does not change saved device settings.
-Prompts follow the website language. OpenClaw instructions use its plugin and QR
-commands; Hermes instructions use its external platform plugin, active profile
-and pairing tool. Hermes requires compatible v0.7.0 or newer firmware and plugin;
-it is not included in v0.6.0. The device recognizes the backend after an
-authenticated connection, independently of the assistant's display name.
+The agent type selects the setup controls: OpenClaw and Hermes provide a setup
+prompt and pairing-code input, while Muse accepts a write-only Gadget SDK token
+over USB for on-device BLE pairing with the Muse app. Switching types keeps
+entered names, addresses and pairing codes and does not change saved device
+settings. Prompts follow the website language. The device displays the matching
+status-bar icon for the active assistant's backend independently of its display name.
 
 Copy feedback stays beside **Copy setup prompt**, never in the page-wide notice.
 The button briefly shows **Copied** with a check mark and a short next-step hint;

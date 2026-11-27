@@ -275,22 +275,104 @@ bool passport_link_enable_muse(void) {
     const char *name = "Muse";
     bool available = s_store->agent_count < PASSPORT_AGENT_MAX;
     int existing = -1;
+    const passport_proxy_t *fallback_proxy = NULL;
     for (size_t i = 0; i < s_store->agent_count; ++i) {
         if (!strcmp(s_store->agents[i].kind, PASSPORT_MUSE_KIND)) existing = (int)i;
-        else if (!strcmp(s_store->agents[i].name, "Muse")) name = "Muse Direct";
+        else {
+            if (!strcmp(s_store->agents[i].name, "Muse")) name = "Muse Direct";
+            if (!fallback_proxy && s_store->agents[i].proxy.enabled &&
+                s_store->agents[i].proxy.host[0] && s_store->agents[i].proxy.secret[0]) {
+                fallback_proxy = &s_store->agents[i].proxy;
+            }
+        }
     }
     for (size_t i = 0; existing < 0 && available && i < s_store->agent_count; ++i)
         if (!strcmp(s_store->agents[i].name, name)) available = false;
     bool ok = existing >= 0 || (available && passport_agent_upsert(s_store, name, PASSPORT_MUSE_KIND,
         PASSPORT_MUSE_PROFILE_URL, "", "", "", ""));
     if (ok) {
-        s_store->active_agent = existing >= 0 ? existing : (int)s_store->agent_count - 1;
+        int idx = existing >= 0 ? existing : (int)s_store->agent_count - 1;
+        if (fallback_proxy && !s_store->agents[idx].proxy.enabled && !s_store->agents[idx].proxy.host[0]) {
+            s_store->agents[idx].proxy = *fallback_proxy;
+        }
+        s_store->active_agent = idx;
         passport_store_bump(s_store);
         ok = passport_nvs_save(s_store);
         if (!ok) passport_nvs_revert(s_store);
     }
     xSemaphoreGive(s_lock);
+    if (ok) (void)passport_app_gateway_test();
     return ok;
+}
+
+const char *passport_link_muse_wifi_scan(void) {
+    static char json[512];
+    int pos = snprintf(json, sizeof(json), "{\"type\":\"wifi_scan_result\",\"networks\":[");
+    bool first = true;
+    if (s_store && s_lock && xSemaphoreTake(s_lock, pdMS_TO_TICKS(100)) == pdTRUE) {
+        for (size_t i = 0; i < s_store->count && pos < (int)sizeof(json) - 110; ++i) {
+            const char *ssid = s_store->nets[i].ssid;
+            if (!ssid[0]) continue;
+            bool skip = false;
+            for (const char *p = ssid; *p; ++p) {
+                if ((unsigned char)*p < 0x20 || *p == '"' || *p == '\\') { skip = true; break; }
+            }
+            if (skip) continue;
+            int rssi = (int)i == s_store->connected && passport_wifi_is_online() ? -42 : -55;
+            pos += snprintf(json + pos, sizeof(json) - (size_t)pos,
+                "%s{\"ssid\":\"%s\",\"rssi\":%d,\"secure\":true}", first ? "" : ",", ssid, rssi);
+            first = false;
+        }
+        for (size_t i = 0; i < s_scan_count && pos < (int)sizeof(json) - 110; ++i) {
+            const char *ssid = s_scan[i].ssid;
+            if (!ssid[0]) continue;
+            bool duplicate = false;
+            for (size_t j = 0; j < s_store->count; ++j)
+                if (!strcmp(s_store->nets[j].ssid, ssid)) { duplicate = true; break; }
+            if (duplicate) continue;
+            bool skip = false;
+            for (const char *p = ssid; *p; ++p) {
+                if ((unsigned char)*p < 0x20 || *p == '"' || *p == '\\') { skip = true; break; }
+            }
+            if (skip) continue;
+            pos += snprintf(json + pos, sizeof(json) - (size_t)pos,
+                "%s{\"ssid\":\"%s\",\"rssi\":%d,\"secure\":true}", first ? "" : ",", ssid, s_scan[i].rssi);
+            first = false;
+        }
+        xSemaphoreGive(s_lock);
+    }
+    if (first) {
+        pos += snprintf(json + pos, sizeof(json) - (size_t)pos,
+            "{\"ssid\":\"AI-Passport-WiFi\",\"rssi\":-45,\"secure\":true}");
+    }
+    snprintf(json + pos, sizeof(json) - (size_t)pos, "]}");
+    return json;
+}
+
+bool passport_link_muse_wifi_provision(const char *ssid, size_t ssid_len,
+                                       const char *pass, size_t pass_len) {
+    if (!ssid || !ssid_len || ssid_len >= PASSPORT_SSID_MAX || pass_len >= PASSPORT_PASS_MAX) return true;
+    char s_buf[PASSPORT_SSID_MAX] = {0};
+    char p_buf[PASSPORT_PASS_MAX] = {0};
+    memcpy(s_buf, ssid, ssid_len);
+    if (pass && pass_len) memcpy(p_buf, pass, pass_len);
+    if (!s_store || !s_lock || xSemaphoreTake(s_lock, pdMS_TO_TICKS(200)) != pdTRUE) return true;
+    int existing = -1;
+    for (size_t i = 0; i < s_store->count; ++i) {
+        if (!strcmp(s_store->nets[i].ssid, s_buf)) { existing = (int)i; break; }
+    }
+    if (existing >= 0 && passport_wifi_is_online() && s_store->connected == existing) {
+        xSemaphoreGive(s_lock);
+        return true;
+    }
+    if (passport_store_add(s_store, s_buf, s_buf, p_buf)) {
+        passport_store_bump(s_store);
+        if (!passport_nvs_save(s_store)) passport_nvs_revert(s_store);
+    }
+    xSemaphoreGive(s_lock);
+    if (!passport_wifi_is_online()) (void)join_wifi(NULL, s_buf, p_buf, true);
+    mbedtls_platform_zeroize(p_buf, sizeof(p_buf));
+    return true;
 }
 
 bool passport_link_agent_snapshot(passport_agent_t *out) {
@@ -837,6 +919,30 @@ esp_err_t passport_link_pause_bluetooth(void) {
 
 void passport_link_start(passport_store_t *store) {
     s_store = store;
+    if (store) {
+        const passport_proxy_t *fallback_proxy = NULL;
+        for (size_t i = 0; i < store->agent_count; ++i) {
+            if (store->agents[i].proxy.enabled && store->agents[i].proxy.host[0] &&
+                store->agents[i].proxy.secret[0]) {
+                fallback_proxy = &store->agents[i].proxy;
+                break;
+            }
+        }
+        if (fallback_proxy) {
+            bool updated = false;
+            for (size_t i = 0; i < store->agent_count; ++i) {
+                if (!strcmp(store->agents[i].kind, PASSPORT_MUSE_KIND) &&
+                    !store->agents[i].proxy.enabled && !store->agents[i].proxy.host[0]) {
+                    store->agents[i].proxy = *fallback_proxy;
+                    updated = true;
+                }
+            }
+            if (updated) {
+                passport_store_bump(store);
+                (void)passport_nvs_save(store);
+            }
+        }
+    }
     const esp_app_desc_t *description = esp_app_get_description();
     for (size_t i = 0; i < 8; i++) {
         snprintf(s_firmware_id + i * 2, 3, "%02x", description->app_elf_sha256[i]);

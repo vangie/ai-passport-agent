@@ -303,10 +303,10 @@ static esp_err_t i2s_full_duplex_init(void) {
     i2s_chan_config_t chan = {
         .id = BSP_I2S_PORT,
         .role = I2S_ROLE_MASTER,
-        /* 32 ms at 16 kHz, with bounded RAM for simultaneous display/radios.
-         * The display uses a 20-row buffer to preserve DMA headroom. */
-        .dma_desc_num = 4,
-        .dma_frame_num = 128,
+        /* 100 ms at 16 kHz absorbs single-sector Flash erases (~25-30 ms) during
+         * recording while keeping DMA RAM bounded for simultaneous display/radios. */
+        .dma_desc_num = 8,
+        .dma_frame_num = 200,
         .auto_clear_after_cb = true,
         .auto_clear_before_cb = false,
         .intr_priority = 0,

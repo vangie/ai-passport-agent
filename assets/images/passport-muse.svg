@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+  <!-- Compact Muse character artwork for the Passport header. -->
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left and right arms -->
+    <path d="M5.5 9.6C3.5 11.2 2.2 14.2 2.5 16.5c.2 1.1 1.3 1.5 2.1.6.6-.7 1-2.2 1.2-3.5Z" fill="#d9c2a6"/>
+    <path d="M16.5 9.6c2 1.6 3.3 4.6 3 6.9-.2 1.1-1.3 1.5-2.1.6-.6-.7-1-2.2-1.2-3.5Z" fill="#d9c2a6"/>
+    <!-- Left and right legs -->
+    <rect x="6.2" y="17.2" width="4.1" height="3.8" rx="1.6" fill="#cbb092"/>
+    <rect x="11.7" y="17.2" width="4.1" height="3.8" rx="1.6" fill="#cbb092"/>
+    <!-- Fluffy hood & torso -->
+    <path d="M11 1c-4.4 0-6 2.2-6.4 6.4-.3 3-.6 5.4-.6 7.4 0 2.5 1.8 4 4.4 4h5.2c2.6 0 4.4-1.5 4.4-4 0-2-.3-4.4-.6-7.4C17 3.2 15.4 1 11 1Z" fill="#ead6bc"/>
+    <!-- Soft belly highlight -->
+    <ellipse cx="11" cy="14.2" rx="4.5" ry="3.8" fill="#f4e5d2"/>
+    <!-- Face opening shadow & face -->
+    <rect x="5.6" y="3" width="10.8" height="7" rx="3.5" fill="#c7ac8e"/>
+    <rect x="6" y="3.5" width="10" height="6.2" rx="3.1" fill="#ffeedb"/>
+    <!-- Rosy cheeks -->
+    <rect x="6.5" y="7" width="2" height="1.5" rx="0.7" fill="#f3a696"/>
+    <rect x="13.5" y="7" width="2" height="1.5" rx="0.7" fill="#f3a696"/>
+    <!-- Symmetric dark eyes with top-left catchlight -->
+    <rect x="7" y="5" width="2" height="2" rx="0.8" fill="#181210"/>
+    <rect x="13" y="5" width="2" height="2" rx="0.8" fill="#181210"/>
+    <!-- Smile -->
+    <rect x="10" y="7" width="2" height="1" rx="0.4" fill="#3b261d"/>
+  </g>
+</svg>

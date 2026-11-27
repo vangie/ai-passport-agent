@@ -13,7 +13,8 @@ add_executable(preview
     "${REPO}/components/bsp/src/bsp_display_rounding.c"
     "${REPO}/assets/fonts/passport_font_16.c" "${REPO}/assets/fonts/passport_font_20.c"
     "${REPO}/assets/images/passport_lobster_22.c"
-    "${REPO}/assets/images/passport_hermes_22.c")
+    "${REPO}/assets/images/passport_hermes_22.c"
+    "${REPO}/assets/images/passport_muse_22.c")
 target_include_directories(preview PRIVATE "${REPO}/app" "${REPO}/components/bsp/src")
 target_link_libraries(preview PRIVATE lvgl m)
 enable_testing()

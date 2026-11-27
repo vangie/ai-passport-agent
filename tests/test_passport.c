@@ -135,6 +135,12 @@ static void test_navigation(void) {
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK) == PASSPORT_ACT_SELECT_AGENT, "candidate emits selection action");
     expect(store.active_agent == 0, "owner must persist agent selection");
+    passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(v.cursor == (int)store.agent_count, "cycle reaches Muse pairing row");
+    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK) == PASSPORT_ACT_MUSE_PAIR &&
+           v.screen == PASSPORT_SCREEN_MUSE_PAIR, "Muse pairing row opens Muse pairing screen");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    expect(v.screen == PASSPORT_SCREEN_SETTINGS && v.cursor == (int)store.agent_count, "Muse pairing returns to assistants");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     expect(v.screen == PASSPORT_SCREEN_PREFERENCES, "assistant returns to settings");
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
@@ -154,9 +160,7 @@ static void test_navigation(void) {
     expect(v.screen == PASSPORT_SCREEN_POWEROFF, "power-off follows standby");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(v.preference_cursor == PASSPORT_PREFERENCE_MUSE, "Muse pairing follows power-off");
-    passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(v.preference_cursor == 0, "settings wraps after Muse pairing");
+    expect(v.preference_cursor == 0, "settings wraps after power-off");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
 
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
@@ -221,8 +225,10 @@ static void test_navigation(void) {
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
     expect(!passport_key_binding(&v,&store,PASSPORT_BTN_UP).enabled,"empty assistant list disables cycling");
-    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_NONE &&
-           v.screen==PASSPORT_SCREEN_SETTINGS,"empty assistant page has only Back");
+    expect(passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK)==PASSPORT_ACT_MUSE_PAIR &&
+           v.screen==PASSPORT_SCREEN_MUSE_PAIR,"empty assistant page opens Muse pairing");
+    passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    expect(v.screen==PASSPORT_SCREEN_SETTINGS,"Muse pairing returns to assistant page");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     expect(v.screen==PASSPORT_SCREEN_HOME,"empty configuration can always return home");
@@ -333,7 +339,7 @@ static void test_preference_navigation(void) {
     passport_agent_upsert(&store,"Second","openclaw","wss://second.example","",NULL,NULL,NULL);
     passport_agent_select(&store,1);
     const passport_screen_t screens[]={PASSPORT_SCREEN_NETS,PASSPORT_SCREEN_SETTINGS,PASSPORT_SCREEN_PREFERENCES,PASSPORT_SCREEN_VOLUME,
-        PASSPORT_SCREEN_STANDBY,PASSPORT_SCREEN_POWEROFF,PASSPORT_SCREEN_MUSE_PAIR};
+        PASSPORT_SCREEN_STANDBY,PASSPORT_SCREEN_POWEROFF};
     const char *labels[][3]={{"Next","Open","Back"},{"切换","打开","返回"}};
     for (int language=0;language<2;language++) {
         passport_lang_set(&store,language ? "zh" : "en");
@@ -464,9 +470,7 @@ static void test_live_navigation(void) {
            "power-off cannot move in front of screen-off");
     view.standby_s=60;view.poweroff_s=1800;view.screen=PASSPORT_SCREEN_PREFERENCES;
     passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(view.preference_cursor==PASSPORT_PREFERENCE_MUSE,"Muse pairing follows power-off");
-    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(view.preference_cursor==0,"settings wrap after Muse pairing");
+    expect(view.preference_cursor==0,"settings wrap after power-off");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_BACK &&
            view.screen==PASSPORT_SCREEN_HOME,"settings return directly to the two voice entries");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_RECORD && view.recording,"home starts a recording");
@@ -1047,6 +1051,10 @@ static void test_chat_history(void) {
     passport_finish_send(&view,true,false,"豹子头。");
     expect(view.chat_count==2 && !strcmp(view.chat[1].answer,"豹子头。"),"retry updates its existing turn without duplication");
     expect(!strcmp(view.chat[0].answer,"林冲是水浒传中的人物。"),"a later answer cannot replace previous messages");
+    passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
+    passport_finish_send(&view,false,false,"未收到 Muse 回复，请在 App 查看");
+    expect(view.chat_count==2 && !view.chat_pending,"non-retryable failure discards its empty pending turn so home status message is visible");
     passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     expect(view.chat_count==2 && !view.chat_pending,"cancel removes only the unfinished turn");

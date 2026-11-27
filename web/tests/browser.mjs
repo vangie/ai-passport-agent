@@ -410,14 +410,16 @@ try {
   await musePage.getByRole('heading', { name: 'AI Passport · USB', exact: true }).waitFor();
   await musePage.locator('#pairing-details summary').click();
   await musePage.locator('.backend-options label:has([value="muse-direct"])').click();
+  assert.equal(await musePage.locator('#muse-pair-steps li').count(), 4);
   await musePage.locator('#muse-token').fill('invalid');
-  await musePage.locator('#save-muse-token').click();
+  await musePage.locator('#save').click();
   await musePage.getByText('请粘贴完整的 Muse Gadget SDK token。').waitFor();
   await musePage.locator('#muse-token').fill('mgst_' + 'A'.repeat(43));
-  await musePage.locator('#save-muse-token').click();
-  await musePage.getByText('已写入 SDK token，可以在工牌上开始配对。').waitFor();
+  await musePage.locator('#save').click();
+  await musePage.getByText('已保存', { exact: true }).waitFor();
   assert.equal(await musePage.evaluate(() => window.fixtureMuseWritten), 1);
   assert.equal(await musePage.locator('#muse-token').inputValue(), '');
+  assert.equal(await musePage.locator('#save').isDisabled(), true);
   assert.deepEqual(await musePage.evaluate(() => [localStorage.length, sessionStorage.length]), [0, 0]);
   await musePage.close();
   const museRoutePage = await context.newPage();
@@ -461,7 +463,7 @@ try {
   assert.equal(await page.evaluate(() => window.isSecureContext), true);
   assert.equal(await page.locator('.hero, .intro').count(), 0);
   assert.equal(await page.locator('header h1').textContent(), '设备配置台');
-  assert.equal(await page.locator('#agent-card .card-head .subtle').textContent(), '复制提示词，让 Agent 准备网关并生成配对码');
+  assert.equal(await page.locator('#agent-card .card-head .subtle').textContent(), '连接 OpenClaw、Hermes 或 Muse，可在设备上切换');
   assert.equal(await page.locator('#wifi-details').evaluate(element => element.open), true);
   assert.equal(await page.locator('#nearby-section #hotspot-help').count(), 0);
   assert.equal(await page.locator('#wifi-details #hotspot-help, #wifi-details .hint').count(), 0);
@@ -518,7 +520,7 @@ try {
   assert.match(await page.locator('#firmware-mode-note').textContent(), /通过 USB 连接设备/);
   assert.equal(await page.getByRole('group', { name: '界面语言' }).count(), 1);
   assert.equal(await page.getByRole('group', { name: '界面语言' }).getByRole('radio').count(), 2);
-  assert.equal(await page.getByRole('group', { name: '助手类型' }).getByRole('radio').count(), 4);
+  assert.equal(await page.getByRole('group', { name: '助手类型' }).getByRole('radio').count(), 3);
   assert.equal(await page.getByRole('radio', { name: 'OpenClaw', exact: true }).isChecked(), true);
   assert.equal(await page.locator('#language-zh').isChecked(), true);
   assert.equal(await page.locator('#language-en').isChecked(), false);
@@ -528,7 +530,7 @@ try {
   assert.equal(await page.locator('#language-en').evaluate(element => element === document.activeElement), true);
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
   assert.equal(await page.getByRole('group', { name: 'Interface language' }).count(), 1);
-  assert.equal(await page.locator('#agent-card .card-head .subtle').textContent(), 'Copy the prompt to have your agent prepare the gateway and generate a pairing code');
+  assert.equal(await page.locator('#agent-card .card-head .subtle').textContent(), 'Connect OpenClaw, Hermes or Muse and switch on the device');
   assert.equal(await page.locator('footer .footer-privacy').textContent(), 'Privacy & data');
   await checkPrivacyDialog(page, 'en', 'privacy-en-desktop');
   for (const width of [1360, 801, 800, 640, 561, 560, 390, 320]) {
@@ -971,25 +973,25 @@ try {
   for (const locale of ['zh', 'en']) {
     await page.locator(`label[for="language-${locale}"]`).click();
     await page.locator('.backend-options label:has([value="muse-direct"])').click();
-    assert.equal(await page.locator('#muse-token').isDisabled(), true);
+    assert.equal(await page.getByRole('radio', { name: 'Muse', exact: true }).isChecked(), true);
+    assert.equal(await page.locator('#muse-token').isEnabled(), true);
     assert.equal(await page.locator('#copy-prompt').isVisible(), false);
     assert.equal(await page.locator('#code').isVisible(), false);
-    for (const backend of ['muse', 'hermes', 'openclaw']) {
+    for (const backend of ['hermes', 'openclaw']) {
       await page.locator(`.backend-options label:has([value="${backend}"])`).click();
       assert.equal(await page.locator('#copy-prompt-status').isVisible(), false);
       assert.equal(await page.locator('#code').inputValue(), code);
       assert.equal(await page.locator('#name').inputValue(), nameBeforeCopy);
       assert.equal(await page.locator('#address').inputValue(), addressBeforeCopy);
       assert.equal(await page.locator('#discard').isDisabled(), true);
-      assert.equal(await page.locator('#muse-setup-note').isVisible(), backend === 'muse');
       await page.locator('#copy-prompt').click();
       await page.getByRole('button', { name: locale === 'zh' ? '已复制' : 'Copied', exact: true }).waitFor();
       const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
       assert.match(copiedPrompt, locale === 'zh' ? /^请/ : /^(?:On the host|Prepare)/);
-      const commands = { muse: 'python -m tools.muse pair', hermes: 'hermes plugins enable ai-passport-hermes', openclaw: 'openclaw qr --json' };
+      const commands = { hermes: 'hermes plugins enable ai-passport-hermes', openclaw: 'openclaw qr --json' };
       assert.ok(copiedPrompt.includes(commands[backend]));
       assert.equal(copiedPrompt.includes('passport_auth.py --home'), backend === 'hermes');
-      const labels = { muse: 'Muse', hermes: 'Hermes', openclaw: 'OpenClaw' };
+      const labels = { hermes: 'Hermes', openclaw: 'OpenClaw' };
       assert.ok((await page.locator('#copy-prompt-status').textContent()).includes(labels[backend]));
       for (const width of [1360, 390, 320]) {
         await page.setViewportSize({ width, height: 1150 });

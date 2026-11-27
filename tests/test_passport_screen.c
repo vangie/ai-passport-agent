@@ -271,11 +271,17 @@ int main(int argc, char **argv) {
         assert(lv_obj_get_width(s_logo)==22 && lv_obj_get_height(s_logo)==22);
     }
     strcpy(store.agents[0].kind,"muse");
+    strcpy(store.lang,"zh");strcpy(store.agents[0].name,"Muse");
+    render("muse-home",&v,&store);
+    strcpy(store.agents[0].name,"助手·Cloudflare");
     for (int language=0;language<2;language++) {
         strcpy(store.lang,language ? "en" : "zh");
         render(language ? "muse-header-en" : "muse-header-zh",&v,&store);
         assert(!strcmp(lv_label_get_text(s_title),"Muse"));
-        assert(lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN));
+        assert(lv_image_get_src(s_logo)==&passport_muse_22 && !lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN));
+        assert(lv_obj_get_x(s_logo)==20 && lv_obj_get_y(s_logo)==3);
+        assert(lv_obj_get_width(s_logo)==22 && lv_obj_get_height(s_logo)==22);
+        assert(lv_obj_get_x(s_title)==45);
         assert(lv_obj_has_flag(s_markers[PASSPORT_BTN_DOWN],LV_OBJ_FLAG_HIDDEN));
         assert(!lv_obj_has_flag(s_markers[PASSPORT_BTN_OK],LV_OBJ_FLAG_HIDDEN));
         assert(!strcmp(lv_label_get_text(s_body),language ? "Ask to read." : "提问看文字"));
@@ -328,9 +334,9 @@ int main(int argc, char **argv) {
     assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_SOONER,true),"缩短"));
     const char *settings_previews[][MENU_ITEMS]={
         {"settings-menu","settings-agents-selected","settings-bluetooth-selected","settings-volume-selected",
-         "settings-standby-selected","settings-poweroff-selected","settings-muse-selected"},
+         "settings-standby-selected","settings-poweroff-selected"},
         {"english-settings-menu","english-settings-agents-selected","english-settings-bluetooth-selected","english-settings-volume-selected",
-         "english-settings-standby-selected","english-settings-poweroff-selected","english-settings-muse-selected"}
+         "english-settings-standby-selected","english-settings-poweroff-selected"}
     };
     v.screen=PASSPORT_SCREEN_PREFERENCES;
     for (int language=0;language<2;language++) {
@@ -339,15 +345,15 @@ int main(int argc, char **argv) {
             v.preference_cursor=selection;
             render(settings_previews[language][selection],&v,&store);
             /* The same list as the network and assistant pages, plus a
-             * right-aligned value on every row. Seven items scroll through
+             * right-aligned value on every row. Six items scroll through
              * four rows with the focus one row below the top. */
-            const int expected_first[MENU_ITEMS]={0,0,1,2,3,3,3};
+            const int expected_first[MENU_ITEMS]={0,0,1,2,2,2};
             int first=expected_first[selection];
             assert(menu_first(selection)==first);
             assert(lv_obj_has_flag(s_body,LV_OBJ_FLAG_HIDDEN));
             check_choice_rows(MENU_ITEMS,(size_t)first,(size_t)selection);
-            const char *names[2][MENU_ITEMS]={{"网络","助手","蓝牙","音量","息屏","关机","Muse 配对"},
-                {"Wi-Fi","Agent","Bluetooth","Volume","Screen off","Power off","Muse pairing"}};
+            const char *names[2][MENU_ITEMS]={{"网络","助手","蓝牙","音量","息屏","关机"},
+                {"Wi-Fi","Agent","Bluetooth","Volume","Screen off","Power off"}};
             for (int row=0;row<MENU_ROWS;row++) {
                 assert(!strcmp(lv_label_get_text(s_chat_rows[row]),names[language ? 1 : 0][first+row]));
                 lv_obj_t *value=s_menu_values[row];
@@ -825,8 +831,9 @@ int main(int argc, char **argv) {
     check_choice_rows(1,0,0);
     assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"添加 Wi-Fi"));
     v.screen=PASSPORT_SCREEN_SETTINGS;render("no-assistants",&v,&store);
-    for (size_t row=0;row<PASSPORT_REPLY_ROWS;row++) assert(lv_obj_has_flag(s_chat_rows[row],LV_OBJ_FLAG_HIDDEN));
-    assert(!strcmp(lv_label_get_text(s_page_count),""));
+    check_choice_rows(1,0,0);
+    assert(!strcmp(lv_label_get_text(s_chat_rows[0]),"Muse 配对"));
+    assert(!strcmp(lv_label_get_text(s_page_count),"1 / 1"));
     for (size_t index=0;index<PASSPORT_NET_MAX;index++) {
         char ssid[33];snprintf(ssid,sizeof(ssid),"Network-%u",(unsigned)index+1);
         assert(passport_store_add(&store,ssid,ssid,"fixture"));
@@ -880,13 +887,17 @@ int main(int argc, char **argv) {
             if (selected==store.count) assert(strstr(lv_label_get_text(s_chat_rows[LIST_VISIBLE-1]),"Wi-Fi"));
         }
         v.screen=PASSPORT_SCREEN_SETTINGS;
-        for (size_t selected=0;selected<store.agent_count;selected++) {
+        for (size_t selected=0;selected<=store.agent_count;selected++) {
             v.cursor=(int)selected;
             char shot[64];snprintf(shot,sizeof(shot),"%s-assistant-list-%u",store.lang,(unsigned)selected);
             render(shot,&v,&store);
-            check_choice_rows(store.agent_count,0,selected);
+            size_t first=selected>1?selected-1:0;
+            if (first>store.agent_count+1-LIST_VISIBLE) first=store.agent_count+1-LIST_VISIBLE;
+            check_choice_rows(store.agent_count+1,first,selected);
             if (selected==store.active_agent)
                 assert(strstr(lv_label_get_text(s_hint),language?"In use":"当前助手"));
+            if (selected==store.agent_count)
+                assert(strstr(lv_label_get_text(s_chat_rows[LIST_VISIBLE-1]),"Muse"));
         }
         assert(store.connected==3 && store.active_agent==2);
     }

@@ -2,10 +2,11 @@
 
 # Gateway connectivity
 
-The Passport connects over Wi-Fi directly to your OpenClaw gateway. The macOS App
-or iOS App configures it; neither app forwards conversations. Install the
-[project plugin](../tools/openclaw/README.md) on the gateway host first. Examples
-use reserved placeholders, not a working shared service.
+Passport connects over Wi-Fi directly to your OpenClaw or Hermes gateway, or to Muse
+for direct Ask. The web configuration studio configures it and never forwards
+conversations. For OpenClaw or Hermes, install the
+[OpenClaw plugin](../tools/openclaw/README.md) or [Hermes adapter](../tools/hermes/README.md)
+on the gateway host first. Examples use reserved placeholders, not a working shared service.
 
 Gateway adapters and their wire/binding contract are maintained in
 [Valet Gateway](../integrations/valet-gateway/protocol/README.md). This page covers
@@ -41,11 +42,11 @@ heap, so recording and upload memory must also be checked on the physical device
 Actual latency depends on the ingress, proxy, network and negotiated protocol;
 use the logged TLS version and connection-stage timings to compare builds.
 
-The apps' **Copy Prompt** can ask an agent on the gateway host to install a
-missing plugin and establish a missing public ingress using authorized resources.
+**Copy setup prompt** in the web studio can ask an agent on the gateway host to install a
+missing plugin or adapter and establish a missing public ingress using authorized resources.
 It reuses working entries and keeps authentication enabled. Missing account
 access, domains, certificates or quota still require user action; see
-[agent-assisted setup](configuration.md#let-openclaw-prepare-the-gateway).
+[agent-assisted setup](configuration.md#let-the-setup-agent-prepare-the-gateway).
 The following sections also support manual setup.
 
 ## Cloudflare Tunnel

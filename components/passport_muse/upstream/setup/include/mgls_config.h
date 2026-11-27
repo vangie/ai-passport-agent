@@ -38,7 +38,7 @@
  * status error_storage and never overflows.
  */
 #ifndef MGLS_PROVISION_MAX
-#define MGLS_PROVISION_MAX 2560
+#define MGLS_PROVISION_MAX 3584
 #endif
 
 /* Per-token limits checked after decryption (error_storage above them). */
@@ -56,7 +56,7 @@
  * outside printable ASCII or a quote or backslash, could never be handed back: provision_v2 answers error_storage
  * and keeps the old set, as for a token over its limit. */
 #ifndef MGLS_CREDENTIALS_MAX
-#define MGLS_CREDENTIALS_MAX 2048
+#define MGLS_CREDENTIALS_MAX 3328
 #endif
 
 /* The longest SDK token pairing_confirmed may carry (mgst_... is ~48 chars). */

@@ -2,7 +2,7 @@
 
 <p align="center"><img src="assets/logo/logo.png" alt="AI Passport Agent" width="104" /></p>
 <h1 align="center">AI Passport Agent</h1>
-<p align="center"><strong>A wearable voice terminal for your personal agent</strong><br />Voice Q&amp;A and realtime calls with OpenClaw or Hermes</p>
+<p align="center"><strong>A wearable voice terminal for your personal agent</strong><br />Voice Q&amp;A and realtime calls with OpenClaw, Hermes or Muse</p>
 <p align="center">
   <a href="https://ai-passport-agent.codelife.me/">Open web studio</a> ·
   <a href="#get-started">Get started</a> ·
@@ -16,23 +16,17 @@ Turn FoloToy AI Passport into a dedicated voice interface for your personal agen
 Ask a question, read the answer, or have a spoken conversation. The device connects
 over Wi-Fi; a phone is not an audio relay.
 
-**v0.8.0: add direct Muse support and per-agent proxy routing.** Supports Muse,
-OpenClaw and Hermes. Muse direct uses the official Gadget SDK path for voice
+**v0.8.1: verified Muse BLE pairing, proxy inheritance, status-bar icon and voice-turn fixes.** Supports Muse,
+OpenClaw and Hermes. Muse uses the official Gadget SDK path for voice
 questions with text replies, while existing gateway pairings remain compatible.
-The project was previously named `ai-passport-openclaw`; existing devices and
-OpenClaw plugin installations remain compatible. The web studio is now at
-<https://ai-passport-agent.codelife.me/>; the former
-`ai-passport-openclaw.codelife.me` address redirects there. See
-[naming and compatibility](docs/configuration.md#project-name-and-compatibility).
 
 An independent community project based on [FoloToy/ai-passport](https://github.com/FoloToy/ai-passport),
 not official FoloToy firmware or an OpenClaw distribution. Installing it replaces
 the stock application and does not retain all of its original features.
 
-Backend adapters now come from the pinned [Valet Gateway](https://github.com/vangie/valet-gateway)
-submodule. Run `git submodule update --init --recursive` after cloning. Existing
-devices need no re-pairing. See [shared gateway source](docs/configuration.md#shared-gateway-source)
-for installation and complete source packages.
+OpenClaw and Hermes gateway adapters are maintained in the pinned [Valet Gateway](https://github.com/vangie/valet-gateway)
+submodule; run `git submodule update --init --recursive` after cloning. See
+[shared gateway source](docs/configuration.md#shared-gateway-source) for installation and complete source packages.
 
 ## Two ways to talk
 
@@ -52,22 +46,26 @@ quality depend on that provider, your gateway and network.
 
 ## Choose your personal agent
 
-| Backend | Ask | Call | Installation |
+| Backend | Ask | Call | Setup |
 | --- | --- | --- | --- |
 | OpenClaw | Dedicated `passport` agent with its authorized tools | Realtime voice with agent delegation | [OpenClaw plugin](tools/openclaw/README.md) |
 | Hermes | Native personal agent, tools and memory; a conversation per device | Realtime voice with native-agent delegation | [External Hermes plugin](tools/hermes/README.md) |
+| Muse | Direct Muse Gadget SDK connection with voice questions and text replies | Ask only (text replies) | [Muse setup](docs/configuration.md#muse) · Personal Gadget SDK token + Muse app BLE pairing |
 
-Select Muse, OpenClaw or Hermes from the same Agents list. Muse direct supports
-voice questions with text replies and can use its own saved direct or Shadowsocks
-route.
-[Muse setup](docs/configuration.md#muse)
+Switch between Muse, OpenClaw and Hermes from the device's **Settings → Agent** list.
+Each assistant can use a Direct connection or its own Shadowsocks proxy route.
 
-Call's realtime model handles ordinary dialogue; tasks, current information and
-private context can be delegated to the personal agent. Not every spoken turn
-runs a full agent task. Both backends need your own working model configuration;
-Call requires a separate realtime voice service. Provider charges are separate.
+Call's realtime model handles ordinary dialogue for OpenClaw and Hermes; tasks,
+current information and private context can be delegated to the personal agent. Not
+every spoken turn runs a full agent task. OpenClaw and Hermes need your own working
+model configuration and a separate realtime voice service for Call; Muse connects
+directly to your Muse account. Provider charges are separate.
 
-<p align="center"><img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes backend on Passport, rendered with fictional assistant data" width="240" /></p>
+<p align="center">
+  <img src="assets/images/screenshots/firmware-hermes.png" alt="Hermes backend on Passport, rendered with fictional assistant data" width="240" />
+  &nbsp;&nbsp;
+  <img src="assets/images/screenshots/firmware-muse.png" alt="Muse backend on Passport, rendered with fictional assistant data" width="240" />
+</p>
 
 ## Configure in your browser
 
@@ -101,7 +99,8 @@ browser/OS combinations still need device testing. See [browser compatibility](d
 ## Get started
 
 You need an AI Passport, a data-capable USB cable, reachable **2.4 GHz Wi-Fi** or
-a compatible hotspot, and a running OpenClaw or Hermes with a working model. Initial flashing
+a compatible hotspot, and either a Muse account (with a personal Gadget SDK token
+and the Muse app) or a running OpenClaw or Hermes with a working model. Initial flashing
 needs desktop Chrome/Edge. **OpenClaw 2026.10.5** is the tested plugin baseline;
 check compatibility before upgrading. Call also needs realtime voice credentials.
 
@@ -111,18 +110,30 @@ check compatibility before upgrading. Call also needs realtime voice credentials
    and confirm. Compatible updates use **Update firmware** with settings kept.
    Read the [data policy](docs/development/engineering/firmware-layout.md#flashing-and-stored-data)
    before replacing another firmware; there is no automatic stock-firmware rollback.
-2. **Prepare your agent.** Under **Add assistant**, select OpenClaw or Hermes,
-   choose **Copy Prompt** and send
-   it to an agent able to operate on your gateway host. It checks/installs the
-   matching plugin, prepares the backend's assistant and a secure reachable ingress,
-   then returns an address and limited pairing code. Existing resources are reused;
-   missing accounts, permissions or credentials still require your action.
-3. **Set Wi-Fi and pair.** Scan nearby networks or type a name and password.
-   Import the gateway address and pairing code, then **Save configuration**.
-   Wait for the Wi-Fi icon; use the device connection check before a first Ask.
-   Correct and retry failures without reflashing; expired codes need replacement.
-4. **Talk.** Choose **Ask** or **Call** on Passport and follow the key captions.
-   Close the setup page afterward. To change networks, use **Settings → Wi-Fi**;
+2. **Prepare your agent.**
+   - **OpenClaw or Hermes:** Under **Add an agent**, select OpenClaw or Hermes,
+     choose **Copy setup prompt** and send it to an agent able to operate on your
+     gateway host. It checks/installs the matching plugin, prepares the backend's
+     assistant and a secure reachable ingress, then returns an address and limited
+     pairing code. Existing resources are reused; missing accounts, permissions or
+     credentials still require your action. See [gateway preparation](docs/configuration.md#let-the-setup-agent-prepare-the-gateway).
+   - **Muse:** Connect Passport over desktop USB (leave at least one agent slot free),
+     select **Muse** under **Add an agent**, paste your personal
+     [Muse Gadget SDK token](https://gadgets.muse.ai/settings/sdk-tokens)
+     and choose **Save settings**. Then open **Settings → Agent → Pair Muse** on
+     Passport, enable **Settings → Devices → Developer mode** in the Muse phone app to
+     add Passport, and press the button next to **Confirm** on Passport. Once paired,
+     expand the `Muse` agent's **Connection settings** on the page if your network
+     requires a Shadowsocks proxy. See the [Muse setup guide](docs/configuration.md#muse).
+3. **Set Wi-Fi and save.** Scan nearby networks or type a name and password.
+   For OpenClaw or Hermes, paste the gateway address and pairing code, then
+   **Save settings**. Use **Connection settings** on any assistant when it requires
+   a Shadowsocks route. Wait for the Wi-Fi icon; use the device connection check
+   before a first Ask. Correct and retry failures without reflashing; expired codes
+   need replacement.
+4. **Talk.** Choose **Ask** (or **Call** on OpenClaw/Hermes) on Passport and follow
+   the key captions. Close the setup page afterward. To switch assistants or
+   networks on Passport, use **Settings → Agent** or **Settings → Wi-Fi**;
    use the web page to add a network or correct its password.
 
 For an iPhone hotspot, turn on **Allow Others to Join** and **Maximize Compatibility**.
@@ -138,14 +149,14 @@ See [configuration and everyday use](docs/configuration.md) for the full workflo
 ```text
 Web studio ── USB / Bluetooth ──> Passport settings
 Passport   ── Wi-Fi / WSS ─────> OpenClaw or Hermes + plugin ──> Your providers
+Passport   ── Wi-Fi / Noise ───> Muse (Direct or Shadowsocks)
 ```
 
-The setup page is not a cloud assistant and does not carry conversations. Model
-API keys stay on the gateway. Both plugins use native integration points, not core
-patches. Hermes installs outside the core checkout; ordinary core upgrades preserve
-the plugin and device grants. Future API compatibility still needs verification.
-The upgraded Hermes v0.23.1 passed plugin discovery and adapter tests; new-version
-microphone/speaker acceptance remains pending. See the backend installation guides.
+The setup page is not a cloud assistant and does not carry conversations. Muse
+connects directly using credentials stored on Passport; OpenClaw and Hermes keep
+model API keys on the gateway. Both gateway plugins use native integration points,
+not core patches. Hermes installs outside the core checkout so ordinary core
+upgrades preserve the plugin and device grants. See the backend installation guides.
 
 For remote use, the bilingual [connectivity and security guide](docs/networking.md)
 covers **Cloudflare Tunnel**, **SakuraFrp with TLS**, LAN access, proxies, pairing
@@ -180,9 +191,9 @@ See [NFC details](docs/configuration.md#nfc-and-personal-hotspot).
 
 ## Releases and development
 
-Releases contain application/merged firmware, a firmware bundle, an installable
-OpenClaw plugin, `release-manifest.json`, `SHA256SUMS.txt` and license information.
-v0.7.5 also packages `ai-passport-hermes-0.7.5.tar.gz`. No native apps are packaged.
+Releases contain the application and merged firmware images, the firmware archive,
+the complete source archive, the OpenClaw and Hermes plugin packages,
+`release-manifest.json`, `SHA256SUMS.txt` and license notices.
 The web studio serves verified firmware on its own origin: your browser does not
 follow GitHub Release download redirects. GitHub Pages itself may still be
 unreachable on some networks. Hashes detect corruption, not a compromised publisher.
@@ -191,6 +202,7 @@ unreachable on some networks. Hashes detect corruption, not a compromised publis
 | --- | --- |
 | Web studio | `web/` · [Browser guide](docs/web.md) |
 | Firmware | `app/`, `main/`, `components/bsp/` · [Build and test](docs/development/engineering/build-and-test.md) |
+| Muse integration | `main/passport_muse*`, `components/passport_muse/` · [Muse setup](docs/configuration.md#muse) |
 | OpenClaw plugin | [`tools/openclaw/`](tools/openclaw/README.md) |
 | Hermes plugin | [`tools/hermes/`](tools/hermes/README.md) |
 | Network ingress | [Connectivity and security](docs/networking.md) |

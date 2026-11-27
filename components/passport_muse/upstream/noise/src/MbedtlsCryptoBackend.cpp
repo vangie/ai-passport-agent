@@ -304,11 +304,13 @@ bool IsAllZero(ConstByteSpan bytes) noexcept {
 }
 
 const unsigned char* MbedtlsData(ConstByteSpan bytes) noexcept {
-  return bytes.empty() ? nullptr : bytes.data();
+  static constexpr unsigned char kEmptyData = 0;
+  return bytes.empty() ? &kEmptyData : bytes.data();
 }
 
 unsigned char* MbedtlsData(ByteSpan bytes) noexcept {
-  return bytes.empty() ? nullptr : bytes.data();
+  static unsigned char kEmptyData = 0;
+  return bytes.empty() ? &kEmptyData : bytes.data();
 }
 
 Status ValidateAesInputs(
@@ -656,7 +658,7 @@ Status MbedtlsCryptoBackend::Aes256GcmOpen(
         aad.size(),
         ciphertextAndTag.data() + plaintextLen,
         kAes256GcmTagSize,
-        plaintextLen == 0 ? nullptr : ciphertextAndTag.data(),
+        MbedtlsData(ciphertextAndTag),
         MbedtlsData(plaintextOut));
     if (rc == MBEDTLS_ERR_GCM_AUTH_FAILED) {
       status = Status::Unauthenticated();

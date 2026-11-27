@@ -22,6 +22,7 @@ static esp_netif_t *s_netif;
 static EventGroupHandle_t s_events;
 static bool s_started;
 static bool s_online;
+static int s_power_mode = -1;
 static volatile uint8_t s_reason;
 static SemaphoreHandle_t s_operation_lock;
 static atomic_uint s_join_waiters;
@@ -316,7 +317,9 @@ bool passport_wifi_is_online(void) {
 
 esp_err_t passport_wifi_gateway_performance(bool enabled) {
     if (!s_started) return ESP_ERR_INVALID_STATE;
+    if (s_power_mode == (int)enabled) return ESP_OK;
     esp_err_t err = esp_wifi_set_ps(enabled ? WIFI_PS_NONE : WIFI_PS_MIN_MODEM);
+    if (err == ESP_OK) s_power_mode = (int)enabled;
     ESP_LOGI(TAG, "gateway Wi-Fi power mode=%s result=%s",
              enabled ? "performance" : "power-save", esp_err_to_name(err));
     return err;
