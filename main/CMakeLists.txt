@@ -6,6 +6,9 @@ idf_component_register(
          "passport_audio.c"
          "passport_clip.c"
          "passport_gateway.c"
+         "passport_muse.cpp"
+         "passport_muse_store.c"
+         "passport_muse_ble.c"
          "passport_clock.c"
          "passport_tls.c"
          "passport_screen.c"
@@ -33,7 +36,7 @@ idf_component_register(
          "../app/openclaw_frame.c"
     INCLUDE_DIRS "." "../app"
     REQUIRES bsp nvs_flash bt esp_event esp_netif esp_wifi esp_app_format esp_partition esp_pm
-             tcp_transport esp-tls mbedtls json passport_crypto passport_transport passport_vad
+             tcp_transport esp-tls esp_http_client mbedtls json passport_crypto passport_transport passport_vad passport_muse
 )
 
 # The UI and application loop run on the small main-task stack. Fail the

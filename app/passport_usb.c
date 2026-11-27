@@ -236,7 +236,7 @@ void passport_usb_line(passport_usb_t *usb, const char *line) {
             memcpy(name, pair.host, sizeof(name) - 1);
             name[sizeof(name) - 1] = '\0';
         }
-        if (!passport_agent_upsert(usb->store, name, "openclaw", pair.url, pair.bootstrap, "", "",
+        if (!passport_agent_upsert(usb->store, name, pair.muse ? "muse" : "openclaw", pair.url, pair.bootstrap, "", "",
                                 "")) {
             say(usb, "ERR agent");
             return;
@@ -421,6 +421,7 @@ void passport_usb_line(passport_usb_t *usb, const char *line) {
             }
             memcpy(form.gateway_url, pair.url, sizeof(form.gateway_url) - 1);
             memcpy(form.bootstrap, pair.bootstrap, sizeof(form.bootstrap) - 1);
+            if (pair.muse) snprintf(form.agent_kind, sizeof(form.agent_kind), "%s", "muse");
             if (form.agent_name[0] == '\0') {
                 memcpy(form.agent_name, pair.host, sizeof(form.agent_name) - 1);
                 form.agent_name[sizeof(form.agent_name) - 1] = '\0';

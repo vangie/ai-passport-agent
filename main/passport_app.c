@@ -15,6 +15,7 @@
 #include "passport_buttons.h"
 #include "passport_control.h"
 #include "passport_network.h"
+#include "passport_muse.h"
 #include "driver/usb_serial_jtag.h"
 
 #include "esp_log.h"
@@ -40,6 +41,7 @@ typedef struct {
     passport_input_t key;
     char *run_id;
     uint32_t capture_generation;
+    unsigned muse_prompt;
     passport_action_t capture_action;
     unsigned expected_volume;
     unsigned desired_volume;
@@ -56,6 +58,7 @@ static bool s_restart_live;
 static uint8_t s_saved_volume;
 static bool s_ble_config_requested;
 static bool s_ble_config_suppressed;
+static bool s_muse_setup_started;
 static int64_t s_boot_us;
 static int s_polled_button = -1;
 static passport_buttons_t s_buttons;
@@ -92,6 +95,7 @@ void passport_wifi_autoconnect(passport_store_t *store);
 void passport_link_diagnostic_reply(const char *line);
 void passport_link_control_complete(void);
 bool passport_link_apply_selection(passport_action_t action, int index, uint32_t expected_generation);
+bool passport_link_enable_muse(void);
 bool passport_link_connect_network(int index, uint32_t generation);
 passport_network_state_t passport_link_network_result(void);
 bool passport_link_configuration_busy(void);
@@ -169,6 +173,7 @@ static void power_maintain(void) {
         s_view.screen == PASSPORT_SCREEN_LIVE || s_audio_test_active || audio.worker_owned ||
         s_view.screen == PASSPORT_SCREEN_PREFERENCES || s_view.screen == PASSPORT_SCREEN_NETS ||
         s_view.screen == PASSPORT_SCREEN_NET_MENU || s_view.screen == PASSPORT_SCREEN_ADD ||
+        s_view.screen == PASSPORT_SCREEN_MUSE_PAIR ||
         s_view.screen == PASSPORT_SCREEN_SETTINGS || s_view.screen == PASSPORT_SCREEN_VOLUME ||
         s_view.screen == PASSPORT_SCREEN_STANDBY || s_view.screen == PASSPORT_SCREEN_POWEROFF ||
         s_polled_button >= 0 || passport_link_configuration_busy() ||
@@ -374,6 +379,40 @@ static void maintain_bluetooth_mode(void) {
     int64_t now = esp_timer_get_time();
     if (s_view.network_state == PASSPORT_NETWORK_CONNECTING) { passport_gateway_maintain(false); return; }
     if (now < retry_after) return;
+    if (s_view.screen == PASSPORT_SCREEN_MUSE_PAIR) {
+        passport_gateway_maintain(false);
+        if (!passport_gateway_quiescent()) return;
+        if (!s_muse_setup_started) {
+            if (passport_link_pause_bluetooth() != ESP_OK || passport_audio_release() != ESP_OK) {
+                retry_after = now + 1000000;
+                return;
+            }
+            passport_muse_pair_open();
+            s_muse_setup_started = true;
+            if (passport_muse_pair_state() == PASSPORT_MUSE_PAIR_WAITING &&
+                passport_link_resume_bluetooth() != ESP_OK) {
+                passport_muse_pair_close();
+                s_view.muse_pair = PASSPORT_MUSE_PAIR_FAILED;
+                snprintf(s_view.notice, sizeof(s_view.notice), "%s", passport_lang_zh(&s_store)
+                    ? "蓝牙启动失败" : "Bluetooth failed to start.");
+                return;
+            }
+        }
+        unsigned pair = passport_muse_pair_state();
+        if (pair == PASSPORT_MUSE_PAIR_DONE && s_view.muse_pair != pair) {
+            if (!passport_link_enable_muse()) {
+                snprintf(s_view.notice, sizeof(s_view.notice), "%s", passport_lang_zh(&s_store)
+                    ? "请检查助手列表是否已满" : "Check that the Agents list has a free slot.");
+            }
+        }
+        if (pair) s_view.muse_pair = pair;
+        return;
+    }
+    if (s_muse_setup_started) {
+        if (passport_link_pause_bluetooth() != ESP_OK) { retry_after = now + 1000000; return; }
+        passport_muse_pair_close();
+        s_muse_setup_started = false;
+    }
     bool configuring = passport_link_is_bluetooth_active() && passport_link_configuration_busy() &&
         (!s_ble_config_suppressed || passport_link_configuration_pending());
     bool online = passport_wifi_is_online();
@@ -422,6 +461,7 @@ static void button_event(bsp_btn_t button, bsp_btn_ev_t event, void *user) {
     (void)user;
     if (!s_inputs || (event != BSP_BTN_PRESS && event != BSP_BTN_RELEASE)) return;
     const app_input_t input = { .kind = INPUT_PHYSICAL_KEY,
+        .muse_prompt = event == BSP_BTN_PRESS ? passport_muse_pair_prompt() : 0,
         .key = { .btn = (passport_btn_t)button, .press = event == BSP_BTN_PRESS ? PASSPORT_PRESS : PASSPORT_RELEASE } };
     (void)xQueueSend(s_inputs, &input, 0);
 }
@@ -484,6 +524,7 @@ void app_main(void) {
     passport_wifi_autoconnect(&s_store);
     passport_memory_report("app_ready");
     ESP_LOGI(TAG, "passport ready, %u agents", (unsigned)s_store.agent_count);
+    unsigned pressed_muse_prompt = 0;
     while (true) {
         poll_button_wake();
         if (s_view.recording || s_view.sending || passport_gateway_active())
@@ -491,19 +532,22 @@ void app_main(void) {
         if (!s_view.recording && !s_view.sending) passport_chat_sync(&s_view, &s_store);
         app_input_t event;
         while (xQueueReceive(s_inputs, &event, 0) == pdTRUE) {
-            if (event.kind == INPUT_PHYSICAL_KEY) {
+            bool physical_click = event.kind == INPUT_PHYSICAL_KEY;
+            if (physical_click) {
                 bool pressed = event.key.press == PASSPORT_PRESS;
                 bool suppress = passport_power_key(&s_power, power_now_ms(), pressed);
                 if (suppress && pressed) (void)power_wake();
                 bool click = passport_buttons_event(&s_buttons, &event.key, suppress);
                 s_polled_button = s_buttons.pressed ? (int)s_buttons.button : -1;
                 if (!suppress && pressed) {
+                    pressed_muse_prompt = event.muse_prompt;
                     s_polled_capture_generation = s_capture_generation;
                     s_polled_capture_action = s_view.recording && s_view.screen == PASSPORT_SCREEN_CAPTURE
                         ? passport_key_binding(&s_view, &s_store, event.key.btn).action : PASSPORT_ACT_NONE;
                 }
                 if (!click) continue;
                 event.kind = INPUT_KEY;
+                event.muse_prompt = pressed_muse_prompt;
                 event.capture_generation = s_polled_capture_generation;
                 event.capture_action = s_polled_capture_action;
             }
@@ -634,6 +678,8 @@ void app_main(void) {
             }
             if (s_device_check) { (void)passport_gateway_cancel(); continue; }
             passport_input_t input = event.key;
+            if (input.btn == PASSPORT_BTN_DOWN && s_view.screen == PASSPORT_SCREEN_MUSE_PAIR &&
+                (!physical_click || !event.muse_prompt)) continue;
             bool was_recording = s_view.recording;
             bool was_sending = s_view.sending;
             bool was_cancelling = s_view.cancel_pending;
@@ -642,6 +688,7 @@ void app_main(void) {
             uint32_t expected_generation = s_store.generation;
             uint8_t previous_volume = s_view.speaker_volume;
             passport_action_t action = passport_on_key(&s_view, &s_store, input.btn, input.press);
+            if (action == PASSPORT_ACT_MUSE_CONFIRM) passport_muse_pair_confirm(event.muse_prompt);
             if (action == PASSPORT_ACT_VOLUME_UP || action == PASSPORT_ACT_VOLUME_DOWN) {
                 if (passport_audio_set_volume(s_view.speaker_volume) != ESP_OK) {
                     s_view.speaker_volume = previous_volume;

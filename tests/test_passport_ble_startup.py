@@ -30,18 +30,19 @@ def function_source(source, name):
 HARNESS = r"""
 #include <assert.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "passport_ble_session.h"
+#include "passport.h"
 #include "passport_line.h"
 #define portENTER_CRITICAL(lock) ((void)(lock))
 #define portEXIT_CRITICAL(lock) ((void)(lock))
 static int s_ble_state_lock;
 static passport_ble_session_t s_ble_sessions;
 static passport_line_t s_ble_lines[PASSPORT_BLE_PEERS];
-static bool s_configuration_connected;
-#define atomic_store(target, value) (*(target) = (value))
+static atomic_bool s_configuration_connected;
 
 typedef int esp_err_t;
 typedef void *TaskHandle_t;
@@ -89,6 +90,12 @@ static int gap_event(struct ble_gap_event *event, void *argument) {
 }
 static TaskHandle_t s_host_task;
 static SemaphoreHandle_t s_host_stopped;
+static atomic_bool s_muse_connection;
+static unsigned passport_muse_pair_state(void) { return PASSPORT_MUSE_PAIR_OFF; }
+static int passport_muse_ble_advertisement(void) { return 0; }
+static int passport_muse_ble_register(void) { return 0; }
+static bool passport_muse_ble_ready(void) { return false; }
+static const char *passport_muse_ble_name(void) { return ""; }
 static const int k_svcs[] = {1, 0};
 static struct {
     void (*sync_cb)(void);

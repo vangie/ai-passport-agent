@@ -18,11 +18,22 @@ PATTERNS = {
     'deployment hostname': re.compile(r'\b[A-Za-z0-9-]+\.(?:online|local|trycloudflare\.com)\b', re.I),
 }
 SERVICE_HOSTS = {'github.com', 'docs.openclaw.ai', 'registry.npmjs.org', 'www.apple.com', 'apps.apple.com', 'www.w3.org'}
-SERVICE_ENDPOINTS = {'tools/hermes/passport_talk.py': {'wss://api.openai.com/v1/realtime'}}
+SERVICE_ENDPOINTS = {
+    'tools/hermes/passport_talk.py': {'wss://api.openai.com/v1/realtime'},
+    'app/passport.h': {'wss://hatch.metaaivm.com/v1/noise'},
+    'main/passport_muse.cpp': {'https://api.muse.ai'},
+    'web/src/main.js': {'https://gadgets.muse.ai/settings/sdk-tokens', 'wss://hatch.metaaivm.com/v1/noise'},
+}
 
 
 def findings(name, data):
     name = name.removeprefix("integrations/valet-gateway/")
+    service_endpoints = SERVICE_ENDPOINTS.get(name, set())
+    if name.startswith('web/dist/assets/') and name.endswith('.js'):
+        service_endpoints = SERVICE_ENDPOINTS['web/src/main.js']
+    elif name in {'web/dist/firmware/agent-talk.bin', 'web/dist/firmware/agent-talk-full.bin'}:
+        service_endpoints = {value.split('/v1/')[0] for path in ('app/passport.h', 'main/passport_muse.cpp')
+                             for value in SERVICE_ENDPOINTS[path]}
     errors = []
     for label, pattern in PATTERNS.items():
         if pattern.search(data):
@@ -30,7 +41,7 @@ def findings(name, data):
     if (name.startswith(('app/', 'main/', 'mac/', 'ios/', 'shared/', 'tools/openclaw/', 'tools/hermes/', 'web/src/', 'web/prompts/', 'web/public/', 'web/dist/')) or name == 'web/index.html') and not name.endswith('.md'):
         for value in re.findall(r'(?:https?|wss?)://[A-Za-z0-9._-]+(?::[0-9]+)?(?:/[A-Za-z0-9_./-]*)?', data):
             host = urlsplit(value).hostname
-            if (value in SERVICE_ENDPOINTS.get(name, set()) or not host or host in SERVICE_HOSTS or
+            if (value in service_endpoints or not host or host in SERVICE_HOSTS or
                     host in {'localhost', 'ai-passport', '192.168.4.1'} or host.endswith(('.example', '.invalid'))):
                 continue
             try:

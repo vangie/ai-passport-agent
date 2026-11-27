@@ -5,6 +5,8 @@
 #include "passport_memory.h"
 #include "passport_power.h"
 #include "passport_network.h"
+#include "passport_muse.h"
+#include "mbedtls/platform_util.h"
 #include <stdatomic.h>
 #include "bsp_display.h"
 #include "lvgl.h"
@@ -106,6 +108,7 @@ static SemaphoreHandle_t s_ble_transmitted;
 static atomic_int s_ble_transmit_status;
 static atomic_uint_least16_t s_ble_transmitting = BLE_HS_CONN_HANDLE_NONE;
 static atomic_uint s_async_configuration;
+static atomic_bool s_muse_connection;
 
 static bool configuration_line(const char *line) {
     return strcmp(line, "HELLO") && strcmp(line, "DIAG") && strcmp(line, "MEM") &&
@@ -267,6 +270,29 @@ bool passport_link_apply_selection(passport_action_t action, int index, uint32_t
     return ok;
 }
 
+bool passport_link_enable_muse(void) {
+    if (!s_store || !s_lock || xSemaphoreTake(s_lock, pdMS_TO_TICKS(100)) != pdTRUE) return false;
+    const char *name = "Muse";
+    bool available = s_store->agent_count < PASSPORT_AGENT_MAX;
+    int existing = -1;
+    for (size_t i = 0; i < s_store->agent_count; ++i) {
+        if (!strcmp(s_store->agents[i].kind, PASSPORT_MUSE_KIND)) existing = (int)i;
+        else if (!strcmp(s_store->agents[i].name, "Muse")) name = "Muse Direct";
+    }
+    for (size_t i = 0; existing < 0 && available && i < s_store->agent_count; ++i)
+        if (!strcmp(s_store->agents[i].name, name)) available = false;
+    bool ok = existing >= 0 || (available && passport_agent_upsert(s_store, name, PASSPORT_MUSE_KIND,
+        PASSPORT_MUSE_PROFILE_URL, "", "", "", ""));
+    if (ok) {
+        s_store->active_agent = existing >= 0 ? existing : (int)s_store->agent_count - 1;
+        passport_store_bump(s_store);
+        ok = passport_nvs_save(s_store);
+        if (!ok) passport_nvs_revert(s_store);
+    }
+    xSemaphoreGive(s_lock);
+    return ok;
+}
+
 bool passport_link_agent_snapshot(passport_agent_t *out) {
     if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(100)) != pdTRUE) return false;
     const passport_agent_t *agent = passport_agent_active(s_store);
@@ -303,6 +329,14 @@ void passport_link_control_complete(void) {
 }
 
 static void handle_line(const char *line) {
+    if (!strncmp(line, "MUSE_TOKEN ", 11)) {
+        if (s_command_session || passport_app_device_busy() || passport_muse_pair_state()) {
+            reply(NULL, "ERR busy");
+        } else {
+            reply(NULL, passport_muse_token_save(line + 11) ? "OK muse-token" : "ERR museToken");
+        }
+        return;
+    }
     if (!strcmp(line, "DEVICE") || !strcmp(line, "CHECK") || !strcmp(line, "CHECK_CANCEL") ||
         !strncmp(line, "VOLUME ", 7) || !strncmp(line, "POWERCFG ", 9)) {
         bool deferred = !strcmp(line, "DEVICE") || !strncmp(line, "VOLUME ", 7) || !strncmp(line, "POWERCFG ", 9);
@@ -389,7 +423,7 @@ static void handle_line(const char *line) {
     memset(&usb, 0, sizeof(usb));
     usb.store = s_store;
     usb.build = s_firmware_id;
-    usb.capabilities = "device-control ble-secure ble-takeover scan-live power-config";
+    usb.capabilities = "device-control ble-secure ble-takeover scan-live power-config muse-direct";
     usb.scan = s_scan;
     usb.scan_count = s_scan_count;
     usb.reply = reply;
@@ -461,6 +495,8 @@ static void process_line(char *line) {
     if (configuring) atomic_fetch_sub(&s_configuration_pending, 1);
     passport_power_command_end();
     if (network) atomic_store(&s_network_command, NULL);
+    if (!network && !strncmp(line, "MUSE_TOKEN ", 11))
+        mbedtls_platform_zeroize(line, strlen(line));
     free(line);
     if (network) {
         atomic_store(&s_network_state, result);
@@ -515,7 +551,9 @@ static void line_task(void *arg) {
     (void)arg;
     passport_link_command_t command;
     while (1) {
-        if (xQueueReceive(s_lines, &command, pdMS_TO_TICKS(250)) == pdTRUE) process_command(command);
+        TickType_t wait = pdMS_TO_TICKS(passport_muse_pair_state() ? 20 : 250);
+        if (xQueueReceive(s_lines, &command, wait) == pdTRUE) process_command(command);
+        passport_muse_ble_poll();
         portENTER_CRITICAL(&s_ble_state_lock);
         uint32_t expired = passport_ble_expired(&s_ble_sessions, (uint32_t)(esp_timer_get_time() / 1000));
         portEXIT_CRITICAL(&s_ble_state_lock);
@@ -527,6 +565,14 @@ static int gap_event(struct ble_gap_event *event, void *arg);
 
 static int advertise(void) {
     if (s_ble_paused) return 0;
+    if (passport_muse_pair_state()) {
+        if (atomic_load(&s_muse_connection) || ble_gap_adv_active()) return 0;
+        int result = passport_muse_ble_advertisement();
+        if (result) return result;
+        struct ble_gap_adv_params params = { .conn_mode = BLE_GAP_CONN_MODE_UND,
+                                             .disc_mode = BLE_GAP_DISC_MODE_GEN };
+        return ble_gap_adv_start(s_addr_type, NULL, BLE_HS_FOREVER, &params, gap_event, NULL);
+    }
     portENTER_CRITICAL(&s_ble_state_lock);
     bool full = passport_ble_count(&s_ble_sessions) >= PASSPORT_BLE_PEERS;
     portEXIT_CRITICAL(&s_ble_state_lock);
@@ -554,6 +600,17 @@ static int advertise(void) {
 
 static int gap_event(struct ble_gap_event *event, void *arg) {
     (void)arg;
+    if (passport_muse_pair_state()) {
+        if (event->type == BLE_GAP_EVENT_CONNECT && event->connect.status == 0) {
+            atomic_store(&s_muse_connection, true);
+            passport_muse_ble_connection(event->connect.conn_handle, true);
+        } else if (event->type == BLE_GAP_EVENT_DISCONNECT) {
+            atomic_store(&s_muse_connection, false);
+            passport_muse_ble_connection(event->disconnect.conn.conn_handle, false);
+            advertise();
+        } else if (event->type == BLE_GAP_EVENT_CONNECT || event->type == BLE_GAP_EVENT_ADV_COMPLETE) advertise();
+        return 0;
+    }
     if (event->type == BLE_GAP_EVENT_CONNECT) {
         if (event->connect.status == 0) {
             portENTER_CRITICAL(&s_ble_state_lock);
@@ -667,12 +724,15 @@ static void on_sync(void) {
     if (result == 0) result = ble_hs_id_infer_auto(0, &s_addr_type);
     uint8_t address[6];
     if (result == 0) result = ble_hs_id_copy_addr(s_addr_type, address, NULL);
-    if (result == 0) {
+    bool muse = passport_muse_pair_state() != PASSPORT_MUSE_PAIR_OFF;
+    if (result == 0 && muse) {
+        result = ble_svc_gap_device_name_set(passport_muse_ble_name());
+    } else if (result == 0) {
         snprintf(s_ble_name, sizeof(s_ble_name), "AI Passport %02X%02X",
                  (unsigned)address[1], (unsigned)address[0]);
         result = ble_svc_gap_device_name_set(s_ble_name);
     }
-    if (result == 0 && s_tx_handle == 0) result = BLE_HS_ENOENT;
+    if (result == 0 && !(muse ? passport_muse_ble_ready() : s_tx_handle != 0)) result = BLE_HS_ENOENT;
     if (result == 0) result = advertise();
     if (result != 0) {
         ESP_LOGE(TAG, "BLE sync failed: %d", result);
@@ -704,8 +764,13 @@ esp_err_t passport_link_resume_bluetooth(void) {
     s_tx_handle = 0;
     ble_svc_gap_init();
     ble_svc_gatt_init();
-    int result = ble_gatts_count_cfg(k_svcs);
-    if (result == 0) result = ble_gatts_add_svcs(k_svcs);
+    int result;
+    if (passport_muse_pair_state()) {
+        result = passport_muse_ble_register();
+    } else {
+        result = ble_gatts_count_cfg(k_svcs);
+        if (result == 0) result = ble_gatts_add_svcs(k_svcs);
+    }
     if (result != 0) {
         ESP_LOGE(TAG, "BLE service registration failed: %d", result);
         err = nimble_port_deinit();
@@ -757,6 +822,7 @@ esp_err_t passport_link_pause_bluetooth(void) {
     esp_err_t err = nimble_port_deinit();
     if (err == ESP_OK) {
         s_ble_initialized = false; s_ble_stopping = false;
+        atomic_store(&s_muse_connection, false);
         for (size_t index = 0; index < PASSPORT_BLE_PEERS; index++) passport_line_reset(&s_ble_lines[index]);
         portENTER_CRITICAL(&s_ble_state_lock);
         for (size_t index = 0; index < PASSPORT_BLE_PEERS; index++)

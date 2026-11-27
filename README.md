@@ -16,8 +16,9 @@ Turn FoloToy AI Passport into a dedicated voice interface for your personal agen
 Ask a question, read the answer, or have a spoken conversation. The device connects
 over Wi-Fi; a phone is not an audio relay.
 
-**v0.7.7: shared gateway packages and restored TLS 1.3 support.** Supports OpenClaw and Hermes; use the matching external plugin for your backend.
-Other agent integrations are not available yet.
+**v0.8.0: add direct Muse support and per-agent proxy routing.** Supports Muse,
+OpenClaw and Hermes. Muse direct uses the official Gadget SDK path for voice
+questions with text replies, while existing gateway pairings remain compatible.
 The project was previously named `ai-passport-openclaw`; existing devices and
 OpenClaw plugin installations remain compatible. The web studio is now at
 <https://ai-passport-agent.codelife.me/>; the former
@@ -55,6 +56,11 @@ quality depend on that provider, your gateway and network.
 | --- | --- | --- | --- |
 | OpenClaw | Dedicated `passport` agent with its authorized tools | Realtime voice with agent delegation | [OpenClaw plugin](tools/openclaw/README.md) |
 | Hermes | Native personal agent, tools and memory; a conversation per device | Realtime voice with native-agent delegation | [External Hermes plugin](tools/hermes/README.md) |
+
+Select Muse, OpenClaw or Hermes from the same Agents list. Muse direct supports
+voice questions with text replies and can use its own saved direct or Shadowsocks
+route.
+[Muse setup](docs/configuration.md#muse)
 
 Call's realtime model handles ordinary dialogue; tasks, current information and
 private context can be delegated to the personal agent. Not every spoken turn

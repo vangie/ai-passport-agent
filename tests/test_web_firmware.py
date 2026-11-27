@@ -22,7 +22,8 @@ with patch.object(sys, 'path', [str(ROOT / 'tools'), *sys.path]):
 class WebFirmwareTests(unittest.TestCase):
     def test_prepare_builds_distinct_bilingual_backend_prompts(self):
         for source in ['assets/images/passport-lobster.svg', 'shared/PairPrompt.swift',
-                       'web/prompts/hermes-zh.txt', 'web/prompts/hermes-en.txt']:
+                       'web/prompts/hermes-zh.txt', 'web/prompts/hermes-en.txt',
+                       'web/prompts/muse-zh.txt', 'web/prompts/muse-en.txt']:
             destination = self.root / source
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / source, destination)
@@ -44,6 +45,10 @@ class WebFirmwareTests(unittest.TestCase):
                 self.assertNotIn('openclaw gateway call', hermes)
                 self.assertNotIn('openclaw qr --json', hermes)
                 self.assertEqual(hermes, (self.root / f'web/prompts/hermes-{language}.txt').read_text())
+                muse = (self.root / f'web/public/setup-muse-{language}.txt').read_text()
+                self.assertIn('python -m tools.muse pair', muse)
+                self.assertIn('/passport/v1', muse)
+                self.assertEqual(muse, (self.root / f'web/prompts/muse-{language}.txt').read_text())
 
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -141,7 +146,36 @@ class WebFirmwareTests(unittest.TestCase):
         manifest = json.loads(self.manifest.read_text())
         self.assertEqual(manifest['buildId'], '34' * 8)
         self.assertEqual(manifest['knownBuilds'], {'56' * 8: {'version': 'v1.2.2', 'channel': 'release'}})
-        self.assertEqual(manifest['version'], 'v1.2.3')
+
+    def test_local_firmware_staging_replaces_legacy_asset_names(self):
+        archive = self.root / 'archive'
+        archive.mkdir()
+        application = bytearray(288)
+        application[0] = 0xe9
+        application[12] = 5
+        application[32:36] = b'\x32\x54\xcd\xab'
+        application[176:208] = bytes.fromhex('6e65772d6170706c' + '0' * 48)
+        full = b'new-full-image'
+        (archive / 'agent-talk.bin').write_bytes(application)
+        (archive / 'agent-talk-full.bin').write_bytes(full)
+        receipt = {'files': {
+            'agent-talk.bin': {'size': len(application), 'sha256': hashlib.sha256(application).hexdigest()},
+            'agent-talk-full.bin': {'size': len(full), 'sha256': hashlib.sha256(full).hexdigest()},
+        }, 'app_descriptor': {'embedded_elf_sha256': '6e65772d6170706c' + '0' * 48}}
+        legacy = self.destination / 'FoloToy-AI-Passport.bin'
+        legacy_full = self.destination / 'FoloToy-AI-Passport-full.bin'
+        legacy.write_bytes(b'old')
+        legacy_full.write_bytes(b'old')
+        with patch.object(web, 'verify_archive', return_value=receipt), \
+                contextlib.redirect_stdout(io.StringIO()):
+            web.stage_local_firmware(archive)
+        self.assertFalse(legacy.exists())
+        self.assertFalse(legacy_full.exists())
+        self.assertTrue((self.destination / 'agent-talk.bin').is_file())
+        manifest = json.loads(self.manifest.read_text())
+        self.assertEqual(manifest['knownBuilds'],
+                         {'6e65772d6170706c': {'version': '', 'channel': 'development'}})
+        self.assertEqual(manifest['version'], 'v0.8.0-dev')
 
     def test_historical_manifest_can_use_noncanonical_asset_names(self):
         directory = self.release(self.root / 'history/v1.2.1', 'v1.2.1', '56' * 32)

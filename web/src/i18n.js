@@ -1,5 +1,11 @@
 const messages = {
   zh: {
+    museGateway: 'Muse 网关', museSetup: '通过 Valet Gateway 上的 Muse 适配器连接。',
+    museDirect: 'Muse 直连', museToken: 'Muse Gadget SDK token', museTokenLink: '获取 SDK token',
+    museTokenSave: '写入 SDK token', museTokenUSB: '请通过 USB 连接设备。', museTokenUpdate: '请更新到支持 Muse 直连的固件。',
+    museTokenInvalid: '请粘贴完整的 Muse Gadget SDK token。', museTokenError: '设备未能保存 SDK token。',
+    musePairSteps: '在工牌上打开「设置 → Muse 配对」。在 Muse App 的「设置 → 设备」中开启开发者模式并添加工牌，然后在工牌上确认。',
+    museTokenSaved: '已写入 SDK token，可以在工牌上开始配对。',
     installBluefy: '在 App Store 获取 Bluefy', bluefyNext: '安装后，在 Bluefy 中打开本页，通过蓝牙配置 Wi-Fi 和助手。配置完成即可关闭 Bluefy，设备会自行联网对话。',
     firmwareDesktop: '固件更新请在电脑上通过 USB 完成。',
     connectionSettings: '连接设置', proxyPasswordHint: '留空沿用设备中已保存的代理密码', routeSaveHint: '仅修改此助手，点击「保存配置」后生效。', confirmRouteSwitch: '放弃当前助手连接方式的未保存修改，转去编辑另一助手？其他配置不受影响。',
@@ -42,6 +48,12 @@ const messages = {
     dialogCancel: '取消', dialogConfirm: '确认', battery: '电量', firmware: '固件', reconnect: '连接后可读取和保存', scanDone: '扫描完成', deviceError: '设备未完成此操作，输入内容仍保留。',
   },
   en: {
+    museGateway: 'Muse gateway', museSetup: 'Connect through the Muse adapter in Valet Gateway.',
+    museDirect: 'Muse direct', museToken: 'Muse Gadget SDK token', museTokenLink: 'Get SDK token',
+    museTokenSave: 'Write SDK token', museTokenUSB: 'Connect your Passport over USB.', museTokenUpdate: 'Update to firmware that supports Muse direct.',
+    museTokenInvalid: 'Paste the full Muse Gadget SDK token.', museTokenError: 'The device could not save the SDK token.',
+    musePairSteps: 'On Passport, open Settings → Pair Muse. In the Muse app, open Settings → Devices, enable Developer mode and add Passport, then confirm on Passport.',
+    museTokenSaved: 'SDK token saved. You can start pairing on Passport.',
     installBluefy: 'Get Bluefy on the App Store', bluefyNext: 'Open this page in Bluefy to configure Wi-Fi and your assistant over Bluetooth. You can close Bluefy after setup; Passport connects and talks on its own.',
     firmwareDesktop: 'Update firmware via USB on a computer.',
     hotspotHelp: 'Can’t find your iPhone hotspot?',

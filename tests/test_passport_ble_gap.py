@@ -37,6 +37,13 @@ static int s_ble_state_lock;
 static passport_ble_session_t s_ble_sessions;
 static passport_line_t s_ble_lines[PASSPORT_BLE_PEERS];
 static atomic_bool s_configuration_connected;
+static atomic_bool s_muse_connection;
+static bool fixture_muse_setup;
+static unsigned passport_muse_pair_state(void) { return fixture_muse_setup; }
+static uint16_t fixture_muse_handle;
+static void passport_muse_ble_connection(uint16_t handle, bool connected) {
+    fixture_muse_handle = connected ? handle : BLE_HS_CONN_HANDLE_NONE;
+}
 static atomic_uint s_configuration_activity;
 static atomic_int s_ble_transmit_status;
 static atomic_uint_least16_t s_ble_transmitting = BLE_HS_CONN_HANDLE_NONE;
@@ -134,6 +141,12 @@ int main(void) {
     assert(!passport_link_is_bluetooth_connected());
     assert(wakeups == 2 && s_ble_transmit_status == BLE_HS_ENOTCONN && !s_configuration_connected);
     assert(!s_ble_sessions.owner && adverts == 3);
+    fixture_muse_setup = true;
+    connect_peer(30);
+    assert(s_muse_connection && fixture_muse_handle == 30);
+    assert(!s_configuration_connected && !passport_ble_count(&s_ble_sessions));
+    disconnect_peer(30);
+    assert(!s_muse_connection && fixture_muse_handle == BLE_HS_CONN_HANDLE_NONE);
     for (size_t index = 0; index < queued_count; index++) free(queued[index]);
     puts("Real BLE GAP/RX: continued discovery, isolated fragments, late disconnect and ACK isolation PASS");
     return 0;

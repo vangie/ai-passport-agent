@@ -76,6 +76,25 @@ OpenClaw 使用专属 `passport` 助手，Hermes 使用原生个人 Agent 与每
 限制 OpenClaw 专属 agent 工具，并检查 Hermes 原生工具策略；设备暂不支持交互式审批。
 助手配置选择连接。
 
+### Muse
+
+1. 使用支持 Muse 直连的 Passport Agent 固件。用 USB 连接工牌，在设备配置台保存可访问 Muse 的 Wi-Fi。
+2. 在「添加助手 → Muse 直连」粘贴个人 Gadget SDK token，点击「写入 SDK token」。
+   可从 [Muse 账号][muse-token] 获取 token。
+3. 工牌打开「设置 → Muse 配对」。在 Muse App 的「设置 → 设备」开启开发者模式并添加工牌，
+   根据屏幕提示按下「确认」旁的实体键。助手列表需要留一个空位。
+4. 在助手列表选择 Muse，用「提问」发送语音并阅读文字回复。若 Muse 服务需要代理，展开 Muse 的「连接设置」单独选择直连或 Shadowsocks，不影响其他助手。
+
+固件集成了官方 SDK [提交 c8453082][muse-sdk] 的 Link 配对和 Noise 通信源码及许可证，
+沿用 Passport Agent 的分区和设备设置。
+
+**Valet Gateway 接入。** 本项目的网页配置台提供「Muse 网关」选项，以便在同一固件中
+切换 Muse、OpenClaw 和 Hermes。由官方 Muse App 绑定 Linux 主机上的适配器，再把适配器
+生成的工牌配对 JSON 填入网页。适配器随包含 `tools/muse` 的 Valet Gateway 开发源码提供。
+
+[muse-sdk]: https://github.com/facebookincubator/muse-gadget-sdk/tree/c84530820658ca50116a88877371ce14b4e44026
+[muse-token]: https://gadgets.muse.ai/settings/sdk-tokens
+
 ## 连接、保存与撤销
 
 1. 通过 USB／蓝牙连接并读取设备。蓝牙名称是 **AI Passport XXXX**，可在设备设置开启蓝牙。

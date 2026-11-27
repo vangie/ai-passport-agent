@@ -14,6 +14,13 @@
 
 No pending changes.
 
+## v0.8.0 - 2026-11-27
+
+- Add Muse direct support with on-device SDK token storage, BLE pairing and voice questions with text replies.
+- Preserve existing OpenClaw and Hermes pairing, credentials and gateway protocol compatibility.
+- Add per-assistant Direct or Shadowsocks routing, including for Muse direct.
+- Add Muse token controls, setup instructions and route editing to the web studio.
+
 ## v0.7.7 - 2026-11-18
 
 - Fix reply-page stack overflow by reusing caption scratch under the LVGL lock and enforcing a 768-byte per-frame budget for the main loop and screen code.

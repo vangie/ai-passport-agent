@@ -8,7 +8,7 @@ static bool disconnect_reply,suppress_history;
 static bool reject_subscription;
 static unsigned connections,closed,uploads,history,aborts,subscriptions,task_creations,pings,transcript_requests;
 static passport_agent_t selected;
-static bool hermes_backend;
+static bool hermes_backend, muse_backend, muse_ready;
 static bool native_missing, old_native, timing_fixture;
 static unsigned identity_reads;
 static unsigned token_saves;
@@ -197,8 +197,22 @@ uint32_t passport_audio_live_position(void) { return live_completed; }
 esp_err_t passport_audio_stop(void) { live_stops++;return ESP_OK; }
 void passport_audio_live_response(bool speaking) { live_response=speaking; }
 bool passport_audio_live_drained(void) { return talk_fault!=3 && (!deferred_playback || clock_us>=playback_ready_at); }
+static passport_proxy_t active_proxy, muse_observed_proxy;
+static unsigned muse_runs;
+static bool muse_last_probe;
 void passport_memory_report(const char *phase) { (void)phase; }
-void passport_tls_set_proxy(const passport_proxy_t *proxy) { (void)proxy; }
+void passport_tls_set_proxy(const passport_proxy_t *proxy) {
+    if (proxy) active_proxy = *proxy;
+    else memset(&active_proxy, 0, sizeof(active_proxy));
+}
+void passport_muse_run(bool probe, void (*on_state)(passport_send_state_t, const char *),
+                       void (*on_transcript)(const char *)) {
+    muse_runs++;
+    muse_last_probe = probe;
+    muse_observed_proxy = active_proxy;
+    if (!probe) on_transcript("Muse 语音转写");
+    on_state(PASSPORT_SEND_DONE, probe ? "Muse 已连接" : "Muse 文字回复");
+}
 const char *passport_tls_proxy_error(void) { return NULL; }
 esp_err_t passport_tls_control_prepare(void) { return ESP_OK; }
 void passport_tls_control_begin(void) { cancelled=can_abort=false; }
@@ -302,7 +316,8 @@ int passport_transport_ws_send_raw(esp_transport_handle_t handle,int opcode,cons
     }
     cJSON *frame=cJSON_Parse(wire);assert(frame);
     const char *method=str(frame,"method");
-    if (!strcmp(method,"connect")) event(old_native ?
+    if (!strcmp(method,"connect")) event(muse_backend ?
+        "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"backend\":\"muse\",\"passportProtocol\":1,\"passportAsk\":true,\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : old_native ?
         "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : hermes_backend ?
         "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"backend\":\"hermes\",\"passportProtocol\":1,\"passportAsk\":true,\"auth\":{\"deviceToken\":\"fixture-device-token\",\"scopes\":[\"operator.read\",\"operator.write\",\"operator.talk\"]}}}" : talk_scope_denied ?
         "{\"type\":\"res\",\"id\":\"passport-connect\",\"ok\":true,\"payload\":{\"passportProtocol\":1,\"passportAsk\":true,\"policy\":{\"maxPayload\":2000000},\"auth\":{\"scopes\":[\"operator.read\",\"operator.write\"]}}}" :
@@ -332,7 +347,11 @@ int passport_transport_ws_send_raw(esp_transport_handle_t handle,int opcode,cons
     if (!strcmp(method,"passport.status")) {
         check_requests++;
         assert(!strcmp(str(cJSON_GetObjectItem(frame,"params"),"agentId"),"passport"));
-        event(check_plugin_missing ? "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":false,\"error\":{\"message\":\"unknown method\"}}" :
+        if (muse_backend) {
+            event(muse_ready ?
+                "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"backend\":\"muse\",\"ask\":true}}" :
+                "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"backend\":\"muse\",\"ask\":false}}");
+        } else event(check_plugin_missing ? "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":false,\"error\":{\"message\":\"unknown method\"}}" :
             check_provider_missing ? "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"upstreamAvailable\":true,\"upstreamConfigured\":false,\"providerRegistered\":true}}" :
             "{\"type\":\"res\",\"id\":\"passport-check-status\",\"ok\":true,\"payload\":{\"protocol\":1,\"upstreamAvailable\":true,\"upstreamConfigured\":true,\"providerRegistered\":true}}");
     }
@@ -782,7 +801,37 @@ int main(void) {
     hermes_backend=false;s_agent=selected;socket=open_gateway(false,&parent);
     assert(socket && !strcmp(selected.kind,"openclaw") && token_saves==saved_before+2);
     close_gateway(&socket,&parent);
+    muse_backend=true;
+    s_agent=selected;socket=open_gateway(false,&parent);
+    assert(socket && !strcmp(selected.kind,"muse") && token_saves==saved_before+3);
+    check_capabilities(socket);passport_gateway_check_result(&report);
+    assert(report.gateway && !report.ask && report.plugin==1 && !report.call);
+    muse_ready=true;
+    check_capabilities(socket);passport_gateway_check_result(&report);
+    assert(report.gateway && report.ask && report.plugin==1 && !report.call);
+    close_gateway(&socket,&parent);
+    muse_backend=false;
     free(s_receive);s_receive=NULL;
+    {
+        snprintf(selected.kind, sizeof(selected.kind), "%s", PASSPORT_MUSE_KIND);
+        snprintf(selected.url, sizeof(selected.url), "%s", PASSPORT_MUSE_PROFILE_URL);
+        selected.proxy.enabled = true;
+        snprintf(selected.proxy.host, sizeof(selected.proxy.host), "muse-proxy.example");
+        selected.proxy.port = 8443;
+        snprintf(selected.proxy.secret, sizeof(selected.proxy.secret), "proxy-secret");
+        assert(passport_gateway_check() == ESP_OK);
+        step(&service);
+        passport_gateway_check_result(&report);
+        assert(muse_runs == 1 && muse_last_probe && report.gateway && report.ask && !report.call);
+        assert(muse_observed_proxy.enabled && !strcmp(muse_observed_proxy.host, "muse-proxy.example") && muse_observed_proxy.port == 8443);
+        assert(passport_gateway_abandon() && passport_gateway_send(NULL) == ESP_OK);
+        step(&service);
+        char muse_heard[64];
+        passport_gateway_transcript(muse_heard, sizeof(muse_heard));
+        assert(muse_runs == 2 && !muse_last_probe && s_state == PASSPORT_SEND_DONE && !strcmp(s_message, "Muse 文字回复") && !strcmp(muse_heard, "Muse 语音转写"));
+        assert(muse_observed_proxy.enabled && !strcmp(muse_observed_proxy.host, "muse-proxy.example"));
+        assert(passport_gateway_abandon());
+    }
     online=true;selected_route("wss://fixture.example");passport_gateway_maintain(true);
     step(&service);
     assert(service.ws && s_talk_auth);

@@ -15,7 +15,8 @@
 把 FoloToy AI Passport 变成个人 Agent 的随身语音终端。提问、交办任务、阅读回复，
 或直接进行语音对话。设备通过 Wi-Fi 连接网关，手机不充当语音中继。
 
-**v0.7.7：共用 Valet Gateway 插件，并恢复 TLS 1.3 支持。** 支持 OpenClaw 与 Hermes，按所选后端安装对应的外置插件，尚未提供其他 Agent 接入。
+**v0.8.0：新增 Muse 直连和助手独立代理线路。** 支持 Muse、OpenClaw 与 Hermes。
+Muse 直连通过官方 Gadget SDK 路径发送语音提问并阅读文字回复，已有网关助手和配对继续兼容。
 项目原名为 `ai-passport-openclaw`，
 更名不影响已有设备和 OpenClaw 插件；配置网页已迁移至 <https://ai-passport-agent.codelife.me/>。
 原地址 `ai-passport-openclaw.codelife.me` 保留并自动跳转，无需重新刷机。
@@ -48,6 +49,9 @@
 | --- | --- | --- | --- |
 | OpenClaw | 专属 `passport` agent 及已授权工具 | 实时语音，按需委托 Agent | [OpenClaw 插件](tools/openclaw/README.zh_CN.md) |
 | Hermes | 原生个人 Agent、工具与记忆，每台设备独立会话 | 实时语音，按需委托原生 Agent | [Hermes 外置插件](tools/hermes/README.zh_CN.md) |
+
+可在同一份固件的助手列表切换 Muse、OpenClaw 和 Hermes。Muse 直连支持语音提问和文字回复，
+并可单独选择直连或 Shadowsocks 线路。[Muse 配置](docs/configuration.zh_CN.md#muse)
 
 通话中的日常交流由实时语音模型应答，需要任务、实时信息或私人上下文时可委托个人 Agent，
 并非每句话都执行完整 Agent 任务。两种后端都需要自行配置可用模型；通话另需实时语音服务，

@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 import web_preview
+from archive_firmware import verify_archive
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +30,8 @@ def prepare():
             raise ValueError('Setup prompt source is missing')
         prompt = '\n'.join(line[4:] if line.startswith('    ') else line for line in match[1].splitlines())
         (public / f'setup-{language}.txt').write_text(prompt + '\n')
-        shutil.copy2(WEB / f'prompts/hermes-{language}.txt', public / f'setup-hermes-{language}.txt')
+        for backend in ('hermes', 'muse'):
+            shutil.copy2(WEB / f'prompts/{backend}-{language}.txt', public / f'setup-{backend}-{language}.txt')
 
 
 def is_application_image(image):
@@ -186,19 +188,51 @@ def stage_local_build_catalog():
     manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
 
 
+def stage_local_firmware(archive):
+    """Expose one verified local archive to the local studio only."""
+    archive = archive.resolve()
+    receipt = verify_archive(archive)
+    destination = WEB / 'public/firmware'
+    destination.mkdir(parents=True, exist_ok=True)
+    for old_name in ('FoloToy-AI-Passport.bin', 'FoloToy-AI-Passport-full.bin'):
+        (destination / old_name).unlink(missing_ok=True)
+    shutil.copy2(archive / 'agent-talk.bin', destination / 'agent-talk.bin')
+    shutil.copy2(archive / 'agent-talk-full.bin', destination / 'agent-talk-full.bin')
+    application = receipt['files']['agent-talk.bin']
+    build_id = receipt['app_descriptor']['embedded_elf_sha256'][:16]
+    (destination / 'manifest.json').write_text(json.dumps({
+        'schema': 1,
+        'version': 'v0.8.0-dev',
+        'commit': '0' * 40,
+        'buildId': build_id,
+        'application': {'file': 'agent-talk.bin', 'offset': 0x10000,
+                        'size': application['size'], 'sha256': application['sha256']},
+        'full': {'file': 'agent-talk-full.bin', 'offset': 0,
+                 'size': receipt['files']['agent-talk-full.bin']['size'],
+                 'sha256': receipt['files']['agent-talk-full.bin']['sha256']},
+        'knownBuilds': {build_id: {'version': '', 'channel': 'development'}},
+    }, indent=2) + '\n')
+    print(f'Staged local firmware archive: {archive}')
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['prepare', 'firmware', 'build', 'serve'])
+    parser.add_argument('command', choices=['prepare', 'firmware', 'local-firmware', 'build', 'serve'])
     parser.add_argument('--from-release', type=Path)
+    parser.add_argument('--from-archive', type=Path)
     parser.add_argument('--release-history', type=Path)
     args = parser.parse_args()
     if args.command == 'firmware' and not args.from_release:
         parser.error('firmware requires --from-release')
+    if args.command == 'local-firmware' and not args.from_archive:
+        parser.error('local-firmware requires --from-archive')
     with web_preview.build_lock():
         prepare()
         if args.from_release:
             stage_firmware(args.from_release.resolve(), args.release_history.resolve() if args.release_history else None)
-        if args.command in {'prepare', 'firmware'}:
+        if args.from_archive:
+            stage_local_firmware(args.from_archive)
+        if args.command in {'prepare', 'firmware', 'local-firmware'}:
             return
         if not (WEB / 'node_modules/.package-lock.json').exists():
             subprocess.run(['npm', 'ci', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=WEB, check=True)

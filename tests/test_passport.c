@@ -40,9 +40,19 @@ static void test_agent_platform(void) {
     expect(!passport_agent_upsert(&store,"Other","unknown","wss://third.example","",NULL,NULL,NULL),"unknown platform rejected");
     expect(!strcmp(passport_agent_platform(&store.agents[0]),"OpenClaw"),"nickname does not determine platform");
     expect(!strcmp(passport_agent_platform(&store.agents[1]),"Hermes"),"custom nickname retains Hermes platform");
+    const char *code = "eyJ1cmwiOiJ3c3M6Ly9tdXNlLmV4YW1wbGUvcGFzc3BvcnQvdjEiLCJib290c3RyYXBUb2tlbiI6ImZpeHR1cmUiLCJiYWNrZW5kIjoibXVzZSJ9";
+    passport_pair_t pair;
+    expect(!passport_pair_parse(code, &pair) && pair.muse, "read Muse platform from setup code");
+    expect(passport_agent_upsert(&store,"My Muse","muse",pair.url,pair.bootstrap,NULL,NULL,NULL),"add Muse alongside other platforms");
+    store.active_agent = 2;
+    passport_view_t view = { .screen = PASSPORT_SCREEN_HOME };
+    expect(!strcmp(passport_agent_platform(passport_agent_active(&store)),"Muse"),"Muse platform label");
+    expect(passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).action == PASSPORT_ACT_NONE,"Muse home hides Call");
+    expect(passport_key_binding(&view,&store,PASSPORT_BTN_OK).action == PASSPORT_ACT_RECORD,"Muse home keeps Ask");
     int size=passport_store_save(&store,blob,sizeof(blob));
     expect(size>0 && passport_store_load(&restored,blob,(size_t)size),"mixed platforms round trip");
     expect(!strcmp(restored.agents[0].kind,"openclaw") && !strcmp(restored.agents[1].kind,"hermes"),"platform survives reload");
+    expect(!strcmp(restored.agents[2].kind,"muse"),"Muse platform survives reload");
 }
 
 static void test_store_order(void) {
@@ -141,10 +151,12 @@ static void test_navigation(void) {
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_DOWN,PASSPORT_CLICK);
-    expect(v.screen == PASSPORT_SCREEN_POWEROFF, "power-off is the last settings row");
+    expect(v.screen == PASSPORT_SCREEN_POWEROFF, "power-off follows standby");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
     passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(v.preference_cursor == 0, "settings cycles through all six options");
+    expect(v.preference_cursor == PASSPORT_PREFERENCE_MUSE, "Muse pairing follows power-off");
+    passport_on_key(&v,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(v.preference_cursor == 0, "settings wraps after Muse pairing");
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
 
     passport_on_key(&v,&store,PASSPORT_BTN_OK,PASSPORT_CLICK);
@@ -321,7 +333,7 @@ static void test_preference_navigation(void) {
     passport_agent_upsert(&store,"Second","openclaw","wss://second.example","",NULL,NULL,NULL);
     passport_agent_select(&store,1);
     const passport_screen_t screens[]={PASSPORT_SCREEN_NETS,PASSPORT_SCREEN_SETTINGS,PASSPORT_SCREEN_PREFERENCES,PASSPORT_SCREEN_VOLUME,
-        PASSPORT_SCREEN_STANDBY,PASSPORT_SCREEN_POWEROFF};
+        PASSPORT_SCREEN_STANDBY,PASSPORT_SCREEN_POWEROFF,PASSPORT_SCREEN_MUSE_PAIR};
     const char *labels[][3]={{"Next","Open","Back"},{"切换","打开","返回"}};
     for (int language=0;language<2;language++) {
         passport_lang_set(&store,language ? "zh" : "en");
@@ -336,7 +348,7 @@ static void test_preference_navigation(void) {
                 expect(!strcmp(passport_action_label(binding.action,language!=0),caption),
                        "settings caption describes opening pages or toggling Bluetooth");
             }
-            passport_action_t selected_action=selection==2 ? PASSPORT_ACT_ENABLE_CONFIG : PASSPORT_ACT_OPEN_PREFERENCE;
+            passport_action_t selected_action=selection==PASSPORT_PREFERENCE_BLUETOOTH ? PASSPORT_ACT_ENABLE_CONFIG : PASSPORT_ACT_OPEN_PREFERENCE;
             expect(passport_key_binding(&view,&store,PASSPORT_BTN_DOWN).action==selected_action,
                    "settings bind the second key to the selected row action");
             expect(passport_on_key(&view,&store,PASSPORT_BTN_DOWN,PASSPORT_HOLD)==PASSPORT_ACT_NONE &&
@@ -452,7 +464,9 @@ static void test_live_navigation(void) {
            "power-off cannot move in front of screen-off");
     view.standby_s=60;view.poweroff_s=1800;view.screen=PASSPORT_SCREEN_PREFERENCES;
     passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
-    expect(view.preference_cursor==0,"settings wrap after power-off");
+    expect(view.preference_cursor==PASSPORT_PREFERENCE_MUSE,"Muse pairing follows power-off");
+    passport_on_key(&view,&store,PASSPORT_BTN_UP,PASSPORT_CLICK);
+    expect(view.preference_cursor==0,"settings wrap after Muse pairing");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_BACK &&
            view.screen==PASSPORT_SCREEN_HOME,"settings return directly to the two voice entries");
     expect(passport_on_key(&view,&store,PASSPORT_BTN_OK,PASSPORT_CLICK)==PASSPORT_ACT_RECORD && view.recording,"home starts a recording");

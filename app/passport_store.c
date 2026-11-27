@@ -132,7 +132,9 @@ bool passport_agent_upsert(passport_store_t *store, const char *name, const char
                         const char *url, const char *bootstrap, const char *device_token,
                         const char *access_id, const char *access_secret) {
     if (store == NULL || name == NULL || name[0] == '\0' || kind == NULL ||
-        (strcmp(kind, "openclaw") && strcmp(kind, "hermes")) || url == NULL || !url_ok(url)) {
+        (strcmp(kind, "openclaw") && strcmp(kind, "hermes") && strcmp(kind, "muse") &&
+         strcmp(kind, PASSPORT_MUSE_KIND)) || url == NULL || !url_ok(url) ||
+        (!strcmp(kind, PASSPORT_MUSE_KIND) && strcmp(url, PASSPORT_MUSE_PROFILE_URL))) {
         return false;
     }
     for (size_t i = 0; i < store->agent_count; i++) {
@@ -169,7 +171,11 @@ bool passport_agent_upsert(passport_store_t *store, const char *name, const char
 }
 
 const char *passport_agent_platform(const passport_agent_t *agent) {
-    return !agent ? "Agent" : !strcmp(agent->kind, "hermes") ? "Hermes" : !strcmp(agent->kind, "openclaw") ? "OpenClaw" : "Agent";
+    if (!agent) return "Agent";
+    if (!strcmp(agent->kind, "hermes")) return "Hermes";
+    if (!strcmp(agent->kind, "openclaw")) return "OpenClaw";
+    if (!strcmp(agent->kind, "muse") || !strcmp(agent->kind, PASSPORT_MUSE_KIND)) return "Muse";
+    return "Agent";
 }
 
 void passport_store_bump(passport_store_t *store) {

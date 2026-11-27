@@ -10,6 +10,7 @@ typedef struct {
     char url[PASSPORT_URL_MAX];
     char host[96];
     char bootstrap[PASSPORT_TOKEN_MAX];
+    bool muse;
 } passport_pair_t;
 
 /* 成功返回 NULL。失败返回 code、url 或 token，out 里什么都不留。 */

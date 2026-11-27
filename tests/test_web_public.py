@@ -37,7 +37,8 @@ class WebPublicTests(unittest.TestCase):
         self.assertEqual(audit_site(self.root, True), [])
 
     def test_all_backend_prompts_are_allowed_and_still_scanned(self):
-        for filename in ['setup-zh.txt', 'setup-en.txt', 'setup-hermes-zh.txt', 'setup-hermes-en.txt']:
+        for filename in ['setup-zh.txt', 'setup-en.txt', 'setup-hermes-zh.txt', 'setup-hermes-en.txt',
+                         'setup-muse-zh.txt', 'setup-muse-en.txt']:
             with self.subTest(filename=filename):
                 path = self.root / filename
                 path.write_text('https://github.com/vangie/ai-passport-agent wss://gateway.example')

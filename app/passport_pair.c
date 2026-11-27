@@ -25,7 +25,7 @@ static int b64_value(int c) {
 }
 
 static int b64_decode(const char *src, uint8_t *out, size_t cap) {
-    int val = 0;
+    uint32_t val = 0;
     int valb = -8;
     size_t n = 0;
     for (const unsigned char *p = (const unsigned char *)src; *p != '\0'; p++) {
@@ -126,6 +126,9 @@ const char *passport_pair_parse(const char *text, passport_pair_t *out) {
     }
     snprintf(out->url, sizeof(out->url), "%s", url);
     snprintf(out->bootstrap, sizeof(out->bootstrap), "%s", token);
+    char backend[PASSPORT_KIND_MAX];
+    out->muse = json_string((const char *)decoded, "backend", backend, sizeof(backend)) &&
+                strcmp(backend, "muse") == 0;
     if (host_of(url, out->host, sizeof(out->host)) == NULL) {
         return "url";
     }

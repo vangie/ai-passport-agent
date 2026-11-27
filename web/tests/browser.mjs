@@ -68,20 +68,35 @@ async function installBluetoothFixture(page, build = 'abcdef1234567890', network
   }, { initialBuild: build, initialNetworks: networks, initialAgents: agents });
 }
 
-async function installSerialFixture(page) {
-  await page.evaluate(async () => {
+async function installSerialFixture(page, muse = false) {
+  await page.evaluate(async muse => {
     const { DemoTransport } = await import('/src/transports.js');
     const fixture = new DemoTransport();
     window.fixtureBuild = 'abcdef1234567890';
+    if (muse) window.fixtureMuseWritten = 0;
     const port = {
       async open() {
-        port.readable = new ReadableStream({ start(controller) { fixture.onData = data => controller.enqueue(new TextEncoder().encode(new TextDecoder().decode(data).replace(' zh demo ', ` zh ${window.fixtureBuild} `))); } });
-        port.writable = new WritableStream({ write(data) { return fixture.send(new TextDecoder().decode(data).trimEnd()); } });
+        port.readable = new ReadableStream({ start(controller) {
+          fixture.onData = data => {
+            let line = new TextDecoder().decode(data).replace(' zh demo ', ` zh ${window.fixtureBuild} `);
+            if (muse && line.startsWith('HELLO ')) line = line.replace('\n', ' muse-direct\n');
+            controller.enqueue(new TextEncoder().encode(line));
+          };
+        } });
+        port.writable = new WritableStream({ write(data) {
+          const command = new TextDecoder().decode(data).trimEnd();
+          if (muse && command === 'MUSE_TOKEN mgst_' + 'A'.repeat(43)) {
+            window.fixtureMuseWritten++;
+            fixture.onData(new TextEncoder().encode('OK muse-token\n'));
+            return;
+          }
+          return fixture.send(command);
+        } });
       },
       async close() {},
     };
     Object.defineProperty(navigator, 'serial', { configurable: true, value: { async requestPort() { return port; } } });
-  });
+  }, muse);
 }
 
 async function checkSavedBar(page, screenshotPrefix = 'save-success') {
@@ -388,6 +403,41 @@ try {
   const release = { schema: 1, version: 'v0.4.2', commit: 'a'.repeat(40), buildId: '1234567890abcdef', knownBuilds: { abcdef1234567890: { version: 'v0.4.1', channel: 'release' }, aaaaaaaaaaaaaaaa: { version: 'v0.4.2', channel: 'development' }, bbbbbbbbbbbbbbbb: { version: 'v0.4.3', channel: 'release' } }, application: { file: 'app.bin', offset: 0x10000, size: 288, sha256: 'b'.repeat(64) }, full: { file: 'full.bin', offset: 0, size: 288, sha256: 'c'.repeat(64) } };
   await checkCompactConnection(context, release);
   await checkConnectionFeedback(context, release);
+  const musePage = await context.newPage();
+  await musePage.goto('http://127.0.0.1:4175');
+  await installSerialFixture(musePage, true);
+  await musePage.locator('#connect-usb').click();
+  await musePage.getByRole('heading', { name: 'AI Passport · USB', exact: true }).waitFor();
+  await musePage.locator('#pairing-details summary').click();
+  await musePage.locator('.backend-options label:has([value="muse-direct"])').click();
+  await musePage.locator('#muse-token').fill('invalid');
+  await musePage.locator('#save-muse-token').click();
+  await musePage.getByText('请粘贴完整的 Muse Gadget SDK token。').waitFor();
+  await musePage.locator('#muse-token').fill('mgst_' + 'A'.repeat(43));
+  await musePage.locator('#save-muse-token').click();
+  await musePage.getByText('已写入 SDK token，可以在工牌上开始配对。').waitFor();
+  assert.equal(await musePage.evaluate(() => window.fixtureMuseWritten), 1);
+  assert.equal(await musePage.locator('#muse-token').inputValue(), '');
+  assert.deepEqual(await musePage.evaluate(() => [localStorage.length, sessionStorage.length]), [0, 0]);
+  await musePage.close();
+  const museRoutePage = await context.newPage();
+  await museRoutePage.goto('http://127.0.0.1:4175');
+  await installBluetoothFixture(museRoutePage, 'abcdef1234567890', ['Home Wi-Fi'], [
+    { name: 'Muse', url: 'wss://hatch.metaaivm.com/v1/noise', current: true, route: { mode: 'direct' } },
+  ]);
+  await museRoutePage.locator('#connect-ble').click();
+  await museRoutePage.getByRole('heading', { name: 'AI Passport · Bluetooth', exact: true }).waitFor();
+  assert.equal(await museRoutePage.locator('[data-route-agent="0"]').textContent(), '直连');
+  await museRoutePage.locator('[data-agent="0"]').click();
+  await museRoutePage.locator('#routeMode').selectOption('ss');
+  await museRoutePage.locator('#proxyHost').fill('muse-proxy.example');
+  await museRoutePage.locator('#proxyPort').fill('443');
+  await museRoutePage.locator('#proxySecret').fill('fixture-proxy-secret');
+  await museRoutePage.locator('#save').click();
+  await museRoutePage.getByText('已保存', { exact: true }).waitFor();
+  assert.equal(await museRoutePage.locator('[data-route-agent="0"]').textContent(), 'Shadowsocks');
+  assert.match((await museRoutePage.evaluate(() => window.fixtureCommands.filter(command => command.startsWith('ROUTE ')))).at(-1), /^ROUTE \d+ 0 ss muse-proxy\.example 443 fixture-proxy-secret aes-256-cfb$/);
+  await museRoutePage.close();
   await page.route('**/firmware/manifest.json', route => route.fulfill({ json: release }));
   const errors = [];
   const external = [];
@@ -468,7 +518,7 @@ try {
   assert.match(await page.locator('#firmware-mode-note').textContent(), /通过 USB 连接设备/);
   assert.equal(await page.getByRole('group', { name: '界面语言' }).count(), 1);
   assert.equal(await page.getByRole('group', { name: '界面语言' }).getByRole('radio').count(), 2);
-  assert.equal(await page.getByRole('group', { name: '助手类型' }).getByRole('radio').count(), 2);
+  assert.equal(await page.getByRole('group', { name: '助手类型' }).getByRole('radio').count(), 4);
   assert.equal(await page.getByRole('radio', { name: 'OpenClaw', exact: true }).isChecked(), true);
   assert.equal(await page.locator('#language-zh').isChecked(), true);
   assert.equal(await page.locator('#language-en').isChecked(), false);
@@ -920,20 +970,27 @@ try {
   const commandsBeforeBackend = await page.evaluate(() => window.fixtureCommands.length);
   for (const locale of ['zh', 'en']) {
     await page.locator(`label[for="language-${locale}"]`).click();
-    for (const backend of ['hermes', 'openclaw']) {
+    await page.locator('.backend-options label:has([value="muse-direct"])').click();
+    assert.equal(await page.locator('#muse-token').isDisabled(), true);
+    assert.equal(await page.locator('#copy-prompt').isVisible(), false);
+    assert.equal(await page.locator('#code').isVisible(), false);
+    for (const backend of ['muse', 'hermes', 'openclaw']) {
       await page.locator(`.backend-options label:has([value="${backend}"])`).click();
       assert.equal(await page.locator('#copy-prompt-status').isVisible(), false);
       assert.equal(await page.locator('#code').inputValue(), code);
       assert.equal(await page.locator('#name').inputValue(), nameBeforeCopy);
       assert.equal(await page.locator('#address').inputValue(), addressBeforeCopy);
       assert.equal(await page.locator('#discard').isDisabled(), true);
+      assert.equal(await page.locator('#muse-setup-note').isVisible(), backend === 'muse');
       await page.locator('#copy-prompt').click();
       await page.getByRole('button', { name: locale === 'zh' ? '已复制' : 'Copied', exact: true }).waitFor();
       const copiedPrompt = await page.evaluate(() => navigator.clipboard.readText());
       assert.match(copiedPrompt, locale === 'zh' ? /^请/ : /^(?:On the host|Prepare)/);
-      assert.ok(copiedPrompt.includes(backend === 'hermes' ? 'hermes plugins enable ai-passport-hermes' : 'openclaw qr --json'));
+      const commands = { muse: 'python -m tools.muse pair', hermes: 'hermes plugins enable ai-passport-hermes', openclaw: 'openclaw qr --json' };
+      assert.ok(copiedPrompt.includes(commands[backend]));
       assert.equal(copiedPrompt.includes('passport_auth.py --home'), backend === 'hermes');
-      assert.ok((await page.locator('#copy-prompt-status').textContent()).includes(backend === 'hermes' ? 'Hermes' : 'OpenClaw'));
+      const labels = { muse: 'Muse', hermes: 'Hermes', openclaw: 'OpenClaw' };
+      assert.ok((await page.locator('#copy-prompt-status').textContent()).includes(labels[backend]));
       for (const width of [1360, 390, 320]) {
         await page.setViewportSize({ width, height: 1150 });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

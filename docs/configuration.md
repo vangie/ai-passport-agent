@@ -95,6 +95,33 @@ For manual or LAN-only setup, see the [OpenClaw guide](../tools/openclaw/README.
 Restrict the dedicated OpenClaw agent and review Hermes tool policy. Device-side
 interactive approval is not supported. Assistant profiles select connections.
 
+### Muse
+
+1. Use a Passport Agent build with **Muse direct** support. Connect the badge by
+   USB and use Device Studio to save a Wi-Fi network that can reach Muse.
+2. In **Add agent → Muse direct**, paste your personal Gadget SDK token and
+   choose **Write SDK token**. Get the token from your [Muse account][muse-token].
+3. On the badge, open **Settings → Pair Muse**. In the Muse app, enable
+   **Settings → Devices → Developer mode** and add the badge. Press the button
+   next to **Confirm** on the badge when prompted. Leave one slot free in Agents.
+4. Select **Muse** in Agents and use **Ask** to send a voice question and read the
+   reply. The badge uses its own Wi-Fi. This connection supports Ask with text
+   replies. In the Muse agent's **Connection settings**, choose Direct or
+   Shadowsocks independently of other agents when its service requires a proxy.
+
+The firmware incorporates the official SDK's Link setup and Noise transport
+source at [commit c8453082][muse-sdk], including the upstream license files.
+Passport Agent uses its existing flash layout and settings.
+
+**Valet Gateway connection.** This project's build also offers a **Muse
+gateway** option in Web Studio for switching between Muse, OpenClaw and Hermes
+in the same firmware. Link the adapter running on a Linux host in the official
+Muse app, then paste the adapter's Passport pairing JSON into Web Studio. The
+adapter is available in Valet Gateway development sources containing `tools/muse`.
+
+[muse-sdk]: https://github.com/facebookincubator/muse-gadget-sdk/tree/c84530820658ca50116a88877371ce14b4e44026
+[muse-token]: https://gadgets.muse.ai/settings/sdk-tokens
+
 ## Connect, save and discard
 
 1. Connect over USB or Bluetooth and let the page read the device. Bluetooth

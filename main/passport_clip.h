@@ -12,6 +12,7 @@ esp_err_t passport_clip_read(size_t offset, void *out, size_t bytes);
 /* Declare the maximum length in the WAV header while the clip still grows. */
 void passport_clip_stream_header(bool streaming);
 size_t passport_clip_size(void);
+esp_err_t passport_clip_read_pcm(size_t offset, void *out, size_t bytes);
 size_t passport_clip_wire_size(void);
 /* Restore metadata only; the existing PCM must match the supplied checksum. */
 esp_err_t passport_clip_restore(size_t bytes, const char *id, uint32_t crc32);

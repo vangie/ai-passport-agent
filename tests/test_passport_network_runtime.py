@@ -91,6 +91,7 @@ static bool passport_nvs_save(const passport_store_t *store) {
     assert(store->connected==1); saves++; return true;
 }
 static void handle_line(const char *line) { assert(line[0]); handled++; }
+static void mbedtls_platform_zeroize(void *data, size_t size) { memset(data, 0, size); }
 """
 
 QUEUE_TEST = r"""
@@ -301,6 +302,13 @@ static passport_store_t s_store;
 static passport_view_t s_view;
 static int64_t now, s_boot_us;
 static bool s_ble_config_requested, s_ble_config_suppressed;
+static bool s_muse_setup_started;
+bool passport_lang_zh(const passport_store_t *store) { return !strcmp(store->lang, "zh"); }
+static unsigned muse_pair_state;
+static unsigned passport_muse_pair_state(void) { return muse_pair_state; }
+static void passport_muse_pair_open(void) { muse_pair_state = PASSPORT_MUSE_PAIR_WAITING; }
+static void passport_muse_pair_close(void) { muse_pair_state = PASSPORT_MUSE_PAIR_OFF; }
+static bool passport_link_enable_muse(void) { return true; }
 static bool configuring, pending, active, gateway_active, gateway_resources;
 static int audio_release_result, resume_result, pause_result;
 static unsigned starts, stops;

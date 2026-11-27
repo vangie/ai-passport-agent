@@ -31,6 +31,13 @@
 #define PASSPORT_CONFIG_LINE_MAX 5120
 #define PASSPORT_WAVEFORM_BARS 12
 #define PASSPORT_VOLUME_DEFAULT 55
+#define PASSPORT_MUSE_KIND "muse-direct"
+#define PASSPORT_MUSE_PROFILE_URL "wss://hatch.metaaivm.com/v1/noise"
+enum {
+    PASSPORT_MUSE_PAIR_OFF, PASSPORT_MUSE_PAIR_WAITING,
+    PASSPORT_MUSE_PAIR_CONFIRM, PASSPORT_MUSE_PAIR_SAVING,
+    PASSPORT_MUSE_PAIR_DONE, PASSPORT_MUSE_PAIR_FAILED,
+};
 
 typedef enum {
     PASSPORT_BTN_UP = 0,
@@ -61,13 +68,14 @@ typedef enum {
     PASSPORT_SCREEN_VOLUME = 13,
     PASSPORT_SCREEN_STANDBY = 14,
     PASSPORT_SCREEN_POWEROFF = 15,
+    PASSPORT_SCREEN_MUSE_PAIR,
 } passport_screen_t;
 
 /* Rows of the Settings list, in display order. */
 enum {
     PASSPORT_PREFERENCE_NETWORK, PASSPORT_PREFERENCE_AGENT, PASSPORT_PREFERENCE_BLUETOOTH,
     PASSPORT_PREFERENCE_VOLUME, PASSPORT_PREFERENCE_STANDBY, PASSPORT_PREFERENCE_POWEROFF,
-    PASSPORT_PREFERENCE_COUNT,
+    PASSPORT_PREFERENCE_MUSE, PASSPORT_PREFERENCE_COUNT,
 };
 
 typedef enum {
@@ -85,6 +93,7 @@ typedef enum {
     PASSPORT_ACT_OPEN_PREFERENCE,
     PASSPORT_ACT_LIVE_INTERRUPT,
     PASSPORT_ACT_STANDBY, PASSPORT_ACT_POWEROFF, PASSPORT_ACT_IDLE_LATER, PASSPORT_ACT_IDLE_SOONER,
+    PASSPORT_ACT_MUSE_PAIR, PASSPORT_ACT_MUSE_CONFIRM,
 } passport_action_t;
 
 typedef struct { passport_action_t action; bool enabled; } passport_key_binding_t;
@@ -155,6 +164,7 @@ typedef struct {
     bool recording;
     bool sending;
     bool retry_send;
+    unsigned muse_pair;
     bool reply_unread;
     bool cancel_pending;
     bool restart_after_cancel;

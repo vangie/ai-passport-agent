@@ -67,6 +67,11 @@ esp_err_t passport_clip_restore(size_t bytes, const char *id, uint32_t expected_
 }
 
 size_t passport_clip_size(void) { return s_size; }
+esp_err_t passport_clip_read_pcm(size_t offset, void *out, size_t bytes) {
+    size_t size = passport_clip_size();
+    if (!s_partition || offset > size || bytes > size - offset) return ESP_ERR_INVALID_SIZE;
+    return esp_partition_read(s_partition, offset, out, bytes);
+}
 size_t passport_clip_wire_size(void) { return s_size / 2 + PASSPORT_CLIP_WAV_HEADER_BYTES; }
 const char *passport_clip_id(void) { return s_id; }
 bool passport_clip_full(void) { return s_size + 512 > PASSPORT_CLIP_MAX_BYTES; }

@@ -1,0 +1,7 @@
+请帮助我用 Valet Gateway 将 AI Passport 接入我的 Muse 账号，支持语音提问和文字回复。
+
+使用 https://github.com/vangie/valet-gateway 中实际包含 tools/muse 的版本，按 tools/muse/README.zh_CN.md 操作。用独立环境和仓库外的私有目录准备 Muse 适配器。已有 OpenClaw、Hermes 和 Muse 服务可继续使用各自的目录与端口。
+
+首次配置 Valet 适配器时，请在有蓝牙、可访问 Muse 的 Linux 主机上运行它。请告诉我如何私下保存自己的 Gadget SDK token，并在官方 Muse App 的设置 → 设备 → 开发者模式中绑定网关显示的设备。请勿在对话中索要或回显 token。按文档只运行 Valet 的 Muse 服务。
+
+使用工牌可访问的现有 WSS 入口，将 /passport/v1 转发到 Muse 适配器的回环监听端口。确认 Muse 注册成功和 WSS 路由可用，再用 python -m tools.muse pair --url '<实际 WSS 地址>' 生成一次性配对凭据。只把 gatewayUrl 和 setupCode 的完整 JSON 发给我私下粘贴。若缺少账号绑定、合适的源码版本或可用入口，说明当前缺哪一步。

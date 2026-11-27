@@ -270,6 +270,17 @@ int main(int argc, char **argv) {
         assert(lv_obj_get_x(s_logo)==20 && lv_obj_get_y(s_logo)==3);
         assert(lv_obj_get_width(s_logo)==22 && lv_obj_get_height(s_logo)==22);
     }
+    strcpy(store.agents[0].kind,"muse");
+    for (int language=0;language<2;language++) {
+        strcpy(store.lang,language ? "en" : "zh");
+        render(language ? "muse-header-en" : "muse-header-zh",&v,&store);
+        assert(!strcmp(lv_label_get_text(s_title),"Muse"));
+        assert(lv_obj_has_flag(s_logo,LV_OBJ_FLAG_HIDDEN));
+        assert(lv_obj_has_flag(s_markers[PASSPORT_BTN_DOWN],LV_OBJ_FLAG_HIDDEN));
+        assert(!lv_obj_has_flag(s_markers[PASSPORT_BTN_OK],LV_OBJ_FLAG_HIDDEN));
+        assert(!strcmp(lv_label_get_text(s_body),language ? "Ask to read." : "提问看文字"));
+    }
+    strcpy(store.agents[0].kind,"hermes");
     strcpy(store.lang,"zh");strcpy(store.agents[0].name,"小夏");
     render("hermes-home",&v,&store);
     assert(lv_color_eq(lv_obj_get_style_text_color(s_keys[PASSPORT_BTN_OK],0),lv_color_hex(CORAL)));
@@ -317,9 +328,9 @@ int main(int argc, char **argv) {
     assert(!strcmp(passport_action_label(PASSPORT_ACT_IDLE_SOONER,true),"缩短"));
     const char *settings_previews[][MENU_ITEMS]={
         {"settings-menu","settings-agents-selected","settings-bluetooth-selected","settings-volume-selected",
-         "settings-standby-selected","settings-poweroff-selected"},
+         "settings-standby-selected","settings-poweroff-selected","settings-muse-selected"},
         {"english-settings-menu","english-settings-agents-selected","english-settings-bluetooth-selected","english-settings-volume-selected",
-         "english-settings-standby-selected","english-settings-poweroff-selected"}
+         "english-settings-standby-selected","english-settings-poweroff-selected","english-settings-muse-selected"}
     };
     v.screen=PASSPORT_SCREEN_PREFERENCES;
     for (int language=0;language<2;language++) {
@@ -328,15 +339,15 @@ int main(int argc, char **argv) {
             v.preference_cursor=selection;
             render(settings_previews[language][selection],&v,&store);
             /* The same list as the network and assistant pages, plus a
-             * right-aligned value on every row. Six items scroll through
+             * right-aligned value on every row. Seven items scroll through
              * four rows with the focus one row below the top. */
-            const int expected_first[MENU_ITEMS]={0,0,1,2,2,2};
+            const int expected_first[MENU_ITEMS]={0,0,1,2,3,3,3};
             int first=expected_first[selection];
             assert(menu_first(selection)==first);
             assert(lv_obj_has_flag(s_body,LV_OBJ_FLAG_HIDDEN));
             check_choice_rows(MENU_ITEMS,(size_t)first,(size_t)selection);
-            const char *names[2][MENU_ITEMS]={{"网络","助手","蓝牙","音量","息屏","关机"},
-                {"Wi-Fi","Agent","Bluetooth","Volume","Screen off","Power off"}};
+            const char *names[2][MENU_ITEMS]={{"网络","助手","蓝牙","音量","息屏","关机","Muse 配对"},
+                {"Wi-Fi","Agent","Bluetooth","Volume","Screen off","Power off","Muse pairing"}};
             for (int row=0;row<MENU_ROWS;row++) {
                 assert(!strcmp(lv_label_get_text(s_chat_rows[row]),names[language ? 1 : 0][first+row]));
                 lv_obj_t *value=s_menu_values[row];
@@ -349,7 +360,7 @@ int main(int argc, char **argv) {
                 lv_point_t name_size,value_size;
                 lv_text_get_size(&name_size,lv_label_get_text(s_chat_rows[row]),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
                 lv_text_get_size(&value_size,lv_label_get_text(value),&passport_font_16,0,0,1000,LV_TEXT_FLAG_NONE);
-                assert(lv_obj_get_x(s_chat_rows[row])+name_size.x<lv_obj_get_x(value));
+                if (value_size.x) assert(lv_obj_get_x(s_chat_rows[row])+name_size.x<lv_obj_get_x(value));
                 assert(value_size.x<=lv_obj_get_width(value) && value_size.y<=lv_obj_get_height(value));
             }
             /* Each value follows its item as the list scrolls. */
@@ -372,6 +383,14 @@ int main(int argc, char **argv) {
                 assert(!strcmp(lv_label_get_text(s_keys[2]),"返\n回"));
             }
         }
+        v.screen=PASSPORT_SCREEN_MUSE_PAIR;
+        for (unsigned pair=PASSPORT_MUSE_PAIR_OFF;pair<=PASSPORT_MUSE_PAIR_FAILED;pair++) {
+            v.muse_pair=pair;
+            render(language ? "muse-pair-en" : "muse-pair-zh",&v,&store);
+            assert(s_last_binding[PASSPORT_BTN_DOWN].enabled==(pair==PASSPORT_MUSE_PAIR_CONFIRM));
+            assert(s_last_binding[PASSPORT_BTN_OK].enabled==(pair!=PASSPORT_MUSE_PAIR_SAVING));
+        }
+        v.screen=PASSPORT_SCREEN_PREFERENCES;
         v.preference_cursor=2;v.bluetooth_ready=true;
         render(language ? "english-settings-bluetooth-on" : "settings-bluetooth-on",&v,&store);
         assert(!strcmp(lv_label_get_text(s_menu_values[1]),language ? "On" : "开"));

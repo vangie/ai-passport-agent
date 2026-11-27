@@ -474,7 +474,7 @@ static int reply_glyph_width(uint32_t cp, uint32_t next) {
 static bool primary_action(passport_action_t action) {
     return action == PASSPORT_ACT_RECORD || action == PASSPORT_ACT_CONTINUE || action == PASSPORT_ACT_SEND || action == PASSPORT_ACT_RETRY ||
            action == PASSPORT_ACT_SELECT_AGENT || action == PASSPORT_ACT_READ_REPLY ||
-           action == PASSPORT_ACT_ENABLE_CONFIG;
+           action == PASSPORT_ACT_ENABLE_CONFIG || action == PASSPORT_ACT_MUSE_CONFIRM;
 }
 
 static uint32_t key_tone(passport_key_binding_t binding) {
@@ -575,7 +575,7 @@ static void show_menu(const passport_view_t *v, const passport_store_t *s) {
     idle_text(poweroff, sizeof(poweroff), s, v->poweroff_s);
     const char *names[MENU_ITEMS] = { tr(s, "网络", "Wi-Fi"), tr(s, "助手", "Agent"),
         tr(s, "蓝牙", "Bluetooth"), tr(s, "音量", "Volume"),
-        tr(s, "息屏", "Screen off"), tr(s, "关机", "Power off") };
+        tr(s, "息屏", "Screen off"), tr(s, "关机", "Power off"), tr(s, "Muse 配对", "Muse pairing") };
     const char *values[MENU_ITEMS] = {
         v->wifi_online && s->connected >= 0 && (size_t)s->connected < s->count
             ? s->nets[s->connected].ssid : s->count ? tr(s, "未连接", "Offline") : tr(s, "未设置", "Not set"),
@@ -583,10 +583,10 @@ static void show_menu(const passport_view_t *v, const passport_store_t *s) {
         v->bluetooth_busy ? tr(s, "处理中", "Busy")
             : v->bluetooth_ready && v->bluetooth_connected ? tr(s, "已连接", "Linked")
             : v->bluetooth_ready ? tr(s, "开", "On") : tr(s, "关", "Off"),
-        volume, standby, poweroff };
+        volume, standby, poweroff, "" };
     /* Only Bluetooth is a switch; its colour says on or off at a glance. */
     const uint32_t tones[MENU_ITEMS] = { MUTED, MUTED,
-        v->bluetooth_busy ? AMBER : v->bluetooth_ready ? MINT : FAINT, MUTED, MUTED, MUTED };
+        v->bluetooth_busy ? AMBER : v->bluetooth_ready ? MINT : FAINT, MUTED, MUTED, MUTED, MUTED };
     for (int row = 0; row < PASSPORT_REPLY_ROWS; row++) visible(s_chat_rows[row], row < MENU_ROWS);
     /* Chinese names are two characters wide; "Bluetooth" needs more room. */
     int left = passport_lang_zh(s) ? 80 : 112, width = MENU_VALUE_RIGHT - left;
@@ -886,8 +886,10 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
     visible(s_network_name, network);
     /* Keep even a maximum-length SSID clear of the feedback area. */
     if (mode == DETAILS) {
-        if (lv_obj_get_style_text_font(s_headline, 0) != &passport_font_20)
-            lv_obj_set_style_text_font(s_headline, &passport_font_20, 0);
+        const lv_font_t *headline_font = v->screen == PASSPORT_SCREEN_MUSE_PAIR && passport_lang_zh(s)
+            ? &passport_font_16 : &passport_font_20;
+        if (lv_obj_get_style_text_font(s_headline, 0) != headline_font)
+            lv_obj_set_style_text_font(s_headline, headline_font, 0);
         lv_obj_set_y(s_body, network ? LIST_TOP + LIST_PITCH : volume ? 166 : 134);
         lv_obj_set_height(s_body, network ? 94 : volume ? 44 : 116);
     }
@@ -906,10 +908,13 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
         lv_obj_set_style_text_color(s_status, status_tone, 0);
     char value[224];
     const passport_agent_t *agent = passport_agent_active(s);
+    const bool muse = agent && (!strcmp(agent->kind, "muse") || !strcmp(agent->kind, PASSPORT_MUSE_KIND));
     text(s_title, passport_agent_platform(agent));
     const lv_image_dsc_t *logo = agent && !strcmp(agent->kind, "hermes") ? &passport_hermes_22 : &passport_lobster_22;
     if (lv_image_get_src(s_logo) != logo) lv_image_set_src(s_logo, logo);
-    visible(s_logo, agent != NULL);
+    visible(s_logo, agent && !muse);
+    int title_x = muse ? 20 : 45;
+    if (lv_obj_get_x(s_title) != title_x) lv_obj_set_x(s_title, title_x);
     switch (mode) {
         case TRANSCRIPT: {
             animated_waiting(value, sizeof(value), tr(s, "等待回复", "WAITING"));
@@ -1007,7 +1012,6 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
             text(s_body, tr(s, "结束后自动返回首页", "Returning home when finished."));
             break;
         case IDLE: {
-            const passport_agent_t *agent = passport_agent_active(s);
             if (agent) {
                 snprintf(value, sizeof(value), tr(s, "助手：%s", "AI: %s"), agent->name);
                 text(s_status, value);
@@ -1018,6 +1022,7 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                 passport_network_feedback(v->network_state, passport_lang_zh(s), v->wifi_online)
                 : local_error ? v->reply : v->retry_send ? tr(s, "录音已保留，可继续发送", "Your recording is ready to send.")
                 : v->reply_unread ? tr(s, "有一条新回复，点右侧查看", "A new reply is ready to read.")
+                : muse ? tr(s, "提问看文字", "Ask to read.")
                 : tr(s, "通话听回复，提问看文字", "Call to listen. Ask to read."));
             break;
         }
@@ -1098,6 +1103,17 @@ void passport_screen_show(const passport_view_t *v, const passport_store_t *s) {
                     text(s_body, tr(s, "尚无网络\n在配置网页添加 Wi-Fi", "No saved network.\nAdd Wi-Fi on the setup page."));
                 }
                 text(s_page_count, "");
+            } else if (v->screen == PASSPORT_SCREEN_MUSE_PAIR) {
+                text(s_page_count, "");
+                text(s_status, tr(s, "设备设置", "SETTINGS"));
+                text(s_headline, tr(s, "Muse 配对", "Pair Muse"));
+                text(s_body, v->notice[0] ? v->notice :
+                    v->muse_pair == PASSPORT_MUSE_PAIR_DONE ? tr(s, "已配对\n\n可在助手列表选择 Muse", "Paired.\n\nSelect Muse in Agents.")
+                    : v->muse_pair == PASSPORT_MUSE_PAIR_CONFIRM ? tr(s, "请确认绑定 Muse", "Confirm pairing with Muse.")
+                    : v->muse_pair == PASSPORT_MUSE_PAIR_SAVING ? tr(s, "正在配对", "Pairing…")
+                    : v->muse_pair == PASSPORT_MUSE_PAIR_FAILED ? tr(s, "请通过 USB 在配置台保存 Muse SDK token", "Save a Muse SDK token in Device Studio over USB.")
+                    : v->muse_pair == PASSPORT_MUSE_PAIR_OFF ? tr(s, "正在启动蓝牙", "Starting Bluetooth…")
+                    : tr(s, "在 Muse App 的设备页\n开启开发者模式并添加工牌", "In Muse App, open Devices, enable developer mode and add Passport."));
             } else if (v->screen == PASSPORT_SCREEN_SETTINGS) {
                 text(s_status, tr(s, "对话设置", "ASSISTANTS")); text(s_headline, tr(s, "助手", "Assistant"));
                 text(s_page_count, "");

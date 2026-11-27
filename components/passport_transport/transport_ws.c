@@ -277,7 +277,6 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
         }
     }
     if (ws->auth) {
-        ESP_LOGD(TAG, "Authorization: %s", ws->auth);
         int r = snprintf(ws->buffer + len, WS_BUFFER_SIZE - len, "Authorization: %s\r\n", ws->auth);
         len += r;
         if (r <= 0 || len >= WS_BUFFER_SIZE) {
@@ -287,7 +286,6 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
         }
     }
     if (ws->headers) {
-        ESP_LOGD(TAG, "headers: %s", ws->headers);
         int r = snprintf(ws->buffer + len, WS_BUFFER_SIZE - len, "%s", ws->headers);
         len += r;
         if (r <= 0 || len >= WS_BUFFER_SIZE) {
@@ -303,9 +301,8 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
                  "(snprintf of header terminal returned %d, desired request len: %d, buffer size: %d", r, len, WS_BUFFER_SIZE);
         return -1;
     }
-    ESP_LOGD(TAG, "Write upgrade request\r\n%s", ws->buffer);
     if (esp_transport_write(ws->parent, ws->buffer, len, timeout_ms) <= 0) {
-        ESP_LOGE(TAG, "Error write Upgrade header %s", ws->buffer);
+        ESP_LOGE(TAG, "Error writing WebSocket upgrade request");
         return -1;
     }
     int header_len = 0;

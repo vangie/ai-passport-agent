@@ -14,6 +14,7 @@ def audit_site(directory, require_firmware=False):
     errors = []
     allowed = {'index.html', 'lobster.svg', 'setup-zh.txt', 'setup-en.txt',
                'setup-hermes-zh.txt', 'setup-hermes-en.txt',
+               'setup-muse-zh.txt', 'setup-muse-en.txt',
                'firmware/manifest.json', 'firmware/agent-talk.bin',
                'firmware/agent-talk-full.bin'}
     for path in sorted(directory.rglob('*')):

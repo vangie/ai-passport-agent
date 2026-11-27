@@ -321,15 +321,18 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
     bool busy = v->recording || v->sending || v->network_state == PASSPORT_NETWORK_CONNECTING;
     key.enabled = true;
     switch (v->screen) {
-        case PASSPORT_SCREEN_HOME:
+        case PASSPORT_SCREEN_HOME: {
+            const passport_agent_t *agent = passport_agent_active(s);
+            bool ask_only = agent && (!strcmp(agent->kind, "muse") || !strcmp(agent->kind, PASSPORT_MUSE_KIND));
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_PREFERENCES
-                : btn == PASSPORT_BTN_DOWN ? PASSPORT_ACT_LIVE
+                : btn == PASSPORT_BTN_DOWN ? (ask_only ? PASSPORT_ACT_NONE : PASSPORT_ACT_LIVE)
                 : v->sending ? PASSPORT_ACT_PROGRESS : v->retry_send ? PASSPORT_ACT_RETRY
                 : v->reply_unread ? PASSPORT_ACT_READ_REPLY : PASSPORT_ACT_RECORD;
             key.enabled = !v->cancel_pending &&
-                (btn != PASSPORT_BTN_DOWN || (!busy && !v->retry_send)) &&
+                (btn != PASSPORT_BTN_DOWN || (!ask_only && !busy && !v->retry_send)) &&
                 (btn == PASSPORT_BTN_UP || v->network_state != PASSPORT_NETWORK_CONNECTING);
             break;
+        }
         case PASSPORT_SCREEN_PREFERENCES:
             key.action = btn == PASSPORT_BTN_UP ? PASSPORT_ACT_NEXT_PREFERENCE
                 : btn == PASSPORT_BTN_DOWN ? (v->preference_cursor == PASSPORT_PREFERENCE_BLUETOOTH
@@ -414,6 +417,12 @@ passport_key_binding_t passport_key_binding(const passport_view_t *v, const pass
                 : btn == PASSPORT_BTN_DOWN ? PASSPORT_ACT_CLOSE_CONFIG : PASSPORT_ACT_BACK;
             key.enabled = btn == PASSPORT_BTN_OK || (!busy && (btn != PASSPORT_BTN_DOWN || v->bluetooth_ready));
             break;
+        case PASSPORT_SCREEN_MUSE_PAIR:
+            key.action = btn == PASSPORT_BTN_OK ? PASSPORT_ACT_BACK :
+                btn == PASSPORT_BTN_DOWN && v->muse_pair == PASSPORT_MUSE_PAIR_CONFIRM
+                ? PASSPORT_ACT_MUSE_CONFIRM : PASSPORT_ACT_NONE;
+            key.enabled = key.action != PASSPORT_ACT_NONE && v->muse_pair != PASSPORT_MUSE_PAIR_SAVING;
+            break;
         default:
             key.action = PASSPORT_ACT_BACK;
             break;
@@ -438,6 +447,7 @@ const char *passport_action_label(passport_action_t action, bool zh) {
         { "打开", "Open" },
         { "打断", "Stop" },
         { "打开", "Open" }, { "打开", "Open" }, { "延长", "More" }, { "缩短", "Less" },
+        { "打开", "Open" }, { "确认", "Pair" },
     };
     if ((unsigned)action >= sizeof(labels)/sizeof(labels[0])) return "";
     return labels[action][zh ? 0 : 1];
@@ -464,6 +474,7 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             : v->preference_cursor == PASSPORT_PREFERENCE_AGENT ? PASSPORT_ACT_AGENTS
             : v->preference_cursor == PASSPORT_PREFERENCE_STANDBY ? PASSPORT_ACT_STANDBY
             : v->preference_cursor == PASSPORT_PREFERENCE_POWEROFF ? PASSPORT_ACT_POWEROFF
+            : v->preference_cursor == PASSPORT_PREFERENCE_MUSE ? PASSPORT_ACT_MUSE_PAIR
             : PASSPORT_ACT_VOLUME;
     }
     v->notice[0] = 0;
@@ -479,6 +490,10 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             break;
         case PASSPORT_ACT_POWEROFF:
             v->screen = PASSPORT_SCREEN_POWEROFF;
+            break;
+        case PASSPORT_ACT_MUSE_PAIR:
+            v->screen = PASSPORT_SCREEN_MUSE_PAIR;
+            v->muse_pair = PASSPORT_MUSE_PAIR_OFF;
             break;
         case PASSPORT_ACT_IDLE_LATER:
         case PASSPORT_ACT_IDLE_SOONER:
@@ -576,6 +591,7 @@ passport_action_t passport_on_key(passport_view_t *v, passport_store_t *s, passp
             v->screen = v->screen == PASSPORT_SCREEN_NET_MENU ? PASSPORT_SCREEN_NETS
                 : v->screen == PASSPORT_SCREEN_ADD ? ((v->setup_parent == PASSPORT_SCREEN_PREFERENCES || v->setup_parent == PASSPORT_SCREEN_SETTINGS || v->setup_parent == PASSPORT_SCREEN_NET_MENU || v->setup_parent == PASSPORT_SCREEN_NETS) ? v->setup_parent : PASSPORT_SCREEN_HOME)
                 : v->screen == PASSPORT_SCREEN_NETS || v->screen == PASSPORT_SCREEN_SETTINGS || v->screen == PASSPORT_SCREEN_VOLUME ||
+                  v->screen == PASSPORT_SCREEN_MUSE_PAIR ||
                   v->screen == PASSPORT_SCREEN_STANDBY || v->screen == PASSPORT_SCREEN_POWEROFF ? PASSPORT_SCREEN_PREFERENCES
                 : PASSPORT_SCREEN_HOME;
             break;

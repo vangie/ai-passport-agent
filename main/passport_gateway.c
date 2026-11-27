@@ -8,6 +8,7 @@
 #include "passport_memory.h"
 #include "passport_reply.h"
 #include "passport_tls.h"
+#include "passport_muse.h"
 #include <stdatomic.h>
 #include "cJSON.h"
 #ifdef PASSPORT_GATEWAY_HOST_TEST
@@ -454,7 +455,8 @@ static esp_transport_handle_t open_gateway(bool bootstrap, esp_transport_handle_
     if (!ok) { auth_error(hello); cJSON_Delete(hello); goto fail; }
     s_connect_retryable = false;
     const cJSON *payload = cJSON_GetObjectItemCaseSensitive(hello, "payload");
-    const char *kind = !strcmp(str(payload, "backend"), "hermes") ? "hermes" : "openclaw";
+    const char *backend = str(payload, "backend");
+    const char *kind = !strcmp(backend, "muse") ? "muse" : !strcmp(backend, "hermes") ? "hermes" : "openclaw";
     bool platform_changed = strcmp(s_agent.kind, kind) != 0;
     snprintf(s_agent.kind, sizeof(s_agent.kind), "%s", kind);
     const cJSON *passport_protocol = cJSON_GetObjectItemCaseSensitive(payload, "passportProtocol");
@@ -686,6 +688,12 @@ static bool history_run_active(const cJSON *payload) {
 static void clear_transcript(void) {
     portENTER_CRITICAL(&s_guard);
     s_transcript[0] = 0;
+    portEXIT_CRITICAL(&s_guard);
+}
+
+static void muse_transcript(const char *text) {
+    portENTER_CRITICAL(&s_guard);
+    passport_reply_live_apply(s_transcript, sizeof(s_transcript), text, true);
     portEXIT_CRITICAL(&s_guard);
 }
 
@@ -1611,6 +1619,7 @@ static cJSON *check_request(esp_transport_handle_t ws, const char *method, const
 
 static void check_capabilities(esp_transport_handle_t ws) {
     passport_gateway_check_t result = { .gateway = true };
+    const bool muse = !strcmp(s_agent.kind, "muse");
     cJSON *response = check_request(ws, "chat.history", "passport-check-history");
     result.ask = response && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(response, "ok"));
     cJSON_Delete(response);
@@ -1620,11 +1629,14 @@ static void check_capabilities(esp_transport_handle_t ws) {
         const cJSON *payload = cJSON_GetObjectItemCaseSensitive(response, "payload");
         const cJSON *protocol = cJSON_GetObjectItemCaseSensitive(payload, "protocol");
         result.plugin = cJSON_IsNumber(protocol) && protocol->valueint == 1 ? 1 : 3;
-        result.call = result.plugin != 1 ? 0 :
+        if (muse) result.ask = result.ask && result.plugin == 1 &&
+            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(payload, "ask"));
+        result.call = result.plugin != 1 || muse ? 0 :
             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(payload, "upstreamAvailable")) &&
             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(payload, "upstreamConfigured")) &&
             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(payload, "providerRegistered")) ? 1 : 2;
     }
+    if (muse && result.plugin != 1) result.ask = false;
     cJSON_Delete(response);
     portENTER_CRITICAL(&s_guard);
     s_check = result;
@@ -1686,7 +1698,8 @@ static void send_operation(int mode, esp_transport_handle_t *connection, esp_tra
     if (!ws) goto done;
     if (talk) {
         s_talk_trace.gateway_ms = (uint32_t)((esp_timer_get_time() - s_operation_started_us) / 1000);
-        if (!s_talk_allowed) state(PASSPORT_SEND_FAILED,"请在网关为此设备授权 operator.talk");
+        if (!strcmp(s_agent.kind, "muse")) state(PASSPORT_SEND_FAILED,"Muse 仅支持提问");
+        else if (!s_talk_allowed) state(PASSPORT_SEND_FAILED,"请在网关为此设备授权 operator.talk");
         else (void)talk_operation(ws, mode == GATEWAY_LIVE_TEST);
         goto done;
     }
@@ -1814,6 +1827,31 @@ static void service_step(gateway_service_t *service) {
         atomic_store(&s_accepted,false);
         s_aborting=false;
         atomic_store(&s_resources,true);
+        bool muse_direct = !strcmp(s_agent.kind, PASSPORT_MUSE_KIND);
+        if (muse_direct) {
+            close_gateway(&ws, &parent);
+            /* Muse uses the same TLS hooks as gateway connections. Keep the
+             * selected agent route so its API and Noise WebSocket can use the
+             * saved Shadowsocks path when direct access is unavailable. */
+            free(s_receive);
+            s_receive = NULL;
+            clear_transcript();
+            if (talk || mode == 2 || mode == 3) {
+                state(PASSPORT_SEND_FAILED, "Muse 仅支持提问");
+            } else {
+                bool check = mode == GATEWAY_CHECK;
+                passport_muse_run(mode == 1 || check, state, muse_transcript);
+                if (check && s_state == PASSPORT_SEND_DONE) {
+                    portENTER_CRITICAL(&s_guard);
+                    s_check = (passport_gateway_check_t){ .gateway = true, .ask = true };
+                    portEXIT_CRITICAL(&s_guard);
+                }
+            }
+            if (passport_tls_cancelled()) state(PASSPORT_SEND_CANCELLED, "本次操作已取消");
+            atomic_store(&s_resources, false);
+            (void)passport_wifi_gateway_performance(false);
+        } else
+        {
         if (!s_receive) s_receive=calloc(1,sizeof(*s_receive));
         if (!s_receive) {
             state(PASSPORT_SEND_FAILED,"内存不足，请重试");
@@ -1821,6 +1859,7 @@ static void service_step(gateway_service_t *service) {
             if (!s_reply.acknowledged) { s_live[0]=0;s_live_seq=0; }
             send_operation(mode,&ws,&parent);
             if (ws) legacy = !s_talk_auth;
+        }
         }
         vTaskPrioritySet(NULL, 3);
         s_call_active = false;
@@ -1832,7 +1871,7 @@ static void service_step(gateway_service_t *service) {
     s_background=true;
     passport_agent_t selected={0};
     bool configured=atomic_load(&s_enabled) && passport_wifi_is_online() &&
-        passport_link_agent_snapshot(&selected) && selected.device_token[0];
+        passport_link_agent_snapshot(&selected) && strcmp(selected.kind, PASSPORT_MUSE_KIND) && selected.device_token[0];
     if (!configured) {
         close_gateway(&ws,&parent);
         free(s_receive);s_receive=NULL;
@@ -1927,6 +1966,7 @@ static esp_err_t start_send_ex(int mode, bool preconnect) {
     s_recording_stopped_us = preconnect ? 0 : esp_timer_get_time();
     atomic_store(&s_go, !preconnect);
     if (!passport_link_agent_snapshot(&s_requested_agent)) { state(PASSPORT_SEND_FAILED, "请先配置助手"); return ESP_FAIL; }
+    if (preconnect && !strcmp(s_requested_agent.kind, PASSPORT_MUSE_KIND)) return ESP_ERR_NOT_SUPPORTED;
     s_probe = probe;
     if (!resume) s_resume_requested[0]=0;
     state(PASSPORT_SEND_CONNECTING, "正在连接助手");

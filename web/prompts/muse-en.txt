@@ -1,0 +1,7 @@
+Prepare Valet Gateway to connect my AI Passport to my Muse account for voice questions and text replies.
+
+Use a revision of https://github.com/vangie/valet-gateway that contains tools/muse and follow tools/muse/README.md. Use an isolated environment and a private state directory outside the checkout. Keep existing OpenClaw, Hermes and Muse services on their own directories and ports.
+
+For first-time setup of the Valet adapter, use a Bluetooth-capable Linux host that can reach Muse. Tell me how to save my own Gadget SDK token privately and link the advertised gateway using Settings → Devices → Developer mode in the official Muse app. Keep tokens out of this conversation. Run the Valet Muse service as described in the guide.
+
+Use an existing WSS endpoint reachable by the Passport and route /passport/v1 to the adapter's loopback listener. Verify Muse registration and the WSS route, then run python -m tools.muse pair --url '<verified WSS address>' to issue a one-use pairing credential. Give me the gatewayUrl and setupCode JSON so I can paste it privately into Web Studio. If the account has not been linked or the source revision or endpoint is unavailable, tell me which step is pending.
